@@ -1,5 +1,6 @@
 import SummaryCard from '../components/dashboard/SummaryCard'
 import StatusBadge from '../components/common/StatusBadge'
+import Logo from '../components/common/Logo'
 import { useAppState } from '../state/AppStateContext'
 
 const DashboardPage = () => {
@@ -40,6 +41,10 @@ const DashboardPage = () => {
 
   return (
     <section className="page page-dashboard dashboard-surface">
+      <article className="panel dashboard-brand-panel">
+        <Logo size="small" showText showSubtitle className="dashboard-logo" />
+      </article>
+
       <div className="summary-grid">
         <SummaryCard label="Active Production Jobs" value={activeJobs.length} />
         <SummaryCard label="Due Today" value={dueTodayCount} />

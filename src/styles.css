@@ -70,15 +70,14 @@ ul {
 .brand-block {
   display: grid;
   gap: 10px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px 12px;
   padding-bottom: 30px;
 }
 
 .sidebar-logo-block {
   margin-bottom: 24px;
-}
-
-.sidebar-logo {
-  max-height: 64px;
 }
 
 .brand-block h1 {
@@ -139,7 +138,7 @@ ul {
 }
 
 .header-logo {
-  max-height: 24px;
+  flex: 0 0 auto;
 }
 
 .top-header h2 {
@@ -172,12 +171,13 @@ ul {
   font-size: 0.9rem;
 }
 
-.app-logo {
+.atelier-logo-image {
   display: block;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  max-width: 100%;
+  object-position: center;
+  image-rendering: auto;
 }
 
 .logo-wrap {
@@ -201,7 +201,7 @@ ul {
 }
 
 .logo-wordmark {
-  color: var(--brand);
+  color: #1e2a4a;
   text-transform: uppercase;
   font-style: italic;
   font-weight: 800;
@@ -211,29 +211,23 @@ ul {
 
 .logo-text-block span {
   font-size: 0.84rem;
-  color: var(--dark-gray, #64748b);
+  color: #6b7280;
+  font-weight: 400;
 }
 
-.sidebar .logo-wordmark,
-.loading-card .logo-wordmark {
-  color: #ffffff;
+.logo-wrap-small .atelier-logo-image {
+  width: 32px;
+  height: 32px;
 }
 
-.sidebar .logo-text-block span,
-.loading-card .logo-text-block span {
-  color: #d4deeb;
+.logo-wrap-medium .atelier-logo-image {
+  width: 64px;
+  height: 64px;
 }
 
-.app-logo-small {
-  max-height: 28px;
-}
-
-.app-logo-medium {
-  max-height: 64px;
-}
-
-.app-logo-large {
-  max-height: 110px;
+.logo-wrap-large .atelier-logo-image {
+  width: 180px;
+  height: 180px;
 }
 
 .logo-wrap-small .logo-wordmark {
@@ -246,6 +240,17 @@ ul {
 
 .logo-wrap-large .logo-wordmark {
   font-size: 2rem;
+}
+
+.sidebar .logo-wrap,
+.login-card .logo-wrap {
+  justify-items: center;
+}
+
+.sidebar .logo-text-block,
+.login-card .logo-text-block {
+  justify-items: center;
+  text-align: center;
 }
 
 .logo-wrap-small .logo-text-block span {
@@ -700,11 +705,20 @@ button:focus {
   color: #2c394f;
 }
 
-.placeholder-page {
+.module-page {
   border: 1px dashed #b6c2d3;
   background: #fff;
   border-radius: 10px;
   padding: 24px;
+}
+
+.module-logo {
+  margin-bottom: 8px;
+}
+
+.dashboard-brand-panel {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .about-panel {
@@ -788,10 +802,6 @@ a:hover {
 
   .logo-wrap-large .logo-wordmark {
     font-size: 1.6rem;
-  }
-
-  .app-logo-large {
-    max-height: 90px;
   }
 
   .summary-grid,

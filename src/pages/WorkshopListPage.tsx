@@ -117,7 +117,7 @@ const WorkshopListPage = () => {
             type="text"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
-            placeholder="Order, customer, or artwork"
+            aria-label="Search workshop list"
           />
         </label>
       </div>

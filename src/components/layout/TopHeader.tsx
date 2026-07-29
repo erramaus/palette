@@ -18,13 +18,18 @@ const pageTitles: Record<string, string> = {
 
 const TopHeader = () => {
   const location = useLocation()
+  const normalizedPath =
+    location.pathname.length > 1 && location.pathname.endsWith('/')
+      ? location.pathname.slice(0, -1)
+      : location.pathname
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
-  const pageTitle = pageTitles[location.pathname] ?? branding.appName
+  const pageTitle =
+    pageTitles[normalizedPath] ?? (normalizedPath === '/' ? 'Dashboard' : branding.appName)
 
   return (
     <header className="top-header">
@@ -32,7 +37,6 @@ const TopHeader = () => {
         <Logo size="small" showText={false} showSubtitle={false} className="header-logo" />
         <div>
           <h2>{pageTitle}</h2>
-          <p>{branding.fullSubtitle}</p>
         </div>
       </div>
       <div className="top-header-date">{todayLabel}</div>

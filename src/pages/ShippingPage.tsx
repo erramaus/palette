@@ -1,5 +1,5 @@
-import PlaceholderPage from './PlaceholderPage'
+import ModulePage from './ModulePage'
 
-const ShippingPage = () => <PlaceholderPage title="Shipping" />
+const ShippingPage = () => <ModulePage title="Shipping" />
 
 export default ShippingPage

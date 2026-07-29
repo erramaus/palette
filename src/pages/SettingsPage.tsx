@@ -1,5 +1,5 @@
-import PlaceholderPage from './PlaceholderPage'
+import ModulePage from './ModulePage'
 
-const SettingsPage = () => <PlaceholderPage title="Settings" />
+const SettingsPage = () => <ModulePage title="Settings" />
 
 export default SettingsPage

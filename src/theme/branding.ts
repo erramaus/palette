@@ -1,5 +1,4 @@
 export const branding = {
-  iconPath: '/assets/atelier-icon.png',
   appName: 'Atelier',
   appNameDisplayUpper: 'ATELIER',
   subtitle: 'PrintShop OS',

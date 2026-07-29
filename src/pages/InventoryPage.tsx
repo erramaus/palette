@@ -1,5 +1,5 @@
-import PlaceholderPage from './PlaceholderPage'
+import ModulePage from './ModulePage'
 
-const InventoryPage = () => <PlaceholderPage title="Inventory" />
+const InventoryPage = () => <ModulePage title="Inventory" />
 
 export default InventoryPage

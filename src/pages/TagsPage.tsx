@@ -1,5 +1,5 @@
-import PlaceholderPage from './PlaceholderPage'
+import ModulePage from './ModulePage'
 
-const TagsPage = () => <PlaceholderPage title="Tags" />
+const TagsPage = () => <ModulePage title="Tags" />
 
 export default TagsPage

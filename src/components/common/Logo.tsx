@@ -16,11 +16,9 @@ const Logo = ({
   return (
     <div className={`logo-wrap logo-wrap-${size} ${className}`.trim()}>
       <img
-        src={branding.iconPath}
-        alt="Atelier icon"
-        className={`app-logo app-logo-${size}`}
-        loading="eager"
-        decoding="async"
+        src="/assets/atelier-icon.png"
+        alt="Atelier"
+        className="atelier-logo-image"
       />
       {showText ? (
         <div className="logo-text-block">
