@@ -14,6 +14,7 @@ import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import AboutPage from './pages/AboutPage'
 import LoadingPage from './pages/LoadingPage'
+import WorkItemDetailPage from './pages/WorkItemDetailPage'
 import { branding } from './theme/branding'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="workshop-list" element={<WorkshopListPage />} />
+            <Route path="work-items/:id" element={<WorkItemDetailPage />} />
             <Route path="battle-plans" element={<BattlePlansPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="loading" element={<LoadingPage />} />

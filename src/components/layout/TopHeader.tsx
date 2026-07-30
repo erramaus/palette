@@ -29,7 +29,10 @@ const TopHeader = () => {
     year: 'numeric',
   })
   const pageTitle =
-    pageTitles[normalizedPath] ?? (normalizedPath === '/' ? 'Dashboard' : branding.appName)
+    (normalizedPath.startsWith('/work-items/')
+      ? 'Work Item Detail'
+      : pageTitles[normalizedPath]) ??
+    (normalizedPath === '/' ? 'Dashboard' : branding.appName)
 
   return (
     <header className="top-header">

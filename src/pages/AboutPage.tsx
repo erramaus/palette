@@ -8,7 +8,7 @@ const AboutPage = () => {
         <Logo size="medium" showSubtitle showText className="about-logo" />
         <h2>{branding.appName}</h2>
         <p>
-          Atelier is production-management software built for fast, high-clarity daily
+          Palette is production-management software built for fast, high-clarity daily
           operations in the Erin Hanson Gallery workflow.
         </p>
       </div>

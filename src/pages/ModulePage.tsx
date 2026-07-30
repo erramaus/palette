@@ -9,7 +9,7 @@ const ModulePage = ({ title }: ModulePageProps) => {
     <section className="module-page">
       <Logo size="small" showText showSubtitle className="module-logo" />
       <h2>{title}</h2>
-      <p>This section is reserved for a future Atelier module.</p>
+      <p>This section is reserved for a future Palette module.</p>
     </section>
   )
 }

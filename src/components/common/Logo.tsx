@@ -16,9 +16,9 @@ const Logo = ({
   return (
     <div className={`logo-wrap logo-wrap-${size} ${className}`.trim()}>
       <img
-        src="/assets/atelier-icon.png"
-        alt="Atelier"
-        className="atelier-logo-image"
+        src="/assets/palette-icon.png"
+        alt="Palette"
+        className="palette-logo-image"
       />
       {showText ? (
         <div className="logo-text-block">
