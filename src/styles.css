@@ -1152,21 +1152,30 @@ button:focus {
 
 .bp-section-card {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .bp-checklist {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
-.bp-checklist li {
+.bp-checklist-item {
   border: 1px solid #dde5f0;
   border-radius: 8px;
   background: #fbfdff;
-  padding: 8px;
+  padding: 6px 8px;
   display: grid;
-  gap: 6px;
+  gap: 4px;
+}
+
+.bp-checklist-item .checkbox-label {
+  margin: 0;
+}
+
+.bp-checklist-audit {
+  margin: 0;
+  font-size: 0.78rem;
 }
 
 .bp-production-groups {

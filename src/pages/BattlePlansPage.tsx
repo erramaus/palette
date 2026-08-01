@@ -435,15 +435,6 @@ const BattlePlansPage = () => {
     })
   }
 
-  const updateChecklistItemNotes = (key: string, itemId: string, notes: string): void => {
-    setChecklistsByKey((current) => ({
-      ...current,
-      [key]: (current[key] ?? []).map((item) =>
-        item.id === itemId ? { ...item, notes } : item,
-      ),
-    }))
-  }
-
   const updateTaskCompletion = (
     plan: BattlePlan,
     entry: BattlePlanWorkItemEntry,
@@ -693,7 +684,7 @@ const BattlePlansPage = () => {
   ) => (
     <ul className="bp-checklist">
       {items.map((item) => (
-        <li key={item.id}>
+        <li key={item.id} className="bp-checklist-item">
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -709,19 +700,12 @@ const BattlePlansPage = () => {
             />
             {item.text}
           </label>
-          <input
-            type="text"
-            value={item.notes}
-            placeholder="Optional notes"
-            disabled={!editable}
-            onChange={(event) =>
-              updateChecklistItemNotes(key, item.id, event.target.value)
-            }
-          />
-          <p className="subtle">
-            {item.completedAt ? `Completed ${new Date(item.completedAt).toLocaleTimeString()}` : 'Not completed'}
-            {item.completedBy ? ` by ${getEmployeeName(employees, item.completedBy)}` : ''}
-          </p>
+          {item.completedAt ? (
+            <p className="subtle bp-checklist-audit">
+              Completed {new Date(item.completedAt).toLocaleTimeString()}
+              {item.completedBy ? ` by ${getEmployeeName(employees, item.completedBy)}` : ''}
+            </p>
+          ) : null}
         </li>
       ))}
     </ul>
