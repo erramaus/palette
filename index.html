@@ -2,12 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/palette-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%assets/palette-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Palette</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      ;(function (l) {
+        if (l.search[1] === '/') {
+          const decoded = l.search
+            .slice(1)
+            .split('&')
+            .map((s) => s.replace(/~and~/g, '&'))
+            .join('?')
+          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash)
+        }
+      })(window.location)
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
