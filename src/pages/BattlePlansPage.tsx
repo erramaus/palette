@@ -680,7 +680,6 @@ const BattlePlansPage = () => {
   const renderChecklist = (
     key: string,
     items: BattlePlanChecklistItem[],
-    editable: boolean,
   ) => (
     <ul className="bp-checklist">
       {items.map((item) => (
@@ -1034,7 +1033,7 @@ const BattlePlansPage = () => {
               <section className="panel bp-section-card">
                 <h4>1. Start of Day Workshop Tasks</h4>
                 <p className="subtle">Estimated section time: {startChecklist.length * 6} mins</p>
-                {renderChecklist(startChecklistKey, startChecklist, isEditMode)}
+                {renderChecklist(startChecklistKey, startChecklist)}
               </section>
 
               <section className="bp-production-groups">
@@ -1044,12 +1043,12 @@ const BattlePlansPage = () => {
               <section className="panel bp-section-card">
                 <h4>Cleaning</h4>
                 <p className="warning">These cleaning tasks are only to be done after the BP has been completed.</p>
-                {renderChecklist(cleaningChecklistKey, cleaningChecklist, isEditMode)}
+                {renderChecklist(cleaningChecklistKey, cleaningChecklist)}
               </section>
 
               <section className="panel bp-section-card">
                 <h4>End of Day Workshop Tasks</h4>
-                {renderChecklist(endChecklistKey, endChecklist, true)}
+                {renderChecklist(endChecklistKey, endChecklist)}
 
                 <div className="battle-plan-task-editor-grid">
                   <label>
