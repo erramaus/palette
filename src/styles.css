@@ -393,6 +393,79 @@ ul {
   gap: 16px;
 }
 
+.dashboard-command-center {
+  gap: 14px;
+}
+
+.dashboard-kpi-grid {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.dashboard-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.dashboard-employee-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-employee-card {
+  border: 1px solid #d8e2f0;
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  background: #fbfdff;
+}
+
+.dashboard-employee-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #304967;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.dashboard-progress-wrap {
+  width: 100%;
+}
+
+.dashboard-flow-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-flow-stage {
+  border: 1px solid #d8e2f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fbfdff;
+  display: grid;
+  gap: 2px;
+}
+
+.dashboard-flow-stage p {
+  color: #4a617f;
+  font-size: 0.85rem;
+}
+
+.dashboard-flow-arrow {
+  justify-self: center;
+  color: #4c6688;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.dashboard-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 10px;
+}
+
 .summary-card p {
   color: var(--muted);
   font-size: 0.88rem;
@@ -459,6 +532,10 @@ ul {
   border-left: 4px solid var(--warn);
   background: #fff7eb;
   padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
 }
 
 .filters {
@@ -1567,6 +1644,18 @@ a:hover {
 }
 
 @media (max-width: 1300px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .dashboard-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-quick-actions {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
   .summary-grid {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
@@ -1615,10 +1704,21 @@ a:hover {
   }
 
   .summary-grid,
+  .dashboard-kpi-grid,
   .filters,
   .form-grid,
   .task-draft-grid,
   .worker-config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-employee-meta {
+    grid-template-columns: 1fr;
+    display: grid;
+    gap: 4px;
+  }
+
+  .dashboard-quick-actions {
     grid-template-columns: 1fr;
   }
 
