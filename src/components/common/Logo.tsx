@@ -1,5 +1,6 @@
 import { branding } from '../../theme/branding'
 import paletteIcon from '../../assets/palette-icon.png'
+import { useState } from 'react'
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large'
@@ -14,12 +15,20 @@ const Logo = ({
   variant = 'dark',
   className = '',
 }: LogoProps) => {
+  const [logoSrc, setLogoSrc] = useState(paletteIcon)
+
   return (
     <div className={`logo-wrap logo-wrap-${size} logo-variant-${variant} ${className}`.trim()}>
       <img
-        src={paletteIcon}
+        src={logoSrc}
         alt="Palette"
         className="palette-logo-image"
+        onError={() => {
+          const fallback = `${import.meta.env.BASE_URL}assets/palette-icon.png`
+          if (logoSrc !== fallback) {
+            setLogoSrc(fallback)
+          }
+        }}
       />
       {showText ? (
         <div className="logo-text-block">
