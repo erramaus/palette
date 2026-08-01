@@ -1,4 +1,5 @@
 import { branding } from '../../theme/branding'
+import paletteIcon from '../../assets/palette-icon.png'
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large'
@@ -16,7 +17,7 @@ const Logo = ({
   return (
     <div className={`logo-wrap logo-wrap-${size} ${className}`.trim()}>
       <img
-        src="/assets/palette-icon.png"
+        src={paletteIcon}
         alt="Palette"
         className="palette-logo-image"
       />
