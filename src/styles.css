@@ -503,12 +503,6 @@ ul {
   color: var(--danger);
 }
 
-.worker-plan-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(320px, 1fr));
-  gap: 12px;
-}
-
 .worker-plan-header {
   display: flex;
   align-items: center;
@@ -1134,6 +1128,126 @@ button:focus {
   gap: 12px;
 }
 
+.battle-plan-erp-plan {
+  display: grid;
+  gap: 14px;
+}
+
+.bp-note-panel {
+  border: 1px solid #d8dfec;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.bp-note-panel ul {
+  margin-top: 8px;
+  margin-left: 18px;
+  list-style: decimal;
+}
+
+.bp-note-panel li {
+  margin-top: 4px;
+}
+
+.bp-section-card {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-checklist {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-checklist li {
+  border: 1px solid #dde5f0;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.bp-production-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.bp-group-card {
+  border: 1px solid #d4ddeb;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.bp-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bp-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bp-group-actions button,
+.bp-group-actions select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fff;
+}
+
+.bp-work-item-list {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-work-item {
+  border: 1px solid #d8e1ef;
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.bp-work-item-complete {
+  background: #eef8f2;
+  border-color: #b9e2c5;
+}
+
+.bp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 36, 56, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 120;
+  padding: 18px;
+}
+
+.bp-modal-card {
+  width: min(1020px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+}
+
+.bp-multiselect-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 6px;
+}
+
 .battle-plan-focus-header {
   display: flex;
   justify-content: space-between;
@@ -1229,7 +1343,7 @@ button:focus {
 
 .director-sections {
   display: grid;
-  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
@@ -1285,8 +1399,7 @@ a:hover {
 
   .form-grid,
   .task-draft-grid,
-  .worker-config-grid,
-  .worker-plan-grid {
+  .worker-config-grid {
     grid-template-columns: repeat(2, minmax(170px, 1fr));
   }
 }
@@ -1323,8 +1436,7 @@ a:hover {
   .filters,
   .form-grid,
   .task-draft-grid,
-  .worker-config-grid,
-  .worker-plan-grid {
+  .worker-config-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1347,6 +1459,14 @@ a:hover {
 
   .director-sections,
   .battle-plan-task-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bp-work-item {
+    grid-template-columns: 1fr;
+  }
+
+  .bp-multiselect-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1388,5 +1508,21 @@ a:hover {
 
   .battle-plan-task-actions {
     grid-template-columns: 1fr;
+  }
+
+  .bp-group-actions {
+    width: 100%;
+  }
+}
+
+@media print {
+  .bp-header-actions,
+  .button-row,
+  .bp-tab-row,
+  .bp-mobile-tab-select,
+  .bp-modal-backdrop,
+  .bp-group-actions button,
+  .bp-group-actions select {
+    display: none !important;
   }
 }

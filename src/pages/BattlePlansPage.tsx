@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
-import type { BattlePlan, BattlePlanStatus, BattlePlanTask } from '../types/battlePlans'
+import type { BattlePlan, BattlePlanTask } from '../types/battlePlans'
 import type { Employee } from '../types/employees'
 import type { ProductionStepName } from '../types/production'
+import type {
+  AddTaskGroupDraft,
+  BattlePlanChecklistItem,
+  BattlePlanEndOfDayReport,
+  BattlePlanTaskGroup,
+  BattlePlanTaskGroupType,
+  BattlePlanWorkItemEntry,
+} from '../types/battlePlanWorkflow'
 import {
   canApprovePlan,
   generateDailyBattlePlans,
@@ -11,6 +20,21 @@ import {
   type GenerationSummary,
   type UnassignedTask,
 } from '../services/battlePlanGenerator'
+import {
+  applyGroupOrderToTasks,
+  BP_PRIORITY_ORDER,
+  BP_STANDING_NOTE,
+  buildReviewTaskText,
+  createDefaultEndOfDayReport,
+  DEFAULT_CLEANING_TASKS,
+  DEFAULT_END_OF_DAY_TASKS,
+  DEFAULT_START_OF_DAY_TASKS,
+  GROUP_LABELS,
+  makeChecklistItems,
+  summarizeIncompleteItems,
+  toWorkflowGroups,
+  withGroupMeta,
+} from '../services/battlePlanWorkflowService'
 import {
   calculateCompletedMinutes,
   calculatePlannedMinutes,
@@ -24,30 +48,18 @@ interface WorkerConfigState {
   availableMinutes: number
 }
 
-interface TaskEditorDraft {
-  productionJobId: string
-  productionStep: ProductionStepName
-  description: string
-  estimatedMinutes: number
-  notes: string
-  assignedWorkerId: string
-  carryForward: boolean
-  locked: boolean
-}
-
-interface TaskEditorState {
-  mode: 'add' | 'edit'
-  planId: string
-  taskId?: string
-}
-
 interface PlanTab {
   id: string
-  workerId: string
-  kind: 'DIRECTOR' | 'WORKER'
+  employeeId: string
   label: string
   roleLabel: string
+  kind: 'DIRECTOR' | 'WORKER'
   hasPlan: boolean
+}
+
+interface CompletionAudit {
+  completedAt?: string
+  completedBy?: string
 }
 
 const formatLocalDate = (date: Date): string =>
@@ -59,17 +71,17 @@ const createTaskId = (): string =>
 const createPlanId = (): string =>
   `BP-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 
+const roleLabel: Record<Employee['role'], string> = {
+  PRODUCTION_DIRECTOR: 'Production Director',
+  WORKER: 'Worker',
+  ADMIN: 'Admin',
+}
+
 const reasonLabels: Record<BacklogReason, string> = {
   NO_QUALIFIED_WORKER: 'No qualified worker',
   INSUFFICIENT_CAPACITY: 'Not enough available worker minutes',
   MISSING_PREREQUISITE: 'Missing prerequisite',
   JOB_ON_HOLD: 'Job on hold',
-}
-
-const roleLabel: Record<Employee['role'], string> = {
-  PRODUCTION_DIRECTOR: 'Production Director',
-  WORKER: 'Worker',
-  ADMIN: 'Admin',
 }
 
 const getEmployeeName = (employees: Employee[], employeeId: string): string =>
@@ -78,21 +90,10 @@ const getEmployeeName = (employees: Employee[], employeeId: string): string =>
 const applyOrder = (tasks: BattlePlanTask[]): BattlePlanTask[] =>
   tasks.map((task, index) => ({ ...task, sortOrder: index + 1 }))
 
-const buildDefaultTaskDraft = (
-  productionJobId: string,
-  assignedWorkerId: string,
-): TaskEditorDraft => ({
-  productionJobId,
-  productionStep: 'FILES',
-  description: '',
-  estimatedMinutes: 45,
-  notes: '',
-  assignedWorkerId,
-  carryForward: false,
-  locked: false,
-})
+const formatStatus = (value: string): string => value.replace('_', ' ')
 
 const BattlePlansPage = () => {
+  const navigate = useNavigate()
   const {
     employees,
     productionJobs,
@@ -100,6 +101,8 @@ const BattlePlansPage = () => {
     createBattlePlan,
     replaceBattlePlansForDate,
     saveBattlePlan,
+    updateProductionStep,
+    addActivityLog,
   } = useAppState()
 
   const today = formatLocalDate(new Date())
@@ -107,6 +110,7 @@ const BattlePlansPage = () => {
   const workers = employees.filter((employee) => employee.role === 'WORKER' && employee.active)
 
   const [generationDate, setGenerationDate] = useState(today)
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [workerConfigs, setWorkerConfigs] = useState<WorkerConfigState[]>(
     workers.map((worker) => ({
       workerId: worker.id,
@@ -114,20 +118,33 @@ const BattlePlansPage = () => {
       availableMinutes: worker.defaultAvailableMinutes,
     })),
   )
-  const [unassignedBacklog, setUnassignedBacklog] = useState<UnassignedTask[]>([])
-  const [generationSummary, setGenerationSummary] = useState<GenerationSummary | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
-  const [selectedTabId, setSelectedTabId] = useState<string>('')
+  const [generationSummary, setGenerationSummary] = useState<GenerationSummary | null>(null)
+  const [unassignedBacklog, setUnassignedBacklog] = useState<UnassignedTask[]>([])
   const [editModeByPlan, setEditModeByPlan] = useState<Record<string, boolean>>({})
-  const [taskEditor, setTaskEditor] = useState<TaskEditorState | null>(null)
-  const [taskEditorDrafts, setTaskEditorDrafts] = useState<Record<string, TaskEditorDraft>>({})
-  const [reassignSelections, setReassignSelections] = useState<Record<string, string>>({})
+  const [completionAudits, setCompletionAudits] = useState<Record<string, CompletionAudit>>({})
+  const [checklistsByKey, setChecklistsByKey] = useState<Record<string, BattlePlanChecklistItem[]>>({})
+  const [arrivalTimesByPlan, setArrivalTimesByPlan] = useState<Record<string, string>>({})
+  const [departureTimesByPlan, setDepartureTimesByPlan] = useState<Record<string, string>>({})
+  const [endOfDayReportsByPlan, setEndOfDayReportsByPlan] = useState<Record<string, BattlePlanEndOfDayReport>>({})
+  const [selectedGroupWorkers, setSelectedGroupWorkers] = useState<Record<string, string>>({})
+
+  const [showAddGroupModal, setShowAddGroupModal] = useState(false)
+  const [addGroupDraft, setAddGroupDraft] = useState<AddTaskGroupDraft>({
+    groupType: 'FRAMES_TO_MAKE',
+    customGroupName: '',
+    assignedEmployeeId: workers[0]?.id ?? '',
+    estimatedMinutes: 60,
+    groupNotes: '',
+    workItemIds: [],
+    productionStep: 'FRAME_MADE',
+    sequencePosition: 1,
+  })
 
   useEffect(() => {
     setWorkerConfigs((currentConfigs) =>
       workers.map((worker) => {
-        const current = currentConfigs.find((config) => config.workerId === worker.id)
-
+        const current = currentConfigs.find((candidate) => candidate.workerId === worker.id)
         return {
           workerId: worker.id,
           selected: current?.selected ?? true,
@@ -145,10 +162,7 @@ const BattlePlansPage = () => {
   const workerPlans = useMemo(
     () =>
       plansForDate
-        .filter((plan) => {
-          const employee = employees.find((candidate) => candidate.id === plan.assignedWorkerId)
-          return employee?.role === 'WORKER'
-        })
+        .filter((plan) => employees.find((employee) => employee.id === plan.assignedWorkerId)?.role === 'WORKER')
         .sort((a, b) =>
           getEmployeeName(employees, a.assignedWorkerId).localeCompare(
             getEmployeeName(employees, b.assignedWorkerId),
@@ -162,101 +176,124 @@ const BattlePlansPage = () => {
     [plansForDate, director],
   )
 
-  const workerTabs = useMemo(() => {
-    const knownWorkers = new Set(workers.map((worker) => worker.id))
-
-    for (const plan of workerPlans) {
-      knownWorkers.add(plan.assignedWorkerId)
-    }
-
-    return [...knownWorkers]
-      .map((workerId) => {
-        const employee = employees.find((candidate) => candidate.id === workerId)
-        const plan = workerPlans.find((candidate) => candidate.assignedWorkerId === workerId)
-
-        return {
-          id: `worker:${workerId}`,
-          workerId,
-          kind: 'WORKER' as const,
-          label: employee?.name ?? workerId,
-          roleLabel: employee?.role ? roleLabel[employee.role] : 'Worker',
-          hasPlan: Boolean(plan),
-        }
-      })
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }, [workers, workerPlans, employees])
-
   const tabs = useMemo(() => {
-    const nextTabs: PlanTab[] = []
+    const result: PlanTab[] = []
 
     if (director) {
-      nextTabs.push({
+      result.push({
         id: `director:${director.id}`,
-        workerId: director.id,
-        kind: 'DIRECTOR',
+        employeeId: director.id,
         label: 'Production Director',
         roleLabel: roleLabel[director.role],
+        kind: 'DIRECTOR',
         hasPlan: Boolean(directorPlan),
       })
     }
 
-    return [...nextTabs, ...workerTabs]
-  }, [director, directorPlan, workerTabs])
+    const workerIds = new Set(workers.map((worker) => worker.id))
+    for (const plan of workerPlans) {
+      workerIds.add(plan.assignedWorkerId)
+    }
+
+    const workerTabs = [...workerIds]
+      .map((workerId) => {
+        const employee = employees.find((candidate) => candidate.id === workerId)
+        const hasPlan = workerPlans.some((plan) => plan.assignedWorkerId === workerId)
+        return {
+          id: `worker:${workerId}`,
+          employeeId: workerId,
+          label: employee?.name ?? workerId,
+          roleLabel: employee ? roleLabel[employee.role] : 'Worker',
+          kind: 'WORKER' as const,
+          hasPlan,
+        }
+      })
+      .sort((a, b) => a.label.localeCompare(b.label))
+
+    return [...result, ...workerTabs]
+  }, [director, directorPlan, workers, workerPlans, employees])
 
   useEffect(() => {
     if (tabs.length === 0) {
-      setSelectedTabId('')
+      setSelectedEmployeeId('')
       return
     }
 
-    if (tabs.some((tab) => tab.id === selectedTabId)) {
+    if (tabs.some((tab) => tab.employeeId === selectedEmployeeId)) {
       return
     }
 
-    const defaultTab = tabs.find((tab) => tab.kind === 'DIRECTOR') ?? tabs[0]
-    setSelectedTabId(defaultTab.id)
-  }, [tabs, selectedTabId])
+    const preferred = tabs.find((tab) => tab.kind === 'DIRECTOR') ?? tabs[0]
+    setSelectedEmployeeId(preferred.employeeId)
+  }, [tabs, selectedEmployeeId])
 
-  const selectedTab = tabs.find((tab) => tab.id === selectedTabId) ?? null
-  const selectedPlan = selectedTab
-    ? plansForDate.find((plan) => plan.assignedWorkerId === selectedTab.workerId)
+  const selectedTab = tabs.find((tab) => tab.employeeId === selectedEmployeeId)
+  const selectedPlan = selectedEmployeeId
+    ? plansForDate.find((plan) => plan.assignedWorkerId === selectedEmployeeId)
     : undefined
 
-  const orderedTasks = selectedPlan
-    ? [...selectedPlan.tasks].sort((a, b) => a.sortOrder - b.sortOrder)
-    : []
+  const selectedEmployee = selectedEmployeeId
+    ? employees.find((employee) => employee.id === selectedEmployeeId)
+    : undefined
 
-  const plannedMinutes = selectedPlan ? calculatePlannedMinutes(orderedTasks) : 0
-  const completedMinutes = selectedPlan ? calculateCompletedMinutes(orderedTasks) : 0
+  const selectedGroups = selectedPlan ? toWorkflowGroups(selectedPlan, productionJobs) : []
+  const plannedMinutes = selectedPlan ? calculatePlannedMinutes(selectedPlan.tasks) : 0
+  const completedMinutes = selectedPlan ? calculateCompletedMinutes(selectedPlan.tasks) : 0
   const remainingMinutes = selectedPlan
-    ? calculateRemainingMinutes(selectedPlan.availableMinutes, orderedTasks)
+    ? calculateRemainingMinutes(selectedPlan.availableMinutes, selectedPlan.tasks)
     : 0
 
-  const completedTasksCount = orderedTasks.filter((task) => task.completed).length
-  const remainingTasksCount = Math.max(orderedTasks.length - completedTasksCount, 0)
-  const carryForwardCount = orderedTasks.filter((task) => task.carryForward).length
-  const capacityUsedPercent =
+  const capacityUsed =
     selectedPlan && selectedPlan.availableMinutes > 0
       ? Math.round((plannedMinutes / selectedPlan.availableMinutes) * 100)
       : 0
 
-  const isEditMode = selectedPlan ? Boolean(editModeByPlan[selectedPlan.id]) : false
+  const carryForwardCount = selectedPlan
+    ? selectedPlan.tasks.filter((task) => task.carryForward).length
+    : 0
 
-  const updateWorkerConfig = (
-    workerId: string,
-    updates: Partial<WorkerConfigState>,
-  ): void => {
-    setWorkerConfigs((currentConfigs) =>
-      currentConfigs.map((config) =>
-        config.workerId === workerId ? { ...config, ...updates } : config,
-      ),
-    )
-  }
+  const startChecklistKey = selectedPlan ? `${selectedPlan.id}:start` : ''
+  const cleaningChecklistKey = selectedPlan ? `${selectedPlan.id}:cleaning` : ''
+  const endChecklistKey = selectedPlan ? `${selectedPlan.id}:end` : ''
+
+  useEffect(() => {
+    if (!selectedPlan) {
+      return
+    }
+
+    setChecklistsByKey((current) => ({
+      ...current,
+      [startChecklistKey]: current[startChecklistKey] ?? makeChecklistItems(DEFAULT_START_OF_DAY_TASKS, selectedPlan.id, 'START'),
+      [cleaningChecklistKey]: current[cleaningChecklistKey] ?? makeChecklistItems(DEFAULT_CLEANING_TASKS, selectedPlan.id, 'CLEAN'),
+      [endChecklistKey]: current[endChecklistKey] ?? makeChecklistItems(DEFAULT_END_OF_DAY_TASKS, selectedPlan.id, 'END'),
+    }))
+
+    setEndOfDayReportsByPlan((current) => ({
+      ...current,
+      [selectedPlan.id]: current[selectedPlan.id] ?? createDefaultEndOfDayReport(),
+    }))
+
+    setArrivalTimesByPlan((current) => ({
+      ...current,
+      [selectedPlan.id]: current[selectedPlan.id] ?? '',
+    }))
+
+    setDepartureTimesByPlan((current) => ({
+      ...current,
+      [selectedPlan.id]: current[selectedPlan.id] ?? '',
+    }))
+  }, [selectedPlan, startChecklistKey, cleaningChecklistKey, endChecklistKey])
+
+  const startChecklist = selectedPlan ? checklistsByKey[startChecklistKey] ?? [] : []
+  const cleaningChecklist = selectedPlan ? checklistsByKey[cleaningChecklistKey] ?? [] : []
+  const endChecklist = selectedPlan ? checklistsByKey[endChecklistKey] ?? [] : []
+
+  const isEditMode = selectedPlan ? Boolean(editModeByPlan[selectedPlan.id]) : false
 
   const createManualPlan = (workerId: string): BattlePlan => {
     const employee = employees.find((candidate) => candidate.id === workerId)
 
-    const nextPlan: BattlePlan = {
+    const plan: BattlePlan = {
       id: createPlanId(),
       date: generationDate,
       assignedWorkerId: workerId,
@@ -269,17 +306,31 @@ const BattlePlansPage = () => {
       endOfDayNotes: '',
     }
 
-    createBattlePlan(nextPlan)
-    return nextPlan
+    createBattlePlan(plan)
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: plan.id,
+      action: 'CREATED',
+      actorEmployeeId: director?.id,
+      metadata: { workerId },
+    })
+
+    return plan
   }
 
-  const getOrCreatePlanForWorker = (workerId: string): BattlePlan => {
+  const getOrCreatePlan = (workerId: string): BattlePlan => {
     const existing = plansForDate.find((plan) => plan.assignedWorkerId === workerId)
-    if (existing) {
-      return existing
-    }
+    return existing ?? createManualPlan(workerId)
+  }
 
-    return createManualPlan(workerId)
+  const saveUpdatedPlan = (plan: BattlePlan, tasks: BattlePlanTask[]): void => {
+    saveBattlePlan({ ...plan, tasks: applyOrder(tasks) })
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: plan.id,
+      action: 'UPDATED',
+      actorEmployeeId: director?.id,
+    })
   }
 
   const generatePlans = (isRegenerate: boolean): void => {
@@ -296,7 +347,6 @@ const BattlePlansPage = () => {
       const shouldContinue = window.confirm(
         'This will replace unlocked incomplete tasks in unapproved generated plans. Continue?',
       )
-
       if (!shouldContinue) {
         return
       }
@@ -322,39 +372,13 @@ const BattlePlansPage = () => {
     setGenerationSummary(finalResult.summary)
     setWarnings(finalResult.summary.warnings)
     setUnassignedBacklog(finalResult.unassignedBacklog)
-  }
-
-  const saveUpdatedPlan = (plan: BattlePlan, tasks: BattlePlanTask[]): void => {
-    saveBattlePlan({ ...plan, tasks: applyOrder(tasks) })
-  }
-
-  const moveTask = (plan: BattlePlan, index: number, direction: -1 | 1): void => {
-    const sorted = [...plan.tasks].sort((a, b) => a.sortOrder - b.sortOrder)
-    const nextIndex = index + direction
-    if (nextIndex < 0 || nextIndex >= sorted.length) {
-      return
-    }
-
-    const reordered = [...sorted]
-    const [task] = reordered.splice(index, 1)
-    reordered.splice(nextIndex, 0, task)
-    saveUpdatedPlan(plan, reordered)
-  }
-
-  const removeTask = (plan: BattlePlan, taskId: string): void => {
-    const tasks = plan.tasks.filter((task) => task.id !== taskId)
-    saveUpdatedPlan(plan, tasks)
-  }
-
-  const toggleTask = (
-    plan: BattlePlan,
-    taskId: string,
-    updates: Partial<BattlePlanTask>,
-  ): void => {
-    const tasks = plan.tasks.map((task) =>
-      task.id === taskId ? { ...task, ...updates } : task,
-    )
-    saveUpdatedPlan(plan, tasks)
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: generationDate,
+      action: 'UPDATED',
+      actorEmployeeId: director.id,
+      metadata: { regenerate: isRegenerate },
+    })
   }
 
   const approvePlan = (plan: BattlePlan): void => {
@@ -363,337 +387,491 @@ const BattlePlansPage = () => {
     }
 
     saveBattlePlan({ ...plan, status: 'APPROVED' })
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: plan.id,
+      action: 'STATUS_CHANGED',
+      actorEmployeeId: director?.id,
+      metadata: { status: 'APPROVED' },
+    })
   }
 
   const completePlan = (plan: BattlePlan): void => {
-    if (plan.status === 'COMPLETED') {
-      return
-    }
-
-    const hasIncompleteTasks = plan.tasks.some((task) => !task.completed)
-    if (hasIncompleteTasks) {
+    if (plan.tasks.some((task) => !task.completed)) {
       return
     }
 
     saveBattlePlan({ ...plan, status: 'COMPLETED' })
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: plan.id,
+      action: 'STATUS_CHANGED',
+      actorEmployeeId: director?.id,
+      metadata: { status: 'COMPLETED' },
+    })
   }
 
-  const setPlanEditMode = (planId: string, nextEditMode: boolean): void => {
-    setEditModeByPlan((current) => ({
-      ...current,
-      [planId]: nextEditMode,
-    }))
-  }
-
-  const reassignTask = (
-    fromPlan: BattlePlan,
-    taskId: string,
-    toWorkerId: string,
+  const toggleChecklistItem = (
+    key: string,
+    itemId: string,
+    checked: boolean,
+    actorEmployeeId?: string,
   ): void => {
-    if (toWorkerId === fromPlan.assignedWorkerId) {
-      return
-    }
-
-    const sourceTasks = [...fromPlan.tasks].sort((a, b) => a.sortOrder - b.sortOrder)
-    const task = sourceTasks.find((candidate) => candidate.id === taskId)
-    if (!task) {
-      return
-    }
-
-    const destinationPlan = getOrCreatePlanForWorker(toWorkerId)
-    const updatedSource = sourceTasks.filter((candidate) => candidate.id !== taskId)
-    const updatedDestination = [
-      ...destinationPlan.tasks.sort((a, b) => a.sortOrder - b.sortOrder),
-      { ...task, id: createTaskId(), locked: false },
-    ]
-
-    saveUpdatedPlan(fromPlan, updatedSource)
-    saveUpdatedPlan(destinationPlan, updatedDestination)
-    setReassignSelections((current) => ({ ...current, [taskId]: toWorkerId }))
-  }
-
-  const openAddTaskEditor = (plan: BattlePlan): void => {
-    const existingDraft = taskEditorDrafts[plan.id]
-    const fallbackJobId = productionJobs[0]?.id ?? ''
-
-    setTaskEditorDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [plan.id]:
-        existingDraft ?? buildDefaultTaskDraft(fallbackJobId, plan.assignedWorkerId),
-    }))
-
-    setTaskEditor({ mode: 'add', planId: plan.id })
-  }
-
-  const openEditTaskEditor = (plan: BattlePlan, task: BattlePlanTask): void => {
-    setTaskEditorDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [plan.id]: {
-        productionJobId: task.productionJobId,
-        productionStep: task.productionStep,
-        description: task.description,
-        estimatedMinutes: task.estimatedMinutes,
-        notes: task.notes,
-        assignedWorkerId: plan.assignedWorkerId,
-        carryForward: task.carryForward,
-        locked: task.locked,
-      },
-    }))
-
-    setTaskEditor({ mode: 'edit', planId: plan.id, taskId: task.id })
-  }
-
-  const updateTaskEditorDraft = (
-    planId: string,
-    updates: Partial<TaskEditorDraft>,
-  ): void => {
-    setTaskEditorDrafts((currentDrafts) => {
-      const fallbackJobId = productionJobs[0]?.id ?? ''
-      const selectedWorker = selectedTab?.workerId ?? workers[0]?.id ?? ''
-      const baseDraft =
-        currentDrafts[planId] ?? buildDefaultTaskDraft(fallbackJobId, selectedWorker)
-
+    setChecklistsByKey((current) => {
+      const list = current[key] ?? []
       return {
-        ...currentDrafts,
-        [planId]: {
-          ...baseDraft,
-          ...updates,
-        },
+        ...current,
+        [key]: list.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                checked,
+                completedAt: checked ? new Date().toISOString() : undefined,
+                completedBy: checked ? actorEmployeeId : undefined,
+              }
+            : item,
+        ),
       }
     })
   }
 
-  const saveTaskEditor = (): void => {
-    if (!taskEditor) {
-      return
-    }
-
-    const draft = taskEditorDrafts[taskEditor.planId]
-    if (!draft || !draft.productionJobId || !draft.assignedWorkerId) {
-      return
-    }
-
-    const sourcePlan = plansForDate.find((plan) => plan.id === taskEditor.planId)
-    if (!sourcePlan) {
-      return
-    }
-
-    const job = productionJobs.find((candidate) => candidate.id === draft.productionJobId)
-    if (!job || draft.estimatedMinutes <= 0) {
-      return
-    }
-
-    const description = draft.description.trim()
-      ? draft.description.trim()
-      : `${job.orderNumber} | ${job.artworkTitle} | ${PRODUCTION_STEP_LABELS[draft.productionStep]}`
-
-    if (taskEditor.mode === 'add') {
-      const targetPlan = getOrCreatePlanForWorker(draft.assignedWorkerId)
-
-      const nextTask: BattlePlanTask = {
-        id: createTaskId(),
-        productionJobId: draft.productionJobId,
-        productionStep: draft.productionStep,
-        description,
-        estimatedMinutes: draft.estimatedMinutes,
-        completed: false,
-        sortOrder: targetPlan.tasks.length + 1,
-        notes: draft.notes,
-        carryForward: draft.carryForward,
-        locked: draft.locked,
-      }
-
-      saveUpdatedPlan(targetPlan, [
-        ...targetPlan.tasks.sort((a, b) => a.sortOrder - b.sortOrder),
-        nextTask,
-      ])
-      setTaskEditor(null)
-      return
-    }
-
-    const taskToEdit = sourcePlan.tasks.find((task) => task.id === taskEditor.taskId)
-    if (!taskToEdit) {
-      return
-    }
-
-    const updatedTask: BattlePlanTask = {
-      ...taskToEdit,
-      productionJobId: draft.productionJobId,
-      productionStep: draft.productionStep,
-      description,
-      estimatedMinutes: draft.estimatedMinutes,
-      notes: draft.notes,
-      carryForward: draft.carryForward,
-      locked: draft.locked,
-    }
-
-    if (draft.assignedWorkerId === sourcePlan.assignedWorkerId) {
-      saveUpdatedPlan(
-        sourcePlan,
-        sourcePlan.tasks.map((task) =>
-          task.id === updatedTask.id ? updatedTask : task,
-        ),
-      )
-      setTaskEditor(null)
-      return
-    }
-
-    const destinationPlan = getOrCreatePlanForWorker(draft.assignedWorkerId)
-    const sourceTasks = sourcePlan.tasks.filter((task) => task.id !== updatedTask.id)
-    const destinationTasks = [
-      ...destinationPlan.tasks.sort((a, b) => a.sortOrder - b.sortOrder),
-      { ...updatedTask, id: createTaskId() },
-    ]
-
-    saveUpdatedPlan(sourcePlan, sourceTasks)
-    saveUpdatedPlan(destinationPlan, destinationTasks)
-    setTaskEditor(null)
+  const updateChecklistItemNotes = (key: string, itemId: string, notes: string): void => {
+    setChecklistsByKey((current) => ({
+      ...current,
+      [key]: (current[key] ?? []).map((item) =>
+        item.id === itemId ? { ...item, notes } : item,
+      ),
+    }))
   }
 
-  const selectedEmployee = selectedTab
-    ? employees.find((employee) => employee.id === selectedTab.workerId)
-    : undefined
+  const updateTaskCompletion = (
+    plan: BattlePlan,
+    entry: BattlePlanWorkItemEntry,
+    completed: boolean,
+  ): void => {
+    const tasks = plan.tasks.map((task) =>
+      task.id === entry.taskId ? { ...task, completed } : task,
+    )
 
-  const reviewWorkerPlanRows = workerPlans.map((plan) => {
-    const tasks = [...plan.tasks].sort((a, b) => a.sortOrder - b.sortOrder)
+    saveUpdatedPlan(plan, tasks)
 
-    return {
-      workerName: getEmployeeName(employees, plan.assignedWorkerId),
-      planned: calculatePlannedMinutes(tasks),
-      remaining: calculateRemainingMinutes(plan.availableMinutes, tasks),
-      status: plan.status,
+    if (completed) {
+      const employeeId = selectedEmployee?.id
+      setCompletionAudits((current) => ({
+        ...current,
+        [entry.taskId]: {
+          completedAt: new Date().toISOString(),
+          completedBy: employeeId,
+        },
+      }))
+
+      const job = productionJobs.find((candidate) => candidate.id === entry.workItemId)
+      if (job && job.steps[entry.productionStep] !== 'COMPLETE') {
+        updateProductionStep(job.id, entry.productionStep)
+      }
+
+      addActivityLog({
+        entityType: 'ProductionStep',
+        entityId: `${entry.workItemId}:${entry.productionStep}`,
+        action: 'STEP_COMPLETED',
+        actorEmployeeId: employeeId,
+        metadata: { planId: plan.id },
+      })
     }
-  })
+  }
 
-  const overdueJobs = productionJobs.filter((job) => job.dueStatus === 'OVERDUE')
-  const atRiskJobs = productionJobs.filter((job) => job.dueStatus === 'AT_RISK')
-  const carryForwardTasks = workerPlans.flatMap((plan) =>
-    plan.tasks
-      .filter((task) => task.carryForward)
-      .map((task) => ({
-        ...task,
-        workerName: getEmployeeName(employees, plan.assignedWorkerId),
-      })),
+  const canCompleteGroup = (group: BattlePlanTaskGroup): boolean => {
+    const previousGroups = selectedGroups.filter((item) => item.sequence < group.sequence)
+    return previousGroups.every((item) => item.status === 'COMPLETE')
+  }
+
+  const completeGroup = (plan: BattlePlan, group: BattlePlanTaskGroup): void => {
+    const allow = canCompleteGroup(group)
+    let overridden = false
+
+    if (!allow) {
+      const continueWithOverride = window.confirm(
+        'Earlier groups are not complete. Override and continue?',
+      )
+      if (!continueWithOverride) {
+        return
+      }
+      overridden = true
+    }
+
+    let tasks = [...plan.tasks]
+
+    for (const item of group.workItems) {
+      if (!item.completed) {
+        tasks = tasks.map((task) =>
+          task.id === item.taskId ? { ...task, completed: true } : task,
+        )
+      }
+    }
+
+    saveUpdatedPlan(plan, tasks)
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: plan.id,
+      action: 'STATUS_CHANGED',
+      actorEmployeeId: director?.id,
+      metadata: {
+        groupId: group.id,
+        overridden,
+      },
+    })
+  }
+
+  const moveGroup = (plan: BattlePlan, groupId: string, direction: -1 | 1): void => {
+    const currentGroups = toWorkflowGroups(plan, productionJobs)
+    const index = currentGroups.findIndex((group) => group.id === groupId)
+    if (index < 0) {
+      return
+    }
+
+    const nextIndex = index + direction
+    if (nextIndex < 0 || nextIndex >= currentGroups.length) {
+      return
+    }
+
+    const reordered = [...currentGroups]
+    const [group] = reordered.splice(index, 1)
+    reordered.splice(nextIndex, 0, group)
+
+    const tasks = applyGroupOrderToTasks(plan, reordered)
+    saveUpdatedPlan(plan, tasks)
+  }
+
+  const removeGroup = (plan: BattlePlan, groupId: string): void => {
+    const currentGroups = toWorkflowGroups(plan, productionJobs)
+    const group = currentGroups.find((item) => item.id === groupId)
+    if (!group) {
+      return
+    }
+
+    const taskIds = new Set(group.workItems.map((item) => item.taskId))
+    const tasks = plan.tasks.filter((task) => !taskIds.has(task.id))
+    saveUpdatedPlan(plan, tasks)
+  }
+
+  const reassignGroup = (plan: BattlePlan, groupId: string, workerId: string): void => {
+    if (!workerId || workerId === plan.assignedWorkerId) {
+      return
+    }
+
+    const currentGroups = toWorkflowGroups(plan, productionJobs)
+    const group = currentGroups.find((item) => item.id === groupId)
+    if (!group) {
+      return
+    }
+
+    const destination = getOrCreatePlan(workerId)
+    const taskIds = new Set(group.workItems.map((item) => item.taskId))
+    const sourceTasks = plan.tasks.filter((task) => !taskIds.has(task.id))
+
+    const movedTasks = group.workItems.map((item) => {
+      const source = plan.tasks.find((task) => task.id === item.taskId)
+      if (!source) {
+        return null
+      }
+
+      return {
+        ...source,
+        id: createTaskId(),
+        locked: false,
+      }
+    }).filter((task): task is BattlePlanTask => task !== null)
+
+    saveUpdatedPlan(plan, sourceTasks)
+    saveUpdatedPlan(destination, [...destination.tasks, ...movedTasks])
+    setSelectedGroupWorkers((current) => ({ ...current, [groupId]: workerId }))
+  }
+
+  const submitEndOfDay = (plan: BattlePlan): void => {
+    const report = endOfDayReportsByPlan[plan.id] ?? createDefaultEndOfDayReport()
+    const incompleteItems = summarizeIncompleteItems(toWorkflowGroups(plan, productionJobs))
+
+    saveBattlePlan({
+      ...plan,
+      endOfDayNotes: [
+        report.notes,
+        `Incomplete reason: ${report.incompleteReason}`,
+        `Carry forward: ${report.carryForward ? 'Yes' : 'No'}`,
+        `Report sent: ${report.reportSent ? 'Yes' : 'No'}`,
+        `Departure time: ${report.departureTime || 'n/a'}`,
+        `Incomplete items: ${incompleteItems.join(' | ') || 'None'}`,
+      ].join('\n'),
+    })
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: plan.id,
+      action: 'UPDATED',
+      actorEmployeeId: selectedEmployee?.id,
+      metadata: {
+        reportSubmitted: true,
+        carryForward: report.carryForward,
+      },
+    })
+  }
+
+  const openAddGroupModal = (): void => {
+    if (!selectedPlan) {
+      return
+    }
+
+    setAddGroupDraft((current) => ({
+      ...current,
+      assignedEmployeeId: selectedPlan.assignedWorkerId,
+      sequencePosition: selectedGroups.length + 1,
+      workItemIds: [],
+    }))
+    setShowAddGroupModal(true)
+  }
+
+  const saveAddGroup = (): void => {
+    if (!selectedPlan || addGroupDraft.workItemIds.length === 0) {
+      return
+    }
+
+    const assignedWorkerId = addGroupDraft.assignedEmployeeId || selectedPlan.assignedWorkerId
+    const plan = getOrCreatePlan(assignedWorkerId)
+    const groupType = addGroupDraft.groupType
+    const groupName =
+      groupType === 'CUSTOM' && addGroupDraft.customGroupName.trim().length > 0
+        ? addGroupDraft.customGroupName.trim()
+        : GROUP_LABELS[groupType]
+    const groupId = `group-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+    const nextTasks: BattlePlanTask[] = addGroupDraft.workItemIds.map((jobId, index) => {
+      const job = productionJobs.find((candidate) => candidate.id === jobId)
+      const description =
+        job
+          ? `${job.orderNumber} | ${job.artworkTitle} | ${groupName}`
+          : `Work Item ${jobId} | ${groupName}`
+
+      return {
+        id: createTaskId(),
+        productionJobId: jobId,
+        productionStep: addGroupDraft.productionStep,
+        description,
+        estimatedMinutes: Math.max(1, Math.floor(addGroupDraft.estimatedMinutes / addGroupDraft.workItemIds.length)),
+        completed: false,
+        sortOrder: plan.tasks.length + index + 1,
+        notes: withGroupMeta(addGroupDraft.groupNotes, groupId, groupType, groupName),
+        carryForward: false,
+        locked: false,
+      }
+    })
+
+    const merged = [...plan.tasks, ...nextTasks]
+    const updatedPlan = { ...plan, tasks: applyOrder(merged) }
+
+    const grouped = toWorkflowGroups(updatedPlan, productionJobs)
+    const sourceIndex = grouped.findIndex((group) => group.id === groupId)
+    const targetIndex = Math.min(
+      Math.max(addGroupDraft.sequencePosition - 1, 0),
+      grouped.length - 1,
+    )
+
+    if (sourceIndex >= 0 && sourceIndex !== targetIndex) {
+      const reordered = [...grouped]
+      const [inserted] = reordered.splice(sourceIndex, 1)
+      reordered.splice(targetIndex, 0, inserted)
+      saveUpdatedPlan(plan, applyGroupOrderToTasks(updatedPlan, reordered))
+    } else {
+      saveUpdatedPlan(plan, merged)
+    }
+
+    setShowAddGroupModal(false)
+  }
+
+  const renderChecklist = (
+    key: string,
+    items: BattlePlanChecklistItem[],
+    editable: boolean,
+  ) => (
+    <ul className="bp-checklist">
+      {items.map((item) => (
+        <li key={item.id}>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={item.checked}
+              onChange={(event) =>
+                toggleChecklistItem(
+                  key,
+                  item.id,
+                  event.target.checked,
+                  selectedEmployee?.id,
+                )
+              }
+            />
+            {item.text}
+          </label>
+          <input
+            type="text"
+            value={item.notes}
+            placeholder="Optional notes"
+            disabled={!editable}
+            onChange={(event) =>
+              updateChecklistItemNotes(key, item.id, event.target.value)
+            }
+          />
+          <p className="subtle">
+            {item.completedAt ? `Completed ${new Date(item.completedAt).toLocaleTimeString()}` : 'Not completed'}
+            {item.completedBy ? ` by ${getEmployeeName(employees, item.completedBy)}` : ''}
+          </p>
+        </li>
+      ))}
+    </ul>
   )
 
-  const actionHint = selectedPlan
-    ? !isEditMode
-      ? 'Enable edit mode to change tasks.'
-      : selectedPlan.status === 'COMPLETED'
-        ? 'Completed plans are read-only.'
-        : 'Editing enabled for this plan.'
-    : 'Create a plan for this worker and date.'
+  const renderGroup = (group: BattlePlanTaskGroup, plan: BattlePlan) => {
+    const canComplete = canCompleteGroup(group)
+    const selectedWorker = selectedGroupWorkers[group.id] ?? plan.assignedWorkerId
 
-  const formatPlanStatus = (status: BattlePlanStatus): string =>
-    status.replace('_', ' ')
+    return (
+      <article key={group.id} className="bp-group-card">
+        <header className="bp-group-header">
+          <div>
+            <h4>
+              ({group.sequence}) {group.operationName} - {group.totalEstimatedMinutes} mins
+            </h4>
+            <p>
+              {GROUP_LABELS[group.type]} • {formatStatus(group.status)} • Assigned to{' '}
+              {getEmployeeName(employees, plan.assignedWorkerId)}
+            </p>
+            {group.notes ? <p className="subtle">{group.notes}</p> : null}
+          </div>
+
+          <div className="bp-group-actions">
+            <button type="button" className="btn" onClick={() => addActivityLog({ entityType: 'BattlePlan', entityId: plan.id, action: 'STATUS_CHANGED', actorEmployeeId: selectedEmployee?.id, metadata: { groupId: group.id, event: 'startGroup' } })}>
+              Start Group
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => completeGroup(plan, group)}
+              disabled={!isEditMode && !canComplete}
+              title={canComplete ? '' : 'Complete earlier groups first or override as Director.'}
+            >
+              Complete Group
+            </button>
+            <button type="button" className="btn" onClick={() => openAddGroupModal()}>
+              Edit Group
+            </button>
+            <button type="button" onClick={() => moveGroup(plan, group.id, -1)} disabled={!isEditMode || group.sequence === 1}>
+              Move Up
+            </button>
+            <button
+              type="button"
+              onClick={() => moveGroup(plan, group.id, 1)}
+              disabled={!isEditMode || group.sequence === selectedGroups.length}
+            >
+              Move Down
+            </button>
+            <select
+              value={selectedWorker}
+              onChange={(event) =>
+                setSelectedGroupWorkers((current) => ({
+                  ...current,
+                  [group.id]: event.target.value,
+                }))
+              }
+            >
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => reassignGroup(plan, group.id, selectedWorker)}>
+              Reassign
+            </button>
+            <button type="button" onClick={() => removeGroup(plan, group.id)} disabled={!isEditMode}>
+              Remove
+            </button>
+          </div>
+        </header>
+
+        <ul className="bp-work-item-list">
+          {group.workItems.map((item) => {
+            const audit = completionAudits[item.taskId]
+            return (
+              <li key={item.id} className={item.completed ? 'bp-work-item bp-work-item-complete' : 'bp-work-item'}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={item.completed}
+                    disabled={!isEditMode && !selectedTab?.kind.includes('DIRECTOR')}
+                    onChange={(event) => updateTaskCompletion(plan, item, event.target.checked)}
+                  />
+                </label>
+                <div>
+                  <strong>{item.artworkTitle}</strong>
+                  <p>
+                    {item.customerOrDestination} • {item.workItemNumber} • {item.productType}
+                  </p>
+                  <p className="subtle">
+                    Due: {item.dueStatus} • Step: {PRODUCTION_STEP_LABELS[item.productionStep]}
+                  </p>
+                  {item.notes ? <p className="subtle">{item.notes}</p> : null}
+                  {audit?.completedAt ? (
+                    <p className="subtle">
+                      Completed {new Date(audit.completedAt).toLocaleString()}
+                      {audit.completedBy ? ` by ${getEmployeeName(employees, audit.completedBy)}` : ''}
+                    </p>
+                  ) : null}
+                </div>
+                <button type="button" onClick={() => navigate(`/work-items/${item.workItemId}`)}>
+                  Open Work Item
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </article>
+    )
+  }
 
   return (
     <section className="page battle-plans-page">
       <div className="page-heading">
         <h2>Battle Plans</h2>
-        <p>
-          Battle Plans are generated daily from the current Workshop List, independent of
-          order importing.
-        </p>
+        <p>ERP workflow execution layout aligned to Warehouse Operator BP sequence.</p>
       </div>
 
-      <div className="panel">
-        <h3>Generation Controls</h3>
-        <div className="form-grid battle-plan-shared-controls">
-          <label>
-            Battle Plan Date
-            <input
-              type="date"
-              value={generationDate}
-              onChange={(event) => setGenerationDate(event.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className="worker-config-grid">
-          {workers.map((worker) => {
-            const config = workerConfigs.find((candidate) => candidate.workerId === worker.id)
-            if (!config) {
-              return null
-            }
-
-            return (
-              <article key={worker.id} className="worker-config-card">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={config.selected}
-                    onChange={(event) =>
-                      updateWorkerConfig(worker.id, { selected: event.target.checked })
-                    }
-                  />
-                  {worker.name}
-                </label>
-                <label>
-                  Available Minutes
-                  <input
-                    type="number"
-                    min={0}
-                    value={config.availableMinutes}
-                    onChange={(event) =>
-                      updateWorkerConfig(worker.id, {
-                        availableMinutes: Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-              </article>
-            )
-          })}
-        </div>
+      <div className="panel battle-plan-shared-controls">
+        <label>
+          Battle Plan Date
+          <input
+            type="date"
+            value={generationDate}
+            onChange={(event) => setGenerationDate(event.target.value)}
+          />
+        </label>
 
         <div className="button-row">
           <button type="button" className="btn btn-primary" onClick={() => generatePlans(false)}>
             Generate Daily Battle Plans
           </button>
           <button type="button" className="btn" onClick={() => generatePlans(true)}>
-            Regenerate
+            Regenerate Plan
           </button>
         </div>
       </div>
 
-      <div className="panel">
-        <h3>Generation Summary</h3>
-        {generationSummary ? (
-          <div className="summary-line-list">
-            <span>Plans created: {generationSummary.plansCreated}</span>
-            <span>Tasks assigned: {generationSummary.tasksAssigned}</span>
-            <span>Tasks left unassigned: {generationSummary.tasksUnassigned}</span>
-            <span>Workers over capacity: {generationSummary.workersOverCapacity}</span>
-            <span>Remaining backlog minutes: {generationSummary.remainingBacklogMinutes}</span>
-          </div>
-        ) : (
-          <p>No generation run yet for this date.</p>
-        )}
-        {warnings.length > 0 ? (
-          <ul className="warning-list">
-            {warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-
       <div className="panel battle-plan-tabs-panel">
-        <div className="battle-plan-date-row">
-          <p>Selected date: {generationDate}</p>
-          <p>{tabs.length} worker tabs available</p>
-        </div>
-
-        <div className="bp-tab-row" role="tablist" aria-label="Battle Plan Worker Tabs">
+        <div className="bp-tab-row" role="tablist" aria-label="Employee tabs">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               role="tab"
-              aria-selected={tab.id === selectedTabId}
-              className={tab.id === selectedTabId ? 'bp-tab bp-tab-active' : 'bp-tab'}
-              onClick={() => setSelectedTabId(tab.id)}
+              aria-selected={tab.employeeId === selectedEmployeeId}
+              className={tab.employeeId === selectedEmployeeId ? 'bp-tab bp-tab-active' : 'bp-tab'}
+              onClick={() => setSelectedEmployeeId(tab.employeeId)}
             >
               <span>{tab.label}</span>
               <small>{tab.hasPlan ? 'Plan ready' : 'No plan'}</small>
@@ -702,13 +880,13 @@ const BattlePlansPage = () => {
         </div>
 
         <label className="bp-mobile-tab-select">
-          Worker View
+          Employee
           <select
-            value={selectedTabId}
-            onChange={(event) => setSelectedTabId(event.target.value)}
+            value={selectedEmployeeId}
+            onChange={(event) => setSelectedEmployeeId(event.target.value)}
           >
             {tabs.map((tab) => (
-              <option key={tab.id} value={tab.id}>
+              <option key={tab.id} value={tab.employeeId}>
                 {tab.label}
               </option>
             ))}
@@ -719,41 +897,33 @@ const BattlePlansPage = () => {
       {selectedTab && !selectedPlan ? (
         <article className="panel battle-plan-empty-state">
           <h3>{selectedTab.label}</h3>
-          <p>
-            No Battle Plan exists for {selectedTab.label} on {generationDate}.
-          </p>
-          <div className="button-row">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                const nextPlan = createManualPlan(selectedTab.workerId)
-                setSelectedTabId(
-                  selectedTab.kind === 'DIRECTOR'
-                    ? `director:${nextPlan.assignedWorkerId}`
-                    : `worker:${nextPlan.assignedWorkerId}`,
-                )
-                setPlanEditMode(nextPlan.id, true)
-              }}
-            >
-              Create Plan
-            </button>
-          </div>
+          <p>No plan exists for {generationDate}. Create a plan to begin workflow execution.</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              const plan = createManualPlan(selectedTab.employeeId)
+              setSelectedEmployeeId(plan.assignedWorkerId)
+              setEditModeByPlan((current) => ({ ...current, [plan.id]: true }))
+            }}
+          >
+            Create Plan
+          </button>
         </article>
       ) : null}
 
-      {selectedTab && selectedPlan ? (
-        <article className="panel battle-plan-focus-panel">
-          <div className="battle-plan-focus-header">
+      {selectedPlan ? (
+        <article className="panel battle-plan-erp-plan">
+          <header className="battle-plan-focus-header">
             <div>
               <h3>{getEmployeeName(employees, selectedPlan.assignedWorkerId)}</h3>
               <p>
-                {selectedEmployee ? roleLabel[selectedEmployee.role] : selectedTab.roleLabel} •{' '}
-                {generationDate}
+                {selectedEmployee ? roleLabel[selectedEmployee.role] : selectedTab?.roleLabel} • {generationDate}
               </p>
               <p>
-                {selectedPlan.generationType} • {formatPlanStatus(selectedPlan.status)}
+                {selectedPlan.generationType} • {formatStatus(selectedPlan.status)}
               </p>
+              <p className="subtle">Arrival: {arrivalTimesByPlan[selectedPlan.id] || '--'} • Departure: {departureTimesByPlan[selectedPlan.id] || '--'}</p>
             </div>
 
             <div className="bp-header-actions">
@@ -768,20 +938,20 @@ const BattlePlansPage = () => {
               <button
                 type="button"
                 className="btn"
-                onClick={() => setPlanEditMode(selectedPlan.id, !isEditMode)}
+                onClick={() =>
+                  setEditModeByPlan((current) => ({
+                    ...current,
+                    [selectedPlan.id]: !current[selectedPlan.id],
+                  }))
+                }
               >
                 {isEditMode ? 'Stop Editing' : 'Edit Plan'}
               </button>
               <button type="button" className="btn" onClick={() => generatePlans(true)}>
                 Regenerate Plan
               </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={!isEditMode || selectedPlan.status === 'COMPLETED'}
-                onClick={() => openAddTaskEditor(selectedPlan)}
-              >
-                Add Task
+              <button type="button" className="btn" onClick={openAddGroupModal}>
+                Add Task Group
               </button>
               <button type="button" className="btn" onClick={() => window.print()}>
                 Print Plan
@@ -789,468 +959,381 @@ const BattlePlansPage = () => {
               <button
                 type="button"
                 className="btn"
-                disabled={
-                  selectedPlan.status === 'COMPLETED' ||
-                  selectedPlan.tasks.length === 0 ||
-                  selectedPlan.tasks.some((task) => !task.completed)
-                }
+                disabled={selectedPlan.tasks.some((task) => !task.completed)}
                 onClick={() => completePlan(selectedPlan)}
               >
                 Complete Plan
               </button>
             </div>
-          </div>
-
-          <p className="subtle">{actionHint}</p>
+          </header>
 
           <div className="battle-plan-summary-strip">
             <span>Available minutes: {selectedPlan.availableMinutes}</span>
             <span>Planned minutes: {plannedMinutes}</span>
             <span>Completed minutes: {completedMinutes}</span>
             <span>Remaining minutes: {remainingMinutes}</span>
-            <span>Capacity used: {capacityUsedPercent}%</span>
-            <span>Tasks completed: {completedTasksCount}</span>
-            <span>Tasks remaining: {remainingTasksCount}</span>
+            <span>Capacity used: {capacityUsed}%</span>
             <span>Carry-forward count: {carryForwardCount}</span>
           </div>
 
-          {remainingMinutes < 0 ? (
-            <p className="warning">Warning: planned minutes exceed available minutes.</p>
-          ) : null}
+          <section className="bp-note-panel">
+            <p>{BP_STANDING_NOTE}</p>
+            <ul>
+              {BP_PRIORITY_ORDER.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
 
-          {selectedTab.kind === 'DIRECTOR' ? (
-            <div className="director-sections">
-              <section className="panel">
-                <h4>Director Tasks</h4>
-                {orderedTasks.length === 0 ? (
-                  <p>No Director tasks yet.</p>
-                ) : (
-                  <ul className="plain-list">
-                    {orderedTasks.map((task) => (
-                      <li key={task.id}>
-                        <div>
-                          <strong>{task.description}</strong>
-                          <p>{task.notes || 'No notes'}</p>
-                        </div>
-                        <span className="subtle">{task.estimatedMinutes} min</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+          {selectedTab?.kind === 'DIRECTOR' ? (
+            <section className="director-sections">
+              <article className="panel">
+                <h4>Worker Plan Reviews</h4>
+                <ul className="plain-list">
+                  {workers.map((worker) => {
+                    const plan = workerPlans.find((candidate) => candidate.assignedWorkerId === worker.id)
+                    const groups = plan ? toWorkflowGroups(plan, productionJobs) : []
+                    const incomplete = groups.flatMap((group) =>
+                      group.workItems.filter((item) => !item.completed),
+                    ).length
+                    const planned = plan ? calculatePlannedMinutes(plan.tasks) : 0
+                    const used = plan
+                      ? Math.round((planned / Math.max(plan.availableMinutes, 1)) * 100)
+                      : 0
 
-              <section className="panel">
-                <h4>Review Tasks by Worker Battle Plan</h4>
-                {reviewWorkerPlanRows.length === 0 ? (
-                  <p>No worker plans available for this date.</p>
-                ) : (
-                  <ul className="plain-list">
-                    {reviewWorkerPlanRows.map((row) => (
-                      <li key={row.workerName}>
+                    return (
+                      <li key={worker.id}>
                         <div>
-                          <strong>{row.workerName}</strong>
+                          <strong>{worker.name}</strong>
+                          <p>{buildReviewTaskText(worker)}</p>
                           <p>
-                            Planned {row.planned} min • Remaining {row.remaining} min
+                            Status: {plan ? formatStatus(plan.status) : 'No plan'} • Capacity used: {used}% • Incomplete items: {incomplete}
                           </p>
                         </div>
-                        <span className="subtle">{formatPlanStatus(row.status)}</span>
+                        <button type="button" onClick={() => setSelectedEmployeeId(worker.id)}>
+                          Open Worker Plan
+                        </button>
                       </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+                    )
+                  })}
+                </ul>
+              </article>
 
-              <section className="panel">
-                <h4>Overdue Follow-up</h4>
-                {overdueJobs.length === 0 ? (
-                  <p>No overdue jobs.</p>
-                ) : (
-                  <ul className="plain-list">
-                    {overdueJobs.map((job) => (
+              <article className="panel">
+                <h4>Unassigned / Overdue / At-risk</h4>
+                <ul className="plain-list">
+                  {unassignedBacklog.map((item) => (
+                    <li key={item.id}>
+                      <div>
+                        <strong>{item.description}</strong>
+                        <p>{reasonLabels[item.reason]}</p>
+                      </div>
+                      <span className="subtle">{item.estimatedMinutes} min</span>
+                    </li>
+                  ))}
+                  {productionJobs
+                    .filter((job) => job.dueStatus === 'OVERDUE' || job.dueStatus === 'AT_RISK')
+                    .map((job) => (
                       <li key={job.id}>
                         <div>
                           <strong>{job.orderNumber}</strong>
                           <p>{job.artworkTitle}</p>
                         </div>
-                        <span className="subtle">{job.dueDate}</span>
+                        <span className="subtle">{job.dueStatus}</span>
                       </li>
                     ))}
-                  </ul>
-                )}
-              </section>
-
-              <section className="panel">
-                <h4>At-risk Job Review</h4>
-                {atRiskJobs.length === 0 ? (
-                  <p>No at-risk jobs.</p>
-                ) : (
-                  <ul className="plain-list">
-                    {atRiskJobs.map((job) => (
-                      <li key={job.id}>
-                        <div>
-                          <strong>{job.orderNumber}</strong>
-                          <p>{job.artworkTitle}</p>
-                        </div>
-                        <span className="subtle">{job.assignedWorkerId}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-
-              <section className="panel">
-                <h4>Unassigned Task Review</h4>
-                {unassignedBacklog.length === 0 ? (
-                  <p>No unassigned backlog tasks.</p>
-                ) : (
-                  <ul className="plain-list">
-                    {unassignedBacklog.map((task) => (
-                      <li key={task.id}>
-                        <div>
-                          <strong>{task.description}</strong>
-                          <p>
-                            {reasonLabels[task.reason]} • {task.estimatedMinutes} min
-                          </p>
-                        </div>
-                        <span className="subtle">{task.productionStep}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-
-              <section className="panel">
-                <h4>Carry-forward Review</h4>
-                {carryForwardTasks.length === 0 ? (
-                  <p>No carry-forward tasks.</p>
-                ) : (
-                  <ul className="plain-list">
-                    {carryForwardTasks.map((task) => (
-                      <li key={task.id}>
-                        <div>
-                          <strong>{task.workerName}</strong>
-                          <p>{task.description}</p>
-                        </div>
-                        <span className="subtle">{task.estimatedMinutes} min</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
+                </ul>
+              </article>
+            </section>
           ) : (
             <>
-              <div className="table-wrap battle-plan-task-table-wrap">
-                <table className="bp-table battle-plan-task-table">
-                  <thead>
-                    <tr>
-                      <th>Order</th>
-                      <th>Task</th>
-                      <th>Work Item</th>
-                      <th>Production Step</th>
-                      <th>Estimated Minutes</th>
-                      <th>Done</th>
-                      <th>Carry Forward</th>
-                      <th>Locked</th>
-                      <th>Notes</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderedTasks.map((task, index) => {
-                      const job = productionJobs.find((candidate) => candidate.id === task.productionJobId)
-                      const reassignTarget =
-                        reassignSelections[task.id] ?? selectedPlan.assignedWorkerId
+              <section className="panel bp-section-card">
+                <h4>1. Start of Day Workshop Tasks</h4>
+                <p className="subtle">Estimated section time: {startChecklist.length * 6} mins</p>
+                {renderChecklist(startChecklistKey, startChecklist, isEditMode)}
+              </section>
 
-                      return (
-                        <tr key={task.id}>
-                          <td>{job?.orderNumber ?? task.sortOrder}</td>
-                          <td>{task.description}</td>
-                          <td>
-                            <strong>{job?.artworkTitle ?? 'Unknown work item'}</strong>
-                            <p>{job?.customerName ?? task.productionJobId}</p>
-                          </td>
-                          <td>{PRODUCTION_STEP_LABELS[task.productionStep]}</td>
-                          <td>{task.estimatedMinutes}</td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={task.completed}
-                              disabled={!isEditMode || task.locked}
-                              onChange={(event) =>
-                                toggleTask(selectedPlan, task.id, {
-                                  completed: event.target.checked,
-                                })
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={task.carryForward}
-                              disabled={!isEditMode || task.completed || task.locked}
-                              onChange={(event) =>
-                                toggleTask(selectedPlan, task.id, {
-                                  carryForward: event.target.checked,
-                                })
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={task.locked}
-                              disabled={!isEditMode}
-                              onChange={(event) =>
-                                toggleTask(selectedPlan, task.id, {
-                                  locked: event.target.checked,
-                                })
-                              }
-                            />
-                          </td>
-                          <td>{task.notes || 'No notes'}</td>
-                          <td>
-                            <div className="battle-plan-task-actions">
-                              <button
-                                type="button"
-                                onClick={() => moveTask(selectedPlan, index, -1)}
-                                disabled={!isEditMode || index === 0 || task.locked}
-                              >
-                                Move Up
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveTask(selectedPlan, index, 1)}
-                                disabled={
-                                  !isEditMode || index === orderedTasks.length - 1 || task.locked
-                                }
-                              >
-                                Move Down
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openEditTaskEditor(selectedPlan, task)}
-                                disabled={!isEditMode}
-                              >
-                                Edit
-                              </button>
-                              <label>
-                                <span className="sr-only">Reassign worker</span>
-                                <select
-                                  value={reassignTarget}
-                                  disabled={!isEditMode || task.locked}
-                                  onChange={(event) =>
-                                    setReassignSelections((current) => ({
-                                      ...current,
-                                      [task.id]: event.target.value,
-                                    }))
-                                  }
-                                >
-                                  {workers.map((worker) => (
-                                    <option key={worker.id} value={worker.id}>
-                                      {worker.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  reassignTask(selectedPlan, task.id, reassignTarget)
-                                }
-                                disabled={!isEditMode || reassignTarget === selectedPlan.assignedWorkerId}
-                              >
-                                Reassign
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeTask(selectedPlan, task.id)}
-                                disabled={!isEditMode || task.locked}
-                              >
-                                Remove
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  window.location.href = `${import.meta.env.BASE_URL}work-items/${task.productionJobId}`
-                                }}
-                              >
-                                Open Work Item
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <section className="bp-production-groups">
+                {selectedGroups.map((group) => renderGroup(group, selectedPlan))}
+              </section>
+
+              <section className="panel bp-section-card">
+                <h4>Cleaning</h4>
+                <p className="warning">These cleaning tasks are only to be done after the BP has been completed.</p>
+                {renderChecklist(cleaningChecklistKey, cleaningChecklist, isEditMode)}
+              </section>
+
+              <section className="panel bp-section-card">
+                <h4>End of Day Workshop Tasks</h4>
+                {renderChecklist(endChecklistKey, endChecklist, true)}
+
+                <div className="battle-plan-task-editor-grid">
+                  <label>
+                    End-of-day notes
+                    <textarea
+                      value={endOfDayReportsByPlan[selectedPlan.id]?.notes ?? ''}
+                      onChange={(event) =>
+                        setEndOfDayReportsByPlan((current) => ({
+                          ...current,
+                          [selectedPlan.id]: {
+                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                            notes: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Reason not completed
+                    <textarea
+                      value={endOfDayReportsByPlan[selectedPlan.id]?.incompleteReason ?? ''}
+                      onChange={(event) =>
+                        setEndOfDayReportsByPlan((current) => ({
+                          ...current,
+                          [selectedPlan.id]: {
+                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                            incompleteReason: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={endOfDayReportsByPlan[selectedPlan.id]?.carryForward ?? false}
+                      onChange={(event) =>
+                        setEndOfDayReportsByPlan((current) => ({
+                          ...current,
+                          [selectedPlan.id]: {
+                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                            carryForward: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    Carry forward
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={endOfDayReportsByPlan[selectedPlan.id]?.reportSent ?? false}
+                      onChange={(event) =>
+                        setEndOfDayReportsByPlan((current) => ({
+                          ...current,
+                          [selectedPlan.id]: {
+                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                            reportSent: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    Report sent
+                  </label>
+                  <label>
+                    Departure time
+                    <input
+                      type="time"
+                      value={endOfDayReportsByPlan[selectedPlan.id]?.departureTime ?? ''}
+                      onChange={(event) =>
+                        setEndOfDayReportsByPlan((current) => ({
+                          ...current,
+                          [selectedPlan.id]: {
+                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                            departureTime: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <button type="button" className="btn btn-primary" onClick={() => submitEndOfDay(selectedPlan)}>
+                  Submit End-of-Day Report
+                </button>
+              </section>
             </>
           )}
         </article>
       ) : null}
 
-      {taskEditor && selectedPlan ? (
-        <article className="panel battle-plan-task-editor-panel">
-          <div className="worker-plan-header">
-            <h4>{taskEditor.mode === 'add' ? 'Add Task' : 'Edit Task'}</h4>
-            <button type="button" className="btn" onClick={() => setTaskEditor(null)}>
-              Close
-            </button>
-          </div>
-
-          <div className="battle-plan-task-editor-grid">
-            <label>
-              Work Item
-              <select
-                value={taskEditorDrafts[taskEditor.planId]?.productionJobId ?? ''}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    productionJobId: event.target.value,
-                  })
-                }
-              >
-                {productionJobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.orderNumber} | {job.artworkTitle}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Production Step
-              <select
-                value={taskEditorDrafts[taskEditor.planId]?.productionStep ?? 'FILES'}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    productionStep: event.target.value as ProductionStepName,
-                  })
-                }
-              >
-                {PRODUCTION_STEP_SEQUENCE.map((stepName) => (
-                  <option key={stepName} value={stepName}>
-                    {PRODUCTION_STEP_LABELS[stepName]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Task Description
-              <input
-                type="text"
-                value={taskEditorDrafts[taskEditor.planId]?.description ?? ''}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    description: event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Estimated Minutes
-              <input
-                type="number"
-                min={1}
-                value={taskEditorDrafts[taskEditor.planId]?.estimatedMinutes ?? 45}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    estimatedMinutes: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Notes
-              <textarea
-                value={taskEditorDrafts[taskEditor.planId]?.notes ?? ''}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    notes: event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Assigned Worker
-              <select
-                value={taskEditorDrafts[taskEditor.planId]?.assignedWorkerId ?? selectedPlan.assignedWorkerId}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    assignedWorkerId: event.target.value,
-                  })
-                }
-              >
-                {workers.map((worker) => (
-                  <option key={worker.id} value={worker.id}>
-                    {worker.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={taskEditorDrafts[taskEditor.planId]?.carryForward ?? false}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    carryForward: event.target.checked,
-                  })
-                }
-              />
-              Carry Forward
-            </label>
-
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={taskEditorDrafts[taskEditor.planId]?.locked ?? false}
-                onChange={(event) =>
-                  updateTaskEditorDraft(taskEditor.planId, {
-                    locked: event.target.checked,
-                  })
-                }
-              />
-              Locked
-            </label>
-          </div>
-
-          <div className="button-row">
-            <button type="button" className="btn btn-primary" onClick={saveTaskEditor}>
-              Save Task
-            </button>
-            <button type="button" className="btn" onClick={() => setTaskEditor(null)}>
-              Cancel
-            </button>
-          </div>
-        </article>
-      ) : null}
-
       <div className="panel">
-        <h3>Unassigned Backlog</h3>
-        {unassignedBacklog.length === 0 ? (
-          <p>No unassigned tasks.</p>
+        <h3>Generation Summary</h3>
+        {generationSummary ? (
+          <div className="summary-line-list">
+            <span>Plans created: {generationSummary.plansCreated}</span>
+            <span>Tasks assigned: {generationSummary.tasksAssigned}</span>
+            <span>Tasks left unassigned: {generationSummary.tasksUnassigned}</span>
+            <span>Workers over capacity: {generationSummary.workersOverCapacity}</span>
+            <span>Remaining backlog minutes: {generationSummary.remainingBacklogMinutes}</span>
+          </div>
         ) : (
-          <ul className="plain-list">
-            {unassignedBacklog.map((task) => (
-              <li key={task.id}>
-                <div>
-                  <strong>{task.description}</strong>
-                  <p>
-                    {reasonLabels[task.reason]} • {task.estimatedMinutes} min
-                  </p>
-                </div>
-                <span className="subtle">{task.productionStep}</span>
-              </li>
+          <p>No generation run yet for this date.</p>
+        )}
+
+        {warnings.length > 0 ? (
+          <ul className="warning-list">
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
             ))}
           </ul>
-        )}
+        ) : null}
       </div>
+
+      {showAddGroupModal && selectedPlan ? (
+        <div className="bp-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="panel bp-modal-card">
+            <h3>Add Task Group</h3>
+            <div className="battle-plan-task-editor-grid">
+              <label>
+                Group type
+                <select
+                  value={addGroupDraft.groupType}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      groupType: event.target.value as BattlePlanTaskGroupType,
+                    }))
+                  }
+                >
+                  {Object.keys(GROUP_LABELS).map((type) => (
+                    <option key={type} value={type}>
+                      {GROUP_LABELS[type as BattlePlanTaskGroupType]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Custom group name
+                <input
+                  type="text"
+                  value={addGroupDraft.customGroupName}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      customGroupName: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Assigned employee
+                <select
+                  value={addGroupDraft.assignedEmployeeId}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      assignedEmployeeId: event.target.value,
+                    }))
+                  }
+                >
+                  {workers.map((worker) => (
+                    <option key={worker.id} value={worker.id}>
+                      {worker.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Estimated minutes
+                <input
+                  type="number"
+                  min={1}
+                  value={addGroupDraft.estimatedMinutes}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      estimatedMinutes: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Group notes
+                <textarea
+                  value={addGroupDraft.groupNotes}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      groupNotes: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Production step
+                <select
+                  value={addGroupDraft.productionStep}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      productionStep: event.target.value as ProductionStepName,
+                    }))
+                  }
+                >
+                  {PRODUCTION_STEP_SEQUENCE.map((step) => (
+                    <option key={step} value={step}>
+                      {PRODUCTION_STEP_LABELS[step]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Sequence position
+                <input
+                  type="number"
+                  min={1}
+                  value={addGroupDraft.sequencePosition}
+                  onChange={(event) =>
+                    setAddGroupDraft((current) => ({
+                      ...current,
+                      sequencePosition: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="bp-multiselect-grid">
+              {productionJobs.map((job) => {
+                const selected = addGroupDraft.workItemIds.includes(job.id)
+                return (
+                  <label key={job.id} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={(event) => {
+                        setAddGroupDraft((current) => {
+                          const next = event.target.checked
+                            ? [...current.workItemIds, job.id]
+                            : current.workItemIds.filter((id) => id !== job.id)
+                          return { ...current, workItemIds: next }
+                        })
+                      }}
+                    />
+                    {job.orderNumber} | {job.artworkTitle}
+                  </label>
+                )
+              })}
+            </div>
+
+            <div className="button-row">
+              <button type="button" className="btn btn-primary" onClick={saveAddGroup}>
+                Save Task Group
+              </button>
+              <button type="button" className="btn" onClick={() => setShowAddGroupModal(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
