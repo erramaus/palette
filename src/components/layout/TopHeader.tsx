@@ -37,7 +37,7 @@ const TopHeader = () => {
   return (
     <header className="top-header">
       <div className="top-header-brand">
-        <Logo size="small" showText={false} showSubtitle={false} className="header-logo" />
+        <Logo size="small" showText={false} variant="dark" className="header-logo" />
         <div>
           <h2>{pageTitle}</h2>
         </div>

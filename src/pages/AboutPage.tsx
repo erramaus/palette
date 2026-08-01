@@ -5,7 +5,7 @@ const AboutPage = () => {
   return (
     <section className="page">
       <div className="panel about-panel">
-        <Logo size="medium" showSubtitle showText className="about-logo" />
+        <Logo size="medium" showText variant="dark" className="about-logo" />
         <h2>{branding.appName}</h2>
         <p>
           Palette is production-management software built for fast, high-clarity daily

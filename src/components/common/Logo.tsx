@@ -4,18 +4,18 @@ import paletteIcon from '../../assets/palette-icon.png'
 interface LogoProps {
   size?: 'small' | 'medium' | 'large'
   showText?: boolean
-  showSubtitle?: boolean
+  variant?: 'light' | 'dark'
   className?: string
 }
 
 const Logo = ({
   size = 'medium',
   showText = true,
-  showSubtitle = true,
+  variant = 'dark',
   className = '',
 }: LogoProps) => {
   return (
-    <div className={`logo-wrap logo-wrap-${size} ${className}`.trim()}>
+    <div className={`logo-wrap logo-wrap-${size} logo-variant-${variant} ${className}`.trim()}>
       <img
         src={paletteIcon}
         alt="Palette"
@@ -24,7 +24,7 @@ const Logo = ({
       {showText ? (
         <div className="logo-text-block">
           <strong className="logo-wordmark">{branding.appNameDisplayUpper}</strong>
-          {showSubtitle ? <span>{branding.subtitle}</span> : null}
+          <span>{branding.subtitle}</span>
         </div>
       ) : null}
     </div>

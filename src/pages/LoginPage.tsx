@@ -4,7 +4,7 @@ const LoginPage = () => {
   return (
     <div className="login-page">
       <div className="login-card">
-        <Logo size="large" showSubtitle showText className="login-logo" />
+        <Logo size="large" showText variant="dark" className="login-logo" />
         <form className="login-form" onSubmit={(event) => event.preventDefault()}>
           <label>
             Username

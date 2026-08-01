@@ -33,7 +33,7 @@ const SidebarNav = () => {
   return (
     <aside className="sidebar">
       <div className="sidebar-branding">
-        <Logo size="medium" showSubtitle={false} showText={false} className="sidebar-logo-block" />
+        <Logo size="medium" showText={false} variant="light" className="sidebar-logo-block" />
         <div className="sidebar-brand-text">
           <strong>PALETTE</strong>
           <span>PrintShop OS</span>
