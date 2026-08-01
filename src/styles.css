@@ -1067,6 +1067,184 @@ button:focus {
   margin-bottom: 6px;
 }
 
+.battle-plans-page {
+  gap: 14px;
+}
+
+.battle-plan-shared-controls {
+  grid-template-columns: minmax(220px, 320px);
+}
+
+.battle-plan-tabs-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.battle-plan-date-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.bp-tab-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.bp-tab {
+  border: 1px solid #cbd5e1;
+  background: #f8fbff;
+  color: #263851;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 170px;
+  text-align: left;
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.bp-tab small {
+  color: #5f7088;
+  font-size: 0.74rem;
+}
+
+.bp-tab-active {
+  background: #1e2a4a;
+  color: #ffffff;
+  border-color: #1e2a4a;
+}
+
+.bp-tab-active small {
+  color: #d1ddf0;
+}
+
+.bp-mobile-tab-select {
+  display: none;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #283449;
+}
+
+.battle-plan-focus-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.battle-plan-focus-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.bp-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.battle-plan-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: #f6f9ff;
+  border: 1px solid #d9e2f0;
+  border-radius: 8px;
+  padding: 10px;
+  color: #25354c;
+  font-size: 0.87rem;
+  font-weight: 600;
+}
+
+.battle-plan-task-table-wrap {
+  overflow-x: auto;
+}
+
+.battle-plan-task-table {
+  table-layout: fixed;
+}
+
+.battle-plan-task-table th,
+.battle-plan-task-table td {
+  white-space: normal;
+}
+
+.battle-plan-task-table td:nth-child(1) {
+  min-width: 90px;
+}
+
+.battle-plan-task-table td:nth-child(2) {
+  min-width: 210px;
+}
+
+.battle-plan-task-table td:nth-child(3) {
+  min-width: 180px;
+}
+
+.battle-plan-task-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.battle-plan-task-actions button,
+.battle-plan-task-actions select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fff;
+}
+
+.battle-plan-task-editor-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.battle-plan-task-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.battle-plan-task-editor-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.battle-plan-task-editor-grid textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.battle-plan-empty-state {
+  display: grid;
+  gap: 8px;
+}
+
+.director-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .loading-page {
   min-height: 80vh;
   display: grid;
@@ -1167,6 +1345,11 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  .director-sections,
+  .battle-plan-task-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
   .workshop-v2-header-actions {
     width: 100%;
   }
@@ -1184,5 +1367,26 @@ a:hover {
   .totals-strip {
     flex-direction: column;
     gap: 6px;
+  }
+
+  .battle-plan-date-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .bp-tab-row {
+    display: none;
+  }
+
+  .bp-mobile-tab-select {
+    display: grid;
+  }
+
+  .bp-header-actions {
+    justify-content: flex-start;
+  }
+
+  .battle-plan-task-actions {
+    grid-template-columns: 1fr;
   }
 }
