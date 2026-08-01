@@ -1180,24 +1180,146 @@ button:focus {
 
 .bp-production-groups {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
-.bp-group-card {
-  border: 1px solid #d4ddeb;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 12px;
+.bp-operation-flow-item {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-flow-arrow {
+  justify-self: center;
+  color: #4f6687;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.bp-current-operation-card {
+  border: 1px solid #9ec3ff;
+  background: linear-gradient(180deg, #f3f8ff 0%, #ffffff 100%);
   display: grid;
   gap: 10px;
 }
 
-.bp-group-header {
+.bp-current-operation-eyebrow {
+  color: #2b4c7f;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.bp-current-operation-card h4 {
+  font-size: 1.45rem;
+  letter-spacing: 0.01em;
+}
+
+.bp-current-operation-meta {
+  display: grid;
+  gap: 4px;
+  color: #263b5b;
+}
+
+.bp-operation-card {
+  border: 1px solid #d4ddeb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.bp-operation-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.bp-operation-header h4 {
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+  font-weight: 800;
+  color: #1d2f4e;
+}
+
+.bp-operation-minutes {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4c607d;
+}
+
+.bp-operation-status {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.bp-operation-status-ready {
+  background: #d9ebff;
+  color: #214f8d;
+}
+
+.bp-operation-status-in_progress {
+  background: #ffe4bf;
+  color: #915200;
+}
+
+.bp-operation-status-complete {
+  background: #d8f5e3;
+  color: #1c6a3a;
+}
+
+.bp-operation-status-blocked {
+  background: #ffd7d7;
+  color: #952121;
+}
+
+.bp-operation-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 8px;
+  color: #2c405f;
+  font-size: 0.9rem;
+}
+
+.bp-operation-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.bp-operation-progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #3a4f6f;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.bp-operation-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5ecf6;
+  overflow: hidden;
+}
+
+.bp-operation-progress-track span {
+  display: block;
+  height: 100%;
+  background: #2f70c2;
+}
+
+.bp-operation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .bp-group-actions {
@@ -1207,31 +1329,82 @@ button:focus {
 }
 
 .bp-group-actions button,
-.bp-group-actions select {
+.bp-group-actions select,
+.bp-operation-actions button,
+.bp-operation-actions select {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 8px;
   background: #fff;
 }
 
-.bp-work-item-list {
+.bp-work-item-cards {
   display: grid;
+  gap: 10px;
+}
+
+.bp-work-item-card {
+  border: 1px solid #ced9eb;
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  background: #f8fbff;
+}
+
+.bp-work-item-card p {
+  color: #334965;
+  font-size: 0.88rem;
+}
+
+.bp-work-item-head strong {
+  font-size: 1.06rem;
+  color: #1f3252;
+}
+
+.bp-work-item-badges {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.bp-work-item {
-  border: 1px solid #d8e1ef;
-  border-radius: 8px;
-  padding: 8px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: start;
+.bp-step-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #e9eef8;
+  color: #29456e;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
-.bp-work-item-complete {
+.bp-work-item-notes {
+  border-left: 3px solid #9cb3d8;
+  padding-left: 8px;
+}
+
+.bp-work-item-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.bp-work-item-card-complete {
   background: #eef8f2;
   border-color: #b9e2c5;
+}
+
+.bp-operation-collapse-toggle {
+  width: 100%;
+  border: 1px dashed #b5c7e2;
+  border-radius: 8px;
+  background: #f4f8ff;
+  padding: 8px 10px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  color: #20456f;
+  font-weight: 700;
 }
 
 .bp-modal-backdrop {

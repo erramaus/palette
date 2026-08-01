@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import StatusBadge from '../components/common/StatusBadge'
 import { useAppState } from '../state/AppStateContext'
 import type { BattlePlan, BattlePlanTask } from '../types/battlePlans'
 import type { Employee } from '../types/employees'
@@ -62,6 +63,8 @@ interface CompletionAudit {
   completedBy?: string
 }
 
+type OperationUiStatus = 'READY' | 'IN_PROGRESS' | 'COMPLETE' | 'BLOCKED'
+
 const formatLocalDate = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
@@ -107,7 +110,10 @@ const BattlePlansPage = () => {
 
   const today = formatLocalDate(new Date())
   const director = employees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')
-  const workers = employees.filter((employee) => employee.role === 'WORKER' && employee.active)
+  const workers = useMemo(
+    () => employees.filter((employee) => employee.role === 'WORKER' && employee.active),
+    [employees],
+  )
 
   const [generationDate, setGenerationDate] = useState(today)
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
@@ -128,6 +134,8 @@ const BattlePlansPage = () => {
   const [departureTimesByPlan, setDepartureTimesByPlan] = useState<Record<string, string>>({})
   const [endOfDayReportsByPlan, setEndOfDayReportsByPlan] = useState<Record<string, BattlePlanEndOfDayReport>>({})
   const [selectedGroupWorkers, setSelectedGroupWorkers] = useState<Record<string, string>>({})
+  const [startedGroupsByPlan, setStartedGroupsByPlan] = useState<Record<string, Record<string, boolean>>>({})
+  const [expandedCompletedGroupsByPlan, setExpandedCompletedGroupsByPlan] = useState<Record<string, Record<string, boolean>>>({})
 
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [addGroupDraft, setAddGroupDraft] = useState<AddTaskGroupDraft>({
@@ -236,7 +244,12 @@ const BattlePlansPage = () => {
     ? employees.find((employee) => employee.id === selectedEmployeeId)
     : undefined
 
-  const selectedGroups = selectedPlan ? toWorkflowGroups(selectedPlan, productionJobs) : []
+  const selectedGroups = useMemo(
+    () => (selectedPlan ? toWorkflowGroups(selectedPlan, productionJobs) : []),
+    [selectedPlan, productionJobs],
+  )
+  const isDirectorView = selectedTab?.kind === 'DIRECTOR'
+  const isWorkerView = selectedTab?.kind === 'WORKER'
   const plannedMinutes = selectedPlan ? calculatePlannedMinutes(selectedPlan.tasks) : 0
   const completedMinutes = selectedPlan ? calculateCompletedMinutes(selectedPlan.tasks) : 0
   const remainingMinutes = selectedPlan
@@ -289,6 +302,42 @@ const BattlePlansPage = () => {
   const endChecklist = selectedPlan ? checklistsByKey[endChecklistKey] ?? [] : []
 
   const isEditMode = selectedPlan ? Boolean(editModeByPlan[selectedPlan.id]) : false
+
+  const isGroupStarted = (planId: string, groupId: string): boolean =>
+    Boolean(startedGroupsByPlan[planId]?.[groupId])
+
+  const getGroupUiStatus = (planId: string, group: BattlePlanTaskGroup): OperationUiStatus => {
+    if (group.status === 'COMPLETE') {
+      return 'COMPLETE'
+    }
+
+    if (group.status === 'IN_PROGRESS' || isGroupStarted(planId, group.id)) {
+      return 'IN_PROGRESS'
+    }
+
+    return canCompleteGroup(group) ? 'READY' : 'BLOCKED'
+  }
+
+  const formatGroupUiStatus = (status: OperationUiStatus): string => {
+    switch (status) {
+      case 'READY':
+        return 'Ready'
+      case 'IN_PROGRESS':
+        return 'In Progress'
+      case 'COMPLETE':
+        return 'Complete'
+      default:
+        return 'Blocked'
+    }
+  }
+
+  const currentOperation = useMemo(() => {
+    if (!selectedPlan || !isWorkerView) {
+      return undefined
+    }
+
+    return selectedGroups.find((group) => getGroupUiStatus(selectedPlan.id, group) !== 'COMPLETE')
+  }, [selectedGroups, selectedPlan, isWorkerView, startedGroupsByPlan])
 
   const createManualPlan = (workerId: string): BattlePlan => {
     const employee = employees.find((candidate) => candidate.id === workerId)
@@ -471,7 +520,7 @@ const BattlePlansPage = () => {
     }
   }
 
-  const canCompleteGroup = (group: BattlePlanTaskGroup): boolean => {
+  function canCompleteGroup(group: BattlePlanTaskGroup): boolean {
     const previousGroups = selectedGroups.filter((item) => item.sequence < group.sequence)
     return previousGroups.every((item) => item.status === 'COMPLETE')
   }
@@ -501,6 +550,13 @@ const BattlePlansPage = () => {
     }
 
     saveUpdatedPlan(plan, tasks)
+    setStartedGroupsByPlan((current) => ({
+      ...current,
+      [plan.id]: {
+        ...(current[plan.id] ?? {}),
+        [group.id]: false,
+      },
+    }))
     addActivityLog({
       entityType: 'BattlePlan',
       entityId: plan.id,
@@ -712,108 +768,198 @@ const BattlePlansPage = () => {
 
   const renderGroup = (group: BattlePlanTaskGroup, plan: BattlePlan) => {
     const canComplete = canCompleteGroup(group)
+    const status = getGroupUiStatus(plan.id, group)
+    const collapsed = status === 'COMPLETE' && !Boolean(expandedCompletedGroupsByPlan[plan.id]?.[group.id])
+    const completedWorkItems = group.workItems.filter((item) => item.completed).length
+    const remainingWorkItems = group.workItems.length - completedWorkItems
+    const percentComplete = group.workItems.length > 0
+      ? Math.round((completedWorkItems / group.workItems.length) * 100)
+      : 0
     const selectedWorker = selectedGroupWorkers[group.id] ?? plan.assignedWorkerId
+    const operationTitle = group.operationName.toUpperCase()
 
     return (
-      <article key={group.id} className="bp-group-card">
-        <header className="bp-group-header">
+      <article key={group.id} className="bp-operation-card">
+        <header className="bp-operation-header">
           <div>
-            <h4>
-              ({group.sequence}) {group.operationName} - {group.totalEstimatedMinutes} mins
-            </h4>
-            <p>
-              {GROUP_LABELS[group.type]} • {formatStatus(group.status)} • Assigned to{' '}
-              {getEmployeeName(employees, plan.assignedWorkerId)}
-            </p>
-            {group.notes ? <p className="subtle">{group.notes}</p> : null}
+            <h4>{operationTitle}</h4>
+            <p className="bp-operation-minutes">{group.totalEstimatedMinutes} Minutes</p>
           </div>
-
-          <div className="bp-group-actions">
-            <button type="button" className="btn" onClick={() => addActivityLog({ entityType: 'BattlePlan', entityId: plan.id, action: 'STATUS_CHANGED', actorEmployeeId: selectedEmployee?.id, metadata: { groupId: group.id, event: 'startGroup' } })}>
-              Start Group
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => completeGroup(plan, group)}
-              disabled={!isEditMode && !canComplete}
-              title={canComplete ? '' : 'Complete earlier groups first or override as Director.'}
-            >
-              Complete Group
-            </button>
-            <button type="button" className="btn" onClick={() => openAddGroupModal()}>
-              Edit Group
-            </button>
-            <button type="button" onClick={() => moveGroup(plan, group.id, -1)} disabled={!isEditMode || group.sequence === 1}>
-              Move Up
-            </button>
-            <button
-              type="button"
-              onClick={() => moveGroup(plan, group.id, 1)}
-              disabled={!isEditMode || group.sequence === selectedGroups.length}
-            >
-              Move Down
-            </button>
-            <select
-              value={selectedWorker}
-              onChange={(event) =>
-                setSelectedGroupWorkers((current) => ({
-                  ...current,
-                  [group.id]: event.target.value,
-                }))
-              }
-            >
-              {workers.map((worker) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.name}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={() => reassignGroup(plan, group.id, selectedWorker)}>
-              Reassign
-            </button>
-            <button type="button" onClick={() => removeGroup(plan, group.id)} disabled={!isEditMode}>
-              Remove
-            </button>
-          </div>
+          <span className={`bp-operation-status bp-operation-status-${status.toLowerCase()}`}>
+            {formatGroupUiStatus(status)}
+          </span>
         </header>
 
-        <ul className="bp-work-item-list">
-          {group.workItems.map((item) => {
-            const audit = completionAudits[item.taskId]
-            return (
-              <li key={item.id} className={item.completed ? 'bp-work-item bp-work-item-complete' : 'bp-work-item'}>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={item.completed}
-                    disabled={!isEditMode && !selectedTab?.kind.includes('DIRECTOR')}
-                    onChange={(event) => updateTaskCompletion(plan, item, event.target.checked)}
-                  />
-                </label>
-                <div>
-                  <strong>{item.artworkTitle}</strong>
-                  <p>
-                    {item.customerOrDestination} • {item.workItemNumber} • {item.productType}
-                  </p>
-                  <p className="subtle">
-                    Due: {item.dueStatus} • Step: {PRODUCTION_STEP_LABELS[item.productionStep]}
-                  </p>
-                  {item.notes ? <p className="subtle">{item.notes}</p> : null}
-                  {audit?.completedAt ? (
-                    <p className="subtle">
-                      Completed {new Date(audit.completedAt).toLocaleString()}
-                      {audit.completedBy ? ` by ${getEmployeeName(employees, audit.completedBy)}` : ''}
-                    </p>
-                  ) : null}
-                </div>
-                <button type="button" onClick={() => navigate(`/work-items/${item.workItemId}`)}>
-                  Open Work Item
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+        {status === 'COMPLETE' ? (
+          <button
+            type="button"
+            className="bp-operation-collapse-toggle"
+            onClick={() =>
+              setExpandedCompletedGroupsByPlan((current) => ({
+                ...current,
+                [plan.id]: {
+                  ...(current[plan.id] ?? {}),
+                  [group.id]: collapsed,
+                },
+              }))
+            }
+            aria-expanded={!collapsed}
+          >
+            ✓ {group.operationName}
+            <span>Completed {collapsed ? '(Expand)' : '(Collapse)'}</span>
+          </button>
+        ) : null}
+
+        {!collapsed ? (
+          <>
+            <div className="bp-operation-meta-grid">
+              <p>{group.workItems.length} Work Item{group.workItems.length === 1 ? '' : 's'}</p>
+              <p>Assigned: {getEmployeeName(employees, plan.assignedWorkerId)}</p>
+              <p>Status: {formatGroupUiStatus(status)}</p>
+            </div>
+
+            <div className="bp-operation-progress">
+              <div className="bp-operation-progress-head">
+                <span>Completed: {completedWorkItems}</span>
+                <span>Remaining: {remainingWorkItems}</span>
+                <span>{percentComplete}% Complete</span>
+              </div>
+              <div className="bp-operation-progress-track" aria-label={`${operationTitle} progress`}>
+                <span style={{ width: `${percentComplete}%` }} />
+              </div>
+            </div>
+
+            <div className="bp-operation-actions">
+              {isWorkerView ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setStartedGroupsByPlan((current) => ({
+                        ...current,
+                        [plan.id]: {
+                          ...(current[plan.id] ?? {}),
+                          [group.id]: true,
+                        },
+                      }))
+                      addActivityLog({
+                        entityType: 'BattlePlan',
+                        entityId: plan.id,
+                        action: 'STATUS_CHANGED',
+                        actorEmployeeId: selectedEmployee?.id,
+                        metadata: { groupId: group.id, event: 'startOperation' },
+                      })
+                    }}
+                    disabled={status === 'COMPLETE' || status === 'BLOCKED'}
+                  >
+                    Start Operation
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => completeGroup(plan, group)}
+                    disabled={!canComplete}
+                    title={canComplete ? '' : 'Complete earlier operations first.'}
+                  >
+                    Complete Operation
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn" onClick={() => addActivityLog({ entityType: 'BattlePlan', entityId: plan.id, action: 'STATUS_CHANGED', actorEmployeeId: selectedEmployee?.id, metadata: { groupId: group.id, event: 'startGroup' } })}>
+                    Start Group
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => completeGroup(plan, group)}
+                    disabled={!isEditMode && !canComplete}
+                    title={canComplete ? '' : 'Complete earlier groups first or override as Director.'}
+                  >
+                    Complete Group
+                  </button>
+                  <button type="button" className="btn" onClick={() => openAddGroupModal()}>
+                    Edit Group
+                  </button>
+                  <button type="button" onClick={() => moveGroup(plan, group.id, -1)} disabled={!isEditMode || group.sequence === 1}>
+                    Move Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveGroup(plan, group.id, 1)}
+                    disabled={!isEditMode || group.sequence === selectedGroups.length}
+                  >
+                    Move Down
+                  </button>
+                  <select
+                    value={selectedWorker}
+                    onChange={(event) =>
+                      setSelectedGroupWorkers((current) => ({
+                        ...current,
+                        [group.id]: event.target.value,
+                      }))
+                    }
+                  >
+                    {workers.map((worker) => (
+                      <option key={worker.id} value={worker.id}>
+                        {worker.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => reassignGroup(plan, group.id, selectedWorker)}>
+                    Reassign
+                  </button>
+                  <button type="button" onClick={() => removeGroup(plan, group.id)} disabled={!isEditMode}>
+                    Remove
+                  </button>
+                </>
+              )}
+            </div>
+
+            <ul className="bp-work-item-cards">
+              {group.workItems.map((item) => {
+                const audit = completionAudits[item.taskId]
+                return (
+                  <li key={item.id} className={item.completed ? 'bp-work-item-card bp-work-item-card-complete' : 'bp-work-item-card'}>
+                    <div className="bp-work-item-head">
+                      <strong>{item.artworkTitle}</strong>
+                    </div>
+                    <p>Order: {item.workItemNumber}</p>
+                    <p>Customer: {item.customerOrDestination}</p>
+                    <div className="bp-work-item-badges">
+                      <span className="bp-step-badge">{PRODUCTION_STEP_LABELS[item.productionStep]}</span>
+                      <StatusBadge dueStatus={item.dueStatus} />
+                    </div>
+                    {item.notes ? <p className="bp-work-item-notes">Special Notes: {item.notes}</p> : null}
+                    {audit?.completedAt ? (
+                      <p className="subtle">
+                        Completed {new Date(audit.completedAt).toLocaleString()}
+                        {audit.completedBy ? ` by ${getEmployeeName(employees, audit.completedBy)}` : ''}
+                      </p>
+                    ) : null}
+                    <div className="bp-work-item-actions">
+                      {!isWorkerView ? (
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={item.completed}
+                            disabled={!isEditMode && !selectedTab?.kind.includes('DIRECTOR')}
+                            onChange={(event) => updateTaskCompletion(plan, item, event.target.checked)}
+                          />
+                          Complete
+                        </label>
+                      ) : null}
+                      <button type="button" onClick={() => navigate(`/work-items/${item.workItemId}`)}>
+                        Open Work Item
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        ) : null}
       </article>
     )
   }
@@ -910,43 +1056,47 @@ const BattlePlansPage = () => {
             </div>
 
             <div className="bp-header-actions">
-              <button
-                type="button"
-                className="btn"
-                disabled={!canApprovePlan(selectedPlan.status)}
-                onClick={() => approvePlan(selectedPlan)}
-              >
-                Approve Plan
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  setEditModeByPlan((current) => ({
-                    ...current,
-                    [selectedPlan.id]: !current[selectedPlan.id],
-                  }))
-                }
-              >
-                {isEditMode ? 'Stop Editing' : 'Edit Plan'}
-              </button>
-              <button type="button" className="btn" onClick={() => generatePlans(true)}>
-                Regenerate Plan
-              </button>
-              <button type="button" className="btn" onClick={openAddGroupModal}>
-                Add Task Group
-              </button>
-              <button type="button" className="btn" onClick={() => window.print()}>
-                Print Plan
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={selectedPlan.tasks.some((task) => !task.completed)}
-                onClick={() => completePlan(selectedPlan)}
-              >
-                Complete Plan
-              </button>
+              {isDirectorView ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={!canApprovePlan(selectedPlan.status)}
+                    onClick={() => approvePlan(selectedPlan)}
+                  >
+                    Approve Plan
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() =>
+                      setEditModeByPlan((current) => ({
+                        ...current,
+                        [selectedPlan.id]: !current[selectedPlan.id],
+                      }))
+                    }
+                  >
+                    {isEditMode ? 'Stop Editing' : 'Edit Plan'}
+                  </button>
+                  <button type="button" className="btn" onClick={() => generatePlans(true)}>
+                    Regenerate Plan
+                  </button>
+                  <button type="button" className="btn" onClick={openAddGroupModal}>
+                    Add Task Group
+                  </button>
+                  <button type="button" className="btn" onClick={() => window.print()}>
+                    Print Plan
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={selectedPlan.tasks.some((task) => !task.completed)}
+                    onClick={() => completePlan(selectedPlan)}
+                  >
+                    Complete Plan
+                  </button>
+                </>
+              ) : null}
             </div>
           </header>
 
@@ -1030,6 +1180,33 @@ const BattlePlansPage = () => {
             </section>
           ) : (
             <>
+              {currentOperation ? (
+                <section className="panel bp-current-operation-card">
+                  <p className="bp-current-operation-eyebrow">Current Operation</p>
+                  <h4>{currentOperation.operationName}</h4>
+                  <div className="bp-current-operation-meta">
+                    <p>Assigned Work Items: {currentOperation.workItems.length}</p>
+                    <p>Estimated Time: {currentOperation.totalEstimatedMinutes} min</p>
+                    <p>Status: {formatGroupUiStatus(getGroupUiStatus(selectedPlan.id, currentOperation))}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() =>
+                      setStartedGroupsByPlan((current) => ({
+                        ...current,
+                        [selectedPlan.id]: {
+                          ...(current[selectedPlan.id] ?? {}),
+                          [currentOperation.id]: true,
+                        },
+                      }))
+                    }
+                  >
+                    Start Operation
+                  </button>
+                </section>
+              ) : null}
+
               <section className="panel bp-section-card">
                 <h4>1. Start of Day Workshop Tasks</h4>
                 <p className="subtle">Estimated section time: {startChecklist.length * 6} mins</p>
@@ -1037,7 +1214,12 @@ const BattlePlansPage = () => {
               </section>
 
               <section className="bp-production-groups">
-                {selectedGroups.map((group) => renderGroup(group, selectedPlan))}
+                {selectedGroups.map((group, index) => (
+                  <div key={group.id} className="bp-operation-flow-item">
+                    {index > 0 ? <div className="bp-flow-arrow" aria-hidden="true">↓</div> : null}
+                    {renderGroup(group, selectedPlan)}
+                  </div>
+                ))}
               </section>
 
               <section className="panel bp-section-card">
