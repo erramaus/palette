@@ -6,7 +6,6 @@ const navSections = [
     heading: 'Overview',
     items: [
       { to: '/dashboard', label: 'Dashboard' },
-      { to: '/about', label: 'About' },
     ],
   },
   {
@@ -14,7 +13,7 @@ const navSections = [
     items: [
       { to: '/workshop-list', label: 'Workshop List' },
       { to: '/battle-plans', label: 'Battle Plans' },
-      { to: '/tags', label: 'Tags' },
+      { to: '/tags', label: 'Production Tags' },
       { to: '/shipping', label: 'Shipping' },
     ],
   },

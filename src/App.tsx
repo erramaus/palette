@@ -12,7 +12,6 @@ import ShippingPage from './pages/ShippingPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
-import AboutPage from './pages/AboutPage'
 import LoadingPage from './pages/LoadingPage'
 import WorkItemDetailPage from './pages/WorkItemDetailPage'
 import { branding } from './theme/branding'
@@ -33,7 +32,6 @@ function App() {
             <Route path="workshop-list" element={<WorkshopListPage />} />
             <Route path="work-items/:id" element={<WorkItemDetailPage />} />
             <Route path="battle-plans" element={<BattlePlansPage />} />
-            <Route path="about" element={<AboutPage />} />
             <Route path="loading" element={<LoadingPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="tags" element={<TagsPage />} />
