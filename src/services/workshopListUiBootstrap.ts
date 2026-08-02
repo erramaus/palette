@@ -23,7 +23,7 @@ export interface WorkshopListUiEnvironment {
   products: Array<NamedEntity & { code: string; type: ProductType }>
   departments: NamedEntity[]
   employees: NamedEntity[]
-  ingestProductionJob: (job: ProductionJob) => string
+  ingestProductionJob: (job: ProductionJob) => { workItemId: string; artworkId: string }
   getWorkItemIdForOrderNumber: (orderNumber: string) => string | undefined
 }
 
@@ -208,10 +208,13 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     employees.set(employee.id, { id: employee.id, name: employee.name })
   }
 
-  const ingestProductionJob = (job: ProductionJob): string => {
+  const ingestProductionJob = (job: ProductionJob): { workItemId: string; artworkId: string } => {
     const existingWorkItemId = workItemIdByOrderNumber.get(job.orderNumber)
     if (existingWorkItemId) {
-      return existingWorkItemId
+      return {
+        workItemId: existingWorkItemId,
+        artworkId: createId('artwork', `${job.customerName}-${job.artworkTitle}`),
+      }
     }
 
     const customerId = createId('customer', job.customerName)
@@ -270,7 +273,10 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
       workItemService.updateWorkItem(created.id, { status: 'COMPLETE' })
     }
 
-    return created.id
+    return {
+      workItemId: created.id,
+      artworkId,
+    }
   }
 
   for (const job of mockProductionJobs) {

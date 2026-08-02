@@ -266,6 +266,10 @@ const DashboardPage = () => {
       count: productionJobs.filter((job) => job.steps.FILES !== 'COMPLETE' && !job.onHold).length,
     },
     {
+      label: '3D file review required',
+      count: threeDFilePreparations.filter((preparation) => preparation.attentionRequired).length,
+    },
+    {
       label: 'Waiting on Erin',
       count: productionJobs.filter((job) => /erin/i.test(job.notes)).length,
     },

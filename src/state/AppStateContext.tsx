@@ -386,14 +386,14 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const environment = getWorkshopListUiEnvironment()
-      const workItemId = environment.ingestProductionJob(job)
+      const { workItemId, artworkId } = environment.ingestProductionJob(job)
 
       const preparation = isThreeDProductType(productType)
         ? recalculateThreeDFilePreparation(
             createThreeDFilePreparation({
               workItemId,
               productionJobId: job.id,
-              artworkId: `artwork-${job.id}`,
+              artworkId,
               artworkName: job.artworkTitle,
               orderedWidth: job.width,
               orderedHeight: job.height,
@@ -442,6 +442,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
                 metadata: {
                   preparationId: preparation.id,
                   status: preparation.status,
+                  attentionRequired: preparation.attentionRequired,
                 },
               },
             ]

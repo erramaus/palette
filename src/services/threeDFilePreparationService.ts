@@ -27,6 +27,9 @@ const parseLocalDate = (value: string): Date => {
 const isOnOrAfter = (value: string, compareTo: string): boolean =>
   parseLocalDate(value).getTime() >= parseLocalDate(compareTo).getTime()
 
+const isSameDay = (value: string, compareTo: string): boolean =>
+  parseLocalDate(value).getTime() === parseLocalDate(compareTo).getTime()
+
 const isWithinInclusiveRange = (value: string, start: string, end: string): boolean => {
   const target = parseLocalDate(value).getTime()
   return target >= parseLocalDate(start).getTime() && target <= parseLocalDate(end).getTime()
@@ -80,6 +83,11 @@ export const calculateThreeDCropSize = (
 
 export const inferThreeDScanMethod = (scanDate?: string): ThreeDScanMethod => {
   if (!scanDate) {
+    return 'UNKNOWN'
+  }
+
+  // The manual distinguishes dates before and after the cutoff; the cutoff date itself is ambiguous.
+  if (isSameDay(scanDate, OLD_METHOD_CUTOFF)) {
     return 'UNKNOWN'
   }
 
