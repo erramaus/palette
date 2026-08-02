@@ -1,14 +1,37 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { useAppState } from '../state/AppStateContext'
+import type { IntelligenceRecommendation, RiskLevel } from '../types/productionIntelligence'
 import { PRODUCTION_STEP_LABELS, PRODUCTION_STEP_SEQUENCE } from '../utils/productionSteps'
 
 const formatPercent = (value: number): string => `${Math.max(0, Math.min(100, Math.round(value)))}%`
 
+const riskBadgeClass: Record<RiskLevel, string> = {
+  INFO: 'badge-risk-info',
+  LOW: 'badge-risk-low',
+  MEDIUM: 'badge-risk-medium',
+  HIGH: 'badge-risk-high',
+  CRITICAL: 'badge-risk-critical',
+}
+
 const DashboardPage = () => {
   const navigate = useNavigate()
-  const { productionJobs, battlePlans, employees, activityLogs } = useAppState()
+  const { productionJobs, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
   const today = new Date().toISOString().slice(0, 10)
+  const [dismissedRecommendationIds, setDismissedRecommendationIds] = useState<Record<string, boolean>>({})
+  const [reviewedRecommendationIds, setReviewedRecommendationIds] = useState<Record<string, boolean>>({})
+  const [acceptedRecommendationIds, setAcceptedRecommendationIds] = useState<Record<string, boolean>>({})
+  const [intelligenceConfig, setIntelligenceConfig] = useState({
+    dueSoonDays: 2,
+    stageAgeThresholdDays: 2,
+    capacityWarningPercentage: 85,
+    overloadPercentage: 100,
+    carryForwardWarningCount: 2,
+    qualityWarningThreshold: 2,
+    bottleneckQueueThreshold: 3,
+    minimumConfidenceThreshold: 0.5,
+  })
 
   const workers = useMemo(
     () => employees.filter((employee) => employee.role === 'WORKER' && employee.active),
@@ -22,6 +45,45 @@ const DashboardPage = () => {
       .forEach((plan) => map.set(plan.assignedWorkerId, plan))
     return map
   }, [battlePlans, today])
+
+  const intelligenceService = useMemo(
+    () =>
+      new ProductionIntelligenceService({
+        productionJobs,
+        battlePlans,
+        employees,
+        activityLogs,
+        config: {
+          ...intelligenceConfig,
+        },
+      }),
+    [productionJobs, battlePlans, employees, activityLogs, intelligenceConfig],
+  )
+
+  const intelligenceForecast = useMemo(() => intelligenceService.getForecast(), [intelligenceService])
+  const topRecommendations = useMemo(
+    () =>
+      intelligenceForecast.recommendations
+        .filter((recommendation) => !dismissedRecommendationIds[recommendation.id])
+        .slice(0, 5),
+    [intelligenceForecast.recommendations, dismissedRecommendationIds],
+  )
+  const deadlineRiskHighlights = useMemo(
+    () => intelligenceForecast.deadlineRisks.slice(0, 5),
+    [intelligenceForecast.deadlineRisks],
+  )
+  const workerForecastHighlights = useMemo(
+    () => intelligenceForecast.workerForecasts.slice(0, 5),
+    [intelligenceForecast.workerForecasts],
+  )
+  const bottleneckHighlights = useMemo(
+    () => intelligenceForecast.bottleneckForecasts.slice(0, 4),
+    [intelligenceForecast.bottleneckForecasts],
+  )
+  const capacityOpportunities = useMemo(
+    () => intelligenceForecast.capacityForecasts.filter((item) => item.status !== 'BALANCED').slice(0, 5),
+    [intelligenceForecast.capacityForecasts],
+  )
 
   const plannedMinutesToday = [...workerPlans.values()].reduce(
     (sum, plan) => sum + plan.tasks.reduce((taskSum, task) => taskSum + task.estimatedMinutes, 0),
@@ -188,6 +250,115 @@ const DashboardPage = () => {
     { label: 'Generate Reports', to: '/reports' },
   ]
 
+  const openRecommendationTarget = (recommendation: IntelligenceRecommendation): void => {
+    if (recommendation.actionTarget.kind === 'BATTLE_PLAN') {
+      navigate('/battle-plans')
+      return
+    }
+
+    navigate('/workshop-list')
+  }
+
+  const dismissRecommendation = (recommendation: IntelligenceRecommendation): void => {
+    setDismissedRecommendationIds((current) => ({
+      ...current,
+      [recommendation.id]: true,
+    }))
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: recommendation.id,
+      action: 'RECOMMENDATION_DISMISSED',
+      metadata: {
+        priority: recommendation.priority,
+        confidence: recommendation.confidence,
+      },
+    })
+  }
+
+  const markRecommendationReviewed = (recommendation: IntelligenceRecommendation): void => {
+    setReviewedRecommendationIds((current) => ({
+      ...current,
+      [recommendation.id]: true,
+    }))
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: recommendation.id,
+      action: 'RECOMMENDATION_REVIEWED',
+      metadata: {
+        priority: recommendation.priority,
+        confidence: recommendation.confidence,
+      },
+    })
+  }
+
+  const acceptRecommendation = (recommendation: IntelligenceRecommendation): void => {
+    setAcceptedRecommendationIds((current) => ({
+      ...current,
+      [recommendation.id]: true,
+    }))
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: recommendation.id,
+      action: 'RECOMMENDATION_ACCEPTED',
+      metadata: {
+        priority: recommendation.priority,
+        confidence: recommendation.confidence,
+      },
+    })
+  }
+
+  const logForecastGenerated = (): void => {
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: 'PRODUCTION_INTELLIGENCE',
+      action: 'FORECAST_GENERATED',
+      metadata: {
+        recommendationCount: intelligenceForecast.recommendations.length,
+        alertCount: intelligenceForecast.alerts.length,
+      },
+    })
+  }
+
+  const updateThresholdProfile = (profile: 'AGGRESSIVE' | 'BALANCED' | 'CONSERVATIVE'): void => {
+    const nextConfig =
+      profile === 'AGGRESSIVE'
+        ? {
+            ...intelligenceConfig,
+            capacityWarningPercentage: 75,
+            bottleneckQueueThreshold: 2,
+            minimumConfidenceThreshold: 0.4,
+          }
+        : profile === 'CONSERVATIVE'
+          ? {
+              ...intelligenceConfig,
+              capacityWarningPercentage: 95,
+              bottleneckQueueThreshold: 4,
+              minimumConfidenceThreshold: 0.65,
+            }
+          : {
+              ...intelligenceConfig,
+              capacityWarningPercentage: 85,
+              bottleneckQueueThreshold: 3,
+              minimumConfidenceThreshold: 0.5,
+            }
+
+    setIntelligenceConfig(nextConfig)
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: 'PRODUCTION_INTELLIGENCE',
+      action: 'INTELLIGENCE_THRESHOLD_CHANGED',
+      metadata: {
+        profile,
+        capacityWarningPercentage: nextConfig.capacityWarningPercentage,
+        bottleneckQueueThreshold: nextConfig.bottleneckQueueThreshold,
+        minimumConfidenceThreshold: nextConfig.minimumConfidenceThreshold,
+      },
+    })
+  }
+
   return (
     <section className="page page-dashboard dashboard-command-center">
       <div className="page-heading">
@@ -228,6 +399,179 @@ const DashboardPage = () => {
           <p>Carry-Forward Minutes</p>
           <h3>{carryForwardMinutes}</h3>
         </article>
+      </section>
+
+      <section className="panel dashboard-intelligence-panel">
+        <div className="work-item-section-header">
+          <h3>Production Intelligence</h3>
+          <div className="dashboard-intelligence-controls">
+            <label>
+              Threshold Profile
+              <select
+                value={
+                  intelligenceConfig.capacityWarningPercentage === 75
+                    ? 'AGGRESSIVE'
+                    : intelligenceConfig.capacityWarningPercentage === 95
+                      ? 'CONSERVATIVE'
+                      : 'BALANCED'
+                }
+                onChange={(event) =>
+                  updateThresholdProfile(
+                    event.target.value as 'AGGRESSIVE' | 'BALANCED' | 'CONSERVATIVE',
+                  )
+                }
+              >
+                <option value="AGGRESSIVE">Aggressive</option>
+                <option value="BALANCED">Balanced</option>
+                <option value="CONSERVATIVE">Conservative</option>
+              </select>
+            </label>
+            <button type="button" className="btn" onClick={logForecastGenerated}>
+              Log Forecast Snapshot
+            </button>
+            <span className="subtle">
+              Generated at {new Date(intelligenceForecast.generatedAt).toLocaleTimeString()}
+            </span>
+          </div>
+        </div>
+
+        <div className="dashboard-intelligence-grid">
+          <article className="dashboard-intelligence-block">
+            <h4>Top Recommendations</h4>
+            {topRecommendations.length === 0 ? (
+              <p className="subtle">No recommendations available above confidence threshold.</p>
+            ) : (
+              <div className="dashboard-recommendation-list">
+                {topRecommendations.map((recommendation) => (
+                  <article key={recommendation.id} className="dashboard-recommendation-card">
+                    <div className="dashboard-recommendation-head">
+                      <strong>{recommendation.title}</strong>
+                      <span className={`badge ${riskBadgeClass[recommendation.priority]}`}>
+                        {recommendation.priority}
+                      </span>
+                    </div>
+                    <p>{recommendation.shortExplanation}</p>
+                    <p className="subtle">
+                      Reason: {recommendation.reasons[0]?.description ?? 'No supporting reason available.'}
+                    </p>
+                    <div className="dashboard-recommendation-actions">
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => openRecommendationTarget(recommendation)}
+                      >
+                        {recommendation.actionTarget.kind === 'BATTLE_PLAN' ? 'Open Battle Plan' : 'Open Work Item'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => dismissRecommendation(recommendation)}
+                      >
+                        Dismiss
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={Boolean(reviewedRecommendationIds[recommendation.id])}
+                        onClick={() => markRecommendationReviewed(recommendation)}
+                      >
+                        {reviewedRecommendationIds[recommendation.id] ? 'Reviewed' : 'Mark Reviewed'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={Boolean(acceptedRecommendationIds[recommendation.id])}
+                        onClick={() => acceptRecommendation(recommendation)}
+                      >
+                        {acceptedRecommendationIds[recommendation.id] ? 'Accepted' : 'Mark Accepted'}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Deadline Risks</h4>
+            <ul className="plain-list">
+              {deadlineRiskHighlights.map((risk) => (
+                <li key={risk.workItemId}>
+                  <div>
+                    <strong>{risk.orderNumber}</strong>
+                    <p>
+                      {risk.minutesRequired} min required, {risk.availableMinutesBeforeDue} min available, ETA {risk.estimatedCompletionDate}
+                    </p>
+                    <p className="subtle">{risk.reasons[0]?.description}</p>
+                  </div>
+                  <span className={`badge ${riskBadgeClass[risk.riskLevel]}`}>{risk.riskLevel}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Worker Forecasts</h4>
+            <ul className="plain-list">
+              {workerForecastHighlights.map((worker) => (
+                <li key={worker.employeeId}>
+                  <div>
+                    <strong>{worker.employeeName}</strong>
+                    <p>
+                      Utilization {worker.utilizationPercentage}% • Idle {worker.likelyIdleMinutes} • Over {worker.overCapacityMinutes}
+                    </p>
+                    <p className="subtle">
+                      Next operation: {worker.nextRecommendedOperation ?? '--'} • Projected finish: {worker.projectedFinishTime ?? '--'}
+                    </p>
+                  </div>
+                  <span className={`badge ${riskBadgeClass[worker.carryForwardRisk]}`}>{worker.carryForwardRisk}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Bottleneck Forecast</h4>
+            <ul className="plain-list">
+              {bottleneckHighlights.map((bottleneck) => (
+                <li key={bottleneck.stage}>
+                  <div>
+                    <strong>{PRODUCTION_STEP_LABELS[bottleneck.stage]}</strong>
+                    <p>
+                      Queue {bottleneck.activeWorkItems} • Load {bottleneck.capacityLoadPercentage}% • Incoming {bottleneck.incomingWorkFromPreviousStage}
+                    </p>
+                    <p className="subtle">{bottleneck.reasons[0]?.description}</p>
+                  </div>
+                  <span className={`badge ${riskBadgeClass[bottleneck.riskLevel]}`}>{bottleneck.riskLevel}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Capacity Opportunities</h4>
+            <ul className="plain-list">
+              {capacityOpportunities.map((capacity) => (
+                <li key={capacity.employeeId}>
+                  <div>
+                    <strong>{capacity.employeeName}</strong>
+                    <p>
+                      {capacity.status === 'OVERLOADED'
+                        ? `${Math.abs(capacity.capacityGapMinutes)} min over capacity`
+                        : `${Math.abs(capacity.capacityGapMinutes)} min available`}
+                    </p>
+                    <p className="subtle">{capacity.recommendation ?? 'Balanced allocation'}</p>
+                  </div>
+                  <span
+                    className={`badge ${capacity.status === 'OVERLOADED' ? riskBadgeClass.HIGH : riskBadgeClass.LOW}`}
+                  >
+                    {capacity.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        </div>
       </section>
 
       <section className="dashboard-two-col">

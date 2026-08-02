@@ -175,8 +175,8 @@ ul {
 }
 
 .header-logo .palette-logo-image {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .top-header h2 {
@@ -216,6 +216,9 @@ ul {
   object-fit: contain;
   object-position: center;
   image-rendering: auto;
+  opacity: 1;
+  filter: none;
+  mix-blend-mode: normal;
 }
 
 .logo-wrap {
@@ -223,6 +226,9 @@ ul {
   gap: 8px;
   justify-items: start;
   align-items: center;
+  opacity: 1;
+  filter: none;
+  mix-blend-mode: normal;
 }
 
 .logo-wrap-small {
@@ -297,7 +303,41 @@ ul {
 }
 
 .logo-variant-light .palette-logo-image {
-  mix-blend-mode: multiply;
+  mix-blend-mode: normal;
+  /* Simulate a white underpaint behind transparent logo shapes on dark UI. */
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.4))
+    saturate(1.18)
+    contrast(1.08);
+}
+
+.sidebar-logo-block,
+.header-logo,
+.login-logo,
+.loading-logo,
+.sidebar .logo-wrap,
+.top-header .logo-wrap,
+.login-card .logo-wrap,
+.loading-card .logo-wrap {
+  opacity: 1;
+  filter: none;
+  mix-blend-mode: normal;
+}
+
+.sidebar-logo-block .palette-logo-image,
+.sidebar .logo-variant-light .palette-logo-image,
+.loading-card .logo-variant-light .palette-logo-image {
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.4))
+    saturate(1.18)
+    contrast(1.08);
+}
+
+.sidebar .logo-wrap-medium .palette-logo-image {
+  width: 76px;
+  height: 76px;
 }
 
 .sidebar .logo-wrap,
@@ -464,6 +504,76 @@ ul {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 10px;
+}
+
+.dashboard-intelligence-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-intelligence-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.dashboard-intelligence-controls label {
+  display: grid;
+  gap: 4px;
+  color: #29405f;
+  font-size: 0.85rem;
+}
+
+.dashboard-intelligence-controls select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fff;
+}
+
+.dashboard-intelligence-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+}
+
+.dashboard-intelligence-block {
+  border: 1px solid #dae4f1;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fbfdff;
+}
+
+.dashboard-intelligence-block h4 {
+  margin: 0 0 10px;
+}
+
+.dashboard-recommendation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-recommendation-card {
+  border: 1px solid #d9e3f1;
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  background: #fff;
+}
+
+.dashboard-recommendation-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-recommendation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .summary-card p {
@@ -747,6 +857,31 @@ button:focus {
 .badge-priority {
   background: #e9edff;
   color: #2b2f67;
+}
+
+.badge-risk-info {
+  background: #e9f0ff;
+  color: #305a96;
+}
+
+.badge-risk-low {
+  background: #e8f8ec;
+  color: #1f7a3f;
+}
+
+.badge-risk-medium {
+  background: #fff2d9;
+  color: #8a5b00;
+}
+
+.badge-risk-high {
+  background: #ffe3db;
+  color: #9f341d;
+}
+
+.badge-risk-critical {
+  background: #ffd7dd;
+  color: #8f122f;
 }
 
 .form-grid {
@@ -1656,6 +1791,10 @@ a:hover {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
   }
 
+  .dashboard-intelligence-grid {
+    grid-template-columns: 1fr;
+  }
+
   .summary-grid {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
@@ -1719,6 +1858,17 @@ a:hover {
   }
 
   .dashboard-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-intelligence-controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-recommendation-actions {
+    display: grid;
     grid-template-columns: 1fr;
   }
 
