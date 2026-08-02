@@ -13,6 +13,8 @@ const pageTitles: Record<string, string> = {
   '/shipping': 'Shipping',
   '/reports': 'Reports',
   '/settings': 'Settings',
+  '/tools': 'Tools',
+  '/tools/print-table-optimizer': 'Print Table Optimizer',
 }
 
 const TopHeader = () => {

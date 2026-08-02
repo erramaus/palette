@@ -26,6 +26,12 @@ const navSections = [
       { to: '/settings', label: 'Settings' },
     ],
   },
+  {
+    heading: 'Tools',
+    items: [
+      { to: '/tools/print-table-optimizer', label: 'Print Table Optimizer' },
+    ],
+  },
 ]
 
 const SidebarNav = () => {
