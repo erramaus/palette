@@ -23,6 +23,8 @@ export interface WorkshopListUiEnvironment {
   products: Array<NamedEntity & { code: string; type: ProductType }>
   departments: NamedEntity[]
   employees: NamedEntity[]
+  ingestProductionJob: (job: ProductionJob) => string
+  getWorkItemIdForOrderNumber: (orderNumber: string) => string | undefined
 }
 
 const createId = (prefix: string, value: string): string =>
@@ -38,7 +40,7 @@ const inferProductCode = (productType: ProductType): string => {
     return '3 Canv'
   }
 
-  if (productType === 'ORIGINAL') {
+  if (productType === 'ORIGINAL' || productType === 'PAPER') {
     return '4 Paper'
   }
 
@@ -200,12 +202,18 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
   const products = new Map<string, NamedEntity & { code: string; type: ProductType }>()
   const departments = new Map<string, NamedEntity>()
   const employees = new Map<string, NamedEntity>()
+  const workItemIdByOrderNumber = new Map<string, string>()
 
   for (const employee of mockEmployees) {
     employees.set(employee.id, { id: employee.id, name: employee.name })
   }
 
-  for (const job of mockProductionJobs) {
+  const ingestProductionJob = (job: ProductionJob): string => {
+    const existingWorkItemId = workItemIdByOrderNumber.get(job.orderNumber)
+    if (existingWorkItemId) {
+      return existingWorkItemId
+    }
+
     const customerId = createId('customer', job.customerName)
     const artworkId = createId('artwork', `${job.customerName}-${job.artworkTitle}`)
     const productId = createId('product', `${job.productType}-${job.artworkTitle}`)
@@ -247,9 +255,12 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
       customFields: {
         orderNumber: job.orderNumber,
         frameStyle: job.frameInfo,
+        alignment: job.width === job.height ? 'SQUARE' : job.width > job.height ? 'HORIZ' : 'VERT',
         packagingMethod: job.orderNumber.startsWith('GAL-') ? 'GALLERY' : 'STANDARD_BOX',
       },
     })
+
+    workItemIdByOrderNumber.set(job.orderNumber, created.id)
 
     if (job.onHold) {
       workItemService.updateWorkItem(created.id, { status: 'BLOCKED' })
@@ -258,6 +269,12 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     if (job.steps.SHIPPED === 'COMPLETE') {
       workItemService.updateWorkItem(created.id, { status: 'COMPLETE' })
     }
+
+    return created.id
+  }
+
+  for (const job of mockProductionJobs) {
+    ingestProductionJob(job)
   }
 
   const workflowContextById = new Map(Object.values(workflowContexts).map((context) => [context.workflow.id, context]))
@@ -290,6 +307,8 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     products: [...products.values()].sort((a, b) => a.name.localeCompare(b.name)),
     departments: [...departments.values()].sort((a, b) => a.name.localeCompare(b.name)),
     employees: [...employees.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    ingestProductionJob,
+    getWorkItemIdForOrderNumber: (orderNumber: string) => workItemIdByOrderNumber.get(orderNumber),
   }
 }
 

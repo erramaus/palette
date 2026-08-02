@@ -8,6 +8,7 @@ import { ProductionForecastService } from '../services/ProductionForecastService
 import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
 import { useAppState } from '../state/AppStateContext'
+import type { ThreeDFilePreparation, ThreeDSignatureStatus } from '../types/threeDFilePreparation'
 
 interface EditFormState {
   priority: number
@@ -78,7 +79,16 @@ const promptActualMinutes = (label: string, suggestedMinutes: number): number | 
 const WorkItemDetailPage = () => {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { productionJobs, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
+  const {
+    productionJobs,
+    threeDFilePreparations,
+    battlePlans,
+    employees,
+    activityLogs,
+    addActivityLog,
+    saveThreeDFilePreparation,
+    validateThreeDFilePreparation,
+  } = useAppState()
 
   const environment = useMemo(() => getWorkshopListUiEnvironment(), [])
   const detailService = useMemo(() => getWorkItemDetailService(environment), [environment])
@@ -129,12 +139,13 @@ const WorkItemDetailPage = () => {
     () =>
       new ProductionForecastService({
         productionJobs,
+        threeDFilePreparations,
         battlePlans,
         employees,
         activityLogs,
         config: loadProductionForecastSettings(),
       }),
-    [productionJobs, battlePlans, employees, activityLogs],
+    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs],
   )
 
   const forecastResult = useMemo(() => forecastService.getForecast(), [forecastService])
@@ -164,6 +175,23 @@ const WorkItemDetailPage = () => {
 
     return forecastService.getWorkItemForecastPanelData(mappedProductionJob.id)
   }, [mappedProductionJob, forecastService])
+
+  const threeDPreparation = useMemo(() => {
+    if (!mappedProductionJob) {
+      return undefined
+    }
+
+    return threeDFilePreparations.find((preparation) => preparation.productionJobId === mappedProductionJob.id)
+  }, [mappedProductionJob, threeDFilePreparations])
+
+  const updateThreeDPreparation = (updater: (current: ThreeDFilePreparation) => ThreeDFilePreparation): void => {
+    if (!threeDPreparation) {
+      return
+    }
+
+    const updated = updater(threeDPreparation)
+    runAction(() => saveThreeDFilePreparation(updated))
+  }
 
   const runAction = (action: () => void): void => {
     setIsWorking(true)
@@ -429,6 +457,157 @@ const WorkItemDetailPage = () => {
           Missing actual times: {forecastResult.dataQuality.missingActualTimes}
         </p>
       </section>
+
+      {threeDPreparation ? (
+        <section className="panel">
+          <div className="work-item-section-header">
+            <h3>3D File Preparation</h3>
+            <button type="button" className="btn" onClick={() => runAction(() => validateThreeDFilePreparation(threeDPreparation.id))}>
+              Run Validation
+            </button>
+          </div>
+
+          <div className="work-item-overview-grid">
+            <p><strong>Status:</strong> {threeDPreparation.status}</p>
+            <p><strong>Scan method:</strong> {threeDPreparation.scanMethod}</p>
+            <p><strong>Ordered size:</strong> {threeDPreparation.orderedWidth} x {threeDPreparation.orderedHeight}</p>
+            <p><strong>Calculated crop:</strong> {threeDPreparation.calculatedCropWidth} x {threeDPreparation.calculatedCropHeight}</p>
+            <p><strong>Alignment:</strong> {threeDPreparation.alignment}</p>
+            <p><strong>Folder:</strong> {threeDPreparation.fileFolderName}</p>
+          </div>
+
+          <div className="form-grid work-item-detail-form-grid">
+            <label>
+              Scan date
+              <input
+                type="date"
+                value={threeDPreparation.scanDate ?? ''}
+                onChange={(event) => updateThreeDPreparation((current) => ({ ...current, scanDate: event.target.value || undefined }))}
+              />
+            </label>
+            <label>
+              Processed slice count
+              <input
+                type="number"
+                min={0}
+                value={threeDPreparation.processedSliceCount}
+                onChange={(event) => updateThreeDPreparation((current) => ({ ...current, processedSliceCount: Number(event.target.value) }))}
+              />
+            </label>
+            <label>
+              Signature status
+              <select
+                value={threeDPreparation.signatureStatus}
+                onChange={(event) => updateThreeDPreparation((current) => ({ ...current, signatureStatus: event.target.value as ThreeDSignatureStatus }))}
+              >
+                <option value="SIGNATURE_VISIBLE">Signature visible</option>
+                <option value="SIGNATURE_REPOSITIONED">Signature repositioned</option>
+                <option value="SIGNATURE_REMOVED_TO_FIT">Signature removed to fit</option>
+                <option value="NO_SIGNATURE_PRESENT">No signature present</option>
+                <option value="NEEDS_REVIEW">Needs review</option>
+              </select>
+            </label>
+            <label className="work-item-detail-wide-field">
+              Signature / workflow notes
+              <textarea
+                value={threeDPreparation.signatureNotes ?? threeDPreparation.notes}
+                onChange={(event) => updateThreeDPreparation((current) => ({ ...current, signatureNotes: event.target.value, notes: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="button-row">
+            <label className="checkbox-label"><input type="checkbox" checked={threeDPreparation.existingFilesFound} onChange={(event) => updateThreeDPreparation((current) => ({ ...current, existingFilesFound: event.target.checked }))} /> Existing files found</label>
+            <label className="checkbox-label"><input type="checkbox" checked={threeDPreparation.existingFilesCorrectSize} onChange={(event) => updateThreeDPreparation((current) => ({ ...current, existingFilesCorrectSize: event.target.checked }))} /> Correct ordered size exists</label>
+            <label className="checkbox-label"><input type="checkbox" checked={threeDPreparation.colorFilePresent} onChange={(event) => updateThreeDPreparation((current) => ({ ...current, colorFilePresent: event.target.checked }))} /> Color file present</label>
+            <label className="checkbox-label"><input type="checkbox" checked={threeDPreparation.depthSlicesPresent} onChange={(event) => updateThreeDPreparation((current) => ({ ...current, depthSlicesPresent: event.target.checked }))} /> Depth slices present</label>
+          </div>
+
+          <h4>Slicing and Formatting Checklist</h4>
+          <ul className="plain-list">
+            {threeDPreparation.checkpoints.map((checkpoint) => (
+              <li key={checkpoint.id}>
+                <div>
+                  <strong>{checkpoint.category}</strong>
+                  <p>{checkpoint.label}</p>
+                </div>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={checkpoint.completed}
+                    onChange={(event) =>
+                      updateThreeDPreparation((current) => ({
+                        ...current,
+                        checkpoints: current.checkpoints.map((currentCheckpoint) =>
+                          currentCheckpoint.id === checkpoint.id
+                            ? {
+                                ...currentCheckpoint,
+                                completed: event.target.checked,
+                                completedAt: event.target.checked ? new Date().toISOString() : undefined,
+                              }
+                            : currentCheckpoint,
+                        ),
+                      }))
+                    }
+                  />
+                  Complete
+                </label>
+              </li>
+            ))}
+          </ul>
+
+          <h4>Validation Results</h4>
+          <ul className="plain-list">
+            {threeDPreparation.validationResults.map((result) => (
+              <li key={result.code}>
+                <div>
+                  <strong>{result.label}</strong>
+                  <p>{result.message}</p>
+                </div>
+                <span className="subtle">{result.passed ? 'PASS' : 'FAIL'}</span>
+              </li>
+            ))}
+          </ul>
+
+          <h4>File Locations</h4>
+          <ul className="plain-list">
+            {threeDPreparation.fileSets.length > 0 ? threeDPreparation.fileSets.map((fileSet) => (
+              <li key={fileSet.id}>
+                <div>
+                  <strong>{fileSet.label}</strong>
+                  <p>{fileSet.fileLocation || fileSet.folderName}</p>
+                </div>
+                <span className="subtle">{fileSet.sliceCount} slices</span>
+              </li>
+            )) : (
+              <li><div><strong>No file locations recorded</strong><p>Record master, order-size, or archive locations as file work progresses.</p></div></li>
+            )}
+            {threeDPreparation.archiveRecord ? (
+              <li key={threeDPreparation.archiveRecord.id}>
+                <div>
+                  <strong>{threeDPreparation.archiveRecord.archiveName}</strong>
+                  <p>{threeDPreparation.archiveRecord.archiveLocation || 'Archive location pending'}</p>
+                </div>
+                <span className="subtle">{threeDPreparation.archiveRecord.completed ? 'Archived' : 'Archive required'}</span>
+              </li>
+            ) : null}
+          </ul>
+
+          <h4>Completion History</h4>
+          <ul className="plain-list">
+            {threeDPreparation.validationHistory.length > 0 ? threeDPreparation.validationHistory.map((entry) => (
+              <li key={`${entry.ranAt}-${entry.ranBy ?? 'system'}`}>
+                <div>
+                  <strong>{new Date(entry.ranAt).toLocaleString()}</strong>
+                  <p>Failed checks: {entry.failedCodes.length > 0 ? entry.failedCodes.join(', ') : 'None'}</p>
+                </div>
+              </li>
+            )) : (
+              <li><div><strong>No validation history yet</strong><p>Run validation after completing slicing, formatting, and signature review.</p></div></li>
+            )}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="panel">
         <h3>Workflow</h3>

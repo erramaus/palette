@@ -378,8 +378,10 @@ export interface InventoryItem extends AuditedEntity {
 export type ActivityAction =
   | 'CREATED'
   | 'UPDATED'
+  | 'DELETED'
   | 'STATUS_CHANGED'
   | 'ASSIGNED'
+  | 'APPROVED'
   | 'PRIORITY_CHANGED'
   | 'DUE_DATE_CHANGED'
   | 'WORK_STARTED'
@@ -410,6 +412,9 @@ export type ActivityAction =
   | 'OPTIMIZATION_PROPOSAL_ACCEPTED'
   | 'OPTIMIZATION_PROPOSAL_REJECTED'
   | 'OPTIMIZATION_SCENARIO_RUN'
+  | 'THREE_D_FILE_PREPARATION_CREATED'
+  | 'THREE_D_FILE_PREPARATION_UPDATED'
+  | 'THREE_D_FILE_PREPARATION_VALIDATED'
 
 export type ActivityEntityType =
   | 'Customer'
@@ -418,6 +423,7 @@ export type ActivityEntityType =
   | 'BattlePlan'
   | 'BattlePlanTemplate'
   | 'Artwork'
+  | 'Product'
   | 'Product'
   | 'Workflow'
   | 'WorkflowStage'

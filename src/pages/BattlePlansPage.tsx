@@ -123,6 +123,7 @@ const BattlePlansPage = () => {
   const {
     employees,
     productionJobs,
+    threeDFilePreparations,
     battlePlans,
     createBattlePlan,
     replaceBattlePlansForDate,
@@ -143,12 +144,13 @@ const BattlePlansPage = () => {
     () =>
       new ProductionForecastService({
         productionJobs,
+        threeDFilePreparations,
         battlePlans,
         employees,
         activityLogs,
         config: loadProductionForecastSettings(),
       }),
-    [productionJobs, battlePlans, employees, activityLogs],
+    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs],
   )
 
   const predictiveForecast = useMemo(() => forecastService.getForecast(), [forecastService])
@@ -478,6 +480,7 @@ const BattlePlansPage = () => {
       employees,
       workerConfigs,
       existingPlans: battlePlans,
+      threeDFilePreparations,
     })
 
     const finalResult = isRegenerate

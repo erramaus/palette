@@ -2,6 +2,7 @@ import type { AppActivityLog } from '../state/AppStateContext'
 import type { BattlePlan } from '../types/battlePlans'
 import type { Employee } from '../types/employees'
 import type { ProductType, ProductionJob } from '../types/production'
+import type { ThreeDFilePreparation } from '../types/threeDFilePreparation'
 import {
   DEFAULT_FORECAST_CONFIG,
   type CarryForwardEvaluationContext,
@@ -22,12 +23,17 @@ import {
 import { HistoricalPerformanceService } from './HistoricalPerformanceService'
 import { CompletionTimeEstimator } from './CompletionTimeEstimator'
 import { PRODUCTION_STEP_NAMES } from '../types/production'
+import {
+  getThreeDPreparationAdditionalMinutes,
+  isThreeDProductType,
+} from './threeDFilePreparationService'
 
 export interface ProductionForecastInput {
   productionJobs: ProductionJob[]
   battlePlans: BattlePlan[]
   employees: Employee[]
   activityLogs: AppActivityLog[]
+  threeDFilePreparations?: ThreeDFilePreparation[]
   now?: Date
   config?: Partial<ForecastConfig>
 }
@@ -58,6 +64,9 @@ const addDays = (value: Date, days: number): Date => {
   next.setDate(next.getDate() + days)
   return next
 }
+
+const shiftIsoDate = (value: string, days: number): string =>
+  toIsoDate(addDays(startOfDay(parseLocalDate(value)), days))
 
 const dayDiff = (leftIso: string, rightIso: string): number => {
   const left = startOfDay(parseLocalDate(leftIso)).getTime()
@@ -127,6 +136,7 @@ export class ProductionForecastService {
   private readonly battlePlans: BattlePlan[]
   private readonly employees: Employee[]
   private readonly activityLogs: AppActivityLog[]
+  private readonly threeDFilePreparations: ThreeDFilePreparation[]
   private readonly now: Date
   private readonly today: string
   private readonly config: ForecastConfig
@@ -136,6 +146,7 @@ export class ProductionForecastService {
     this.battlePlans = input.battlePlans
     this.employees = input.employees
     this.activityLogs = input.activityLogs
+    this.threeDFilePreparations = input.threeDFilePreparations ?? []
     this.now = input.now ?? new Date()
     this.today = toIsoDate(this.now)
     this.config = {
@@ -275,23 +286,60 @@ export class ProductionForecastService {
   private buildDeadlineForecasts(estimator: CompletionTimeEstimator): DeadlineForecast[] {
     return this.activeJobs().map((job) => {
       const estimate = estimator.estimateForJob(job)
-      const riskLevel = this.toDeadlineRisk(job, estimate)
-      const recommendedAction = this.recommendedAction(job, riskLevel, estimate)
+      const preparation = this.threeDFilePreparations.find((item) => item.productionJobId === job.id)
+      const additionalMinutes = preparation ? getThreeDPreparationAdditionalMinutes(preparation) : 0
+      const adjustedEstimate = additionalMinutes > 0
+        ? {
+            ...estimate,
+            remainingEstimatedMinutes: estimate.remainingEstimatedMinutes + additionalMinutes,
+            expectedWaitingMinutes: estimate.expectedWaitingMinutes + additionalMinutes,
+            optimisticDate: shiftIsoDate(estimate.optimisticDate, Math.ceil(additionalMinutes / this.config.dailyWorkingMinutes)),
+            expectedDate: shiftIsoDate(estimate.expectedDate, Math.ceil(additionalMinutes / this.config.dailyWorkingMinutes)),
+            conservativeDate: shiftIsoDate(estimate.conservativeDate, Math.ceil(additionalMinutes / this.config.dailyWorkingMinutes)),
+            estimatedShipReadyDate: shiftIsoDate(estimate.estimatedShipReadyDate, Math.ceil(additionalMinutes / this.config.dailyWorkingMinutes)),
+          }
+        : estimate
+      const riskLevel = this.toDeadlineRisk(job, adjustedEstimate)
+      const recommendedAction = this.recommendedAction(job, riskLevel, adjustedEstimate)
 
       const reasons: ForecastReason[] = [
-        ...estimate.reasons,
+        ...adjustedEstimate.reasons,
         {
           code: 'DEADLINE_COMPARISON',
-          description: `${job.orderNumber} due ${job.dueDate}; expected ${estimate.expectedDate}; conservative ${estimate.conservativeDate}.`,
+          description: `${job.orderNumber} due ${job.dueDate}; expected ${adjustedEstimate.expectedDate}; conservative ${adjustedEstimate.conservativeDate}.`,
         },
       ]
 
-      if (estimate.remainingEstimatedMinutes > estimate.expectedWaitingMinutes + this.config.dailyWorkingMinutes) {
+      if (adjustedEstimate.remainingEstimatedMinutes > adjustedEstimate.expectedWaitingMinutes + this.config.dailyWorkingMinutes) {
         reasons.push({
           code: 'LARGE_REMAINING_LOAD',
-          description: `${estimate.remainingEstimatedMinutes} estimated minutes remain across ${estimate.remainingRequiredStages.length} stages.`,
-          value: estimate.remainingEstimatedMinutes,
+          description: `${adjustedEstimate.remainingEstimatedMinutes} estimated minutes remain across ${adjustedEstimate.remainingRequiredStages.length} stages.`,
+          value: adjustedEstimate.remainingEstimatedMinutes,
         })
+      }
+
+      if (preparation && isThreeDProductType(job.productType)) {
+        if (!preparation.scanDate) {
+          reasons.push({
+            code: 'THREE_D_SCAN_DATE_MISSING',
+            description: '3D file preparation is missing a scan date, lowering forecast confidence.',
+          })
+        }
+
+        if (preparation.slicingRequired) {
+          reasons.push({
+            code: 'THREE_D_SLICING_REQUIRED',
+            description: `3D slicing remains required and adds ${additionalMinutes} estimated minutes before print readiness.`,
+            value: additionalMinutes,
+          })
+        }
+
+        if (preparation.status === 'VALIDATION_FAILED') {
+          reasons.push({
+            code: 'THREE_D_VALIDATION_FAILED',
+            description: '3D file validation failed; work item is effectively blocked until FILES issues are resolved.',
+          })
+        }
       }
 
       if (/approval|material|blocked|waiting/i.test(job.notes)) {
@@ -303,7 +351,13 @@ export class ProductionForecastService {
       }
 
       return {
-        ...estimate,
+        ...adjustedEstimate,
+        confidence:
+          preparation && !preparation.scanDate
+            ? 'LOW'
+            : preparation?.status === 'VALIDATION_FAILED'
+              ? 'LOW'
+              : adjustedEstimate.confidence,
         riskLevel,
         recommendedAction,
         reasons,

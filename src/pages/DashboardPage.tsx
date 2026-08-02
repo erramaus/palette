@@ -50,7 +50,7 @@ const formatWeeklyMetric = (metric: ProductionMetricDefinition | undefined): str
 
 const DashboardPage = () => {
   const navigate = useNavigate()
-  const { productionJobs, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
+  const { productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
   const today = new Date().toISOString().slice(0, 10)
   const [dismissedRecommendationIds, setDismissedRecommendationIds] = useState<Record<string, boolean>>({})
   const [reviewedRecommendationIds, setReviewedRecommendationIds] = useState<Record<string, boolean>>({})
@@ -109,12 +109,13 @@ const DashboardPage = () => {
     () =>
       new ProductionForecastService({
         productionJobs,
+        threeDFilePreparations,
         battlePlans,
         employees,
         activityLogs,
         config: loadProductionForecastSettings(),
       }),
-    [productionJobs, battlePlans, employees, activityLogs],
+    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs],
   )
 
   const weeklyAnalytics = useMemo(

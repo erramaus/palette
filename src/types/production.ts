@@ -26,7 +26,9 @@ export type Priority = 'ORIGINALS' | 'CUSTOMER_PURCHASED' | 'GALLERY_INVENTORY'
 export type ProductType =
   | 'ORIGINAL'
   | 'TEXTURED_REPLICA_3D'
+  | 'THREE_D_PRINT'
   | 'CANVAS'
+  | 'PAPER'
   | 'GALLERY_INVENTORY'
 
 export type ProductionStepsRecord = Record<ProductionStepName, ProductionStepStatus>

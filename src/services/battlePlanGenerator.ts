@@ -11,8 +11,15 @@ import type {
   ProductionStepName,
   ProductionStepStatus,
 } from '../types/production'
+import type { ThreeDFilePreparation } from '../types/threeDFilePreparation'
 import { PRODUCTION_STEP_SEQUENCE } from '../utils/productionSteps'
 import { calculateDueStatus } from '../utils/dueStatus'
+import {
+  getThreeDDirectorOperationType,
+  getThreeDPreparationAdditionalMinutes,
+  isThreeDPreparationReadyForPrinter,
+  isThreeDProductType,
+} from './threeDFilePreparationService'
 
 export type BacklogReason =
   | 'NO_QUALIFIED_WORKER'
@@ -67,6 +74,7 @@ export interface GenerateBattlePlansInput {
   employees: Employee[]
   workerConfigs: GenerationWorkerConfig[]
   existingPlans: BattlePlan[]
+  threeDFilePreparations?: ThreeDFilePreparation[]
 }
 
 const dueStatusRank: Record<DueStatus, number> = {
@@ -196,6 +204,22 @@ export const isStepActionable = (job: ProductionJob, step: ProductionStepName): 
       .filter((candidateStep) => isStepRequired(job, candidateStep))
       .every((requiredStep) => isDoneForDependency(job.steps[requiredStep]))
   )
+}
+
+const isFilesCompleteForScheduling = (
+  job: ProductionJob,
+  preparationByJobId: Map<string, ThreeDFilePreparation>,
+): boolean => {
+  if (!isThreeDProductType(job.productType)) {
+    return job.steps.FILES === 'COMPLETE'
+  }
+
+  const preparation = preparationByJobId.get(job.id)
+  if (!preparation) {
+    return false
+  }
+
+  return isThreeDPreparationReadyForPrinter(preparation)
 }
 
 export const getNextActionableStep = (job: ProductionJob): ProductionStepName | null => {
@@ -331,6 +355,58 @@ const buildCandidateTasks = (jobs: ProductionJob[]): {
   }
 
   candidates.sort(compareTaskPriority)
+  return { candidates, blockedBacklog }
+}
+
+const buildCandidateTasksWithThreeDPrep = (
+  jobs: ProductionJob[],
+  threeDFilePreparations: ThreeDFilePreparation[],
+): {
+  candidates: GeneratedCandidateTask[]
+  blockedBacklog: UnassignedTask[]
+} => {
+  const preparationByJobId = new Map(threeDFilePreparations.map((preparation) => [preparation.productionJobId, preparation]))
+  const base = buildCandidateTasks(jobs)
+
+  const candidates = base.candidates.map((candidate) => {
+    if (candidate.productionStep !== 'FILES') {
+      return candidate
+    }
+
+    const preparation = preparationByJobId.get(candidate.productionJobId)
+    if (!preparation) {
+      return candidate
+    }
+
+    return {
+      ...candidate,
+      estimatedMinutes: candidate.estimatedMinutes + getThreeDPreparationAdditionalMinutes(preparation),
+      notes: [candidate.notes, `3D file prep status: ${preparation.status}`].filter(Boolean).join(' | '),
+    }
+  })
+
+  const blockedBacklog = base.blockedBacklog.map((task) => {
+    if (task.productionStep !== 'PRINTED') {
+      return task
+    }
+
+    const job = jobs.find((candidate) => candidate.id === task.productionJobId)
+    if (!job || !isThreeDProductType(job.productType)) {
+      return task
+    }
+
+    const preparation = preparationByJobId.get(job.id)
+    if (!preparation || isFilesCompleteForScheduling(job, preparationByJobId)) {
+      return task
+    }
+
+    return {
+      ...task,
+      reason: 'MISSING_PREREQUISITE' as const,
+      notes: `3D file preparation ${preparation.status} keeps FILES incomplete.`,
+    }
+  })
+
   return { candidates, blockedBacklog }
 }
 
@@ -535,6 +611,8 @@ export const generateDirectorBattlePlan = (
   unassignedBacklog: UnassignedTask[],
   overdueCount: number,
   atRiskCount: number,
+  threeDFilePreparations: ThreeDFilePreparation[] = [],
+  jobs: ProductionJob[] = [],
 ): BattlePlan => {
   const staticTasks: BattlePlanTask[] = [
     {
@@ -623,6 +701,42 @@ export const generateDirectorBattlePlan = (
     },
   ]
 
+  const activeThreeDPreparations = threeDFilePreparations.filter(
+    (preparation) => preparation.status !== 'READY_FOR_PRINTER' && preparation.status !== 'COMPLETE',
+  )
+
+  const groupedThreeDOperations = Array.from(
+    activeThreeDPreparations.reduce((groups, preparation) => {
+      const key = getThreeDDirectorOperationType(preparation)
+      const existing = groups.get(key) ?? []
+      existing.push(preparation)
+      groups.set(key, existing)
+      return groups
+    }, new Map<string, ThreeDFilePreparation[]>()),
+  )
+
+  const threeDOperationTasks: BattlePlanTask[] = groupedThreeDOperations.map(([operation, preparations], index) => {
+    const affectedWorkItems = preparations
+      .map((preparation) => {
+        const job = jobs.find((candidate) => candidate.id === preparation.productionJobId)
+        return `${job?.orderNumber ?? preparation.productionJobId} ${job?.artworkTitle ?? ''}`.trim()
+      })
+      .join(' | ')
+
+    return {
+      id: `DIR-${date}-3D-${index + 1}`,
+      productionJobId: 'SYSTEM',
+      productionStep: systemStep,
+      description: `${operation} (${preparations.length})`,
+      estimatedMinutes: Math.max(20, preparations.length * 25),
+      completed: false,
+      sortOrder: staticTasks.length + index + 1,
+      notes: affectedWorkItems,
+      carryForward: false,
+      locked: false,
+    }
+  })
+
   const reviewTasks = workerPlans.map((plan, index) => ({
     id: `DIR-${date}-REVIEW-${plan.assignedWorkerId}`,
     productionJobId: 'SYSTEM',
@@ -630,13 +744,13 @@ export const generateDirectorBattlePlan = (
     description: `Review and manage ${plan.assignedWorkerId} ${formatDateLong(date)} Battle Plan`,
     estimatedMinutes: 20,
     completed: false,
-    sortOrder: staticTasks.length + index + 1,
+    sortOrder: staticTasks.length + threeDOperationTasks.length + index + 1,
     notes: '',
     carryForward: false,
     locked: false,
   }))
 
-  const tasks = applyTaskOrder([...staticTasks, ...reviewTasks])
+  const tasks = applyTaskOrder([...staticTasks, ...threeDOperationTasks, ...reviewTasks])
 
   return {
     id: `AUTO-BP-${date}-${director.id}`,
@@ -741,7 +855,9 @@ export const generateDailyBattlePlans = (
 
   const jobsById = new Map(jobs.map((job) => [job.id, job]))
   const carryForwardTasks = getPreviousDayCarryForwardTasks(date, existingPlans, jobsById)
-  const { candidates, blockedBacklog } = buildCandidateTasks(jobs)
+  const { candidates, blockedBacklog } = input.threeDFilePreparations
+    ? buildCandidateTasksWithThreeDPrep(jobs, input.threeDFilePreparations)
+    : buildCandidateTasks(jobs)
   const mergedTasks = mergeCarryForwardTasks(carryForwardTasks, candidates)
   const assignment = assignTasksToWorkers(mergedTasks, workers, availabilityByWorker)
 
@@ -765,6 +881,8 @@ export const generateDailyBattlePlans = (
     unassignedBacklog,
     overdueCount,
     atRiskCount,
+    input.threeDFilePreparations ?? [],
+    jobs,
   )
 
   const workersOverCapacity = workerPlans.filter((plan) => {
