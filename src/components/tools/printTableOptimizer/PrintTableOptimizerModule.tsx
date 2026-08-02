@@ -13,9 +13,15 @@ import {
 
 interface EntryDraft {
   name: string
-  widthIn: number
-  heightIn: number
-  orientation: PrintOrientation
+  widthRaw: string
+  heightRaw: string
+  orientation: PrintOrientation | ''
+}
+
+interface EntryErrors {
+  width?: string
+  height?: string
+  orientation?: string
 }
 
 interface OrderPainting {
@@ -34,17 +40,32 @@ const PAINT_COLORS = ['#8ec5ff', '#f9b67a', '#b7e3a1', '#d7b6ff', '#ffd0a8', '#8
 
 const createDefaultDraft = (): EntryDraft => ({
   name: '',
-  widthIn: 16,
-  heightIn: 20,
-  orientation: 'VERT',
+  widthRaw: '',
+  heightRaw: '',
+  orientation: '',
 })
 
 const sampleClearanceHeight = SAMPLE_HEIGHT_IN + SAMPLE_SPACING_IN
 const tableWidthMm = Math.round(TABLE_WIDTH_IN * 25.4)
 const tableDepthMm = Math.round(TABLE_DEPTH_IN * 25.4)
 
+const parseDimension = (raw: string): number | null => {
+  const normalized = raw.trim()
+  if (!normalized) {
+    return null
+  }
+  if (!/^[0-9]*\.?[0-9]+$/.test(normalized)) {
+    return Number.NaN
+  }
+  const parsed = Number(normalized)
+  if (!Number.isFinite(parsed)) {
+    return Number.NaN
+  }
+  return parsed
+}
+
 const toDisplayLabel = (painting: OrderPainting): string =>
-  painting.optionalName ? `${painting.referenceNumber} ${painting.optionalName}` : painting.referenceNumber
+  painting.optionalName.trim() || painting.referenceNumber
 
 const toPrintInput = (painting: OrderPainting): PrintPaintingInput => ({
   id: painting.id,
@@ -73,12 +94,14 @@ const PrintTableOptimizerModule = () => {
   const [activeTableNumber, setActiveTableNumber] = useState(1)
   const [editingPaintingId, setEditingPaintingId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState<EntryDraft | null>(null)
+  const [entryErrors, setEntryErrors] = useState<EntryErrors>({})
   const [collapsedIntegration, setCollapsedIntegration] = useState(true)
   const [activeBottomTab, setActiveBottomTab] = useState<BottomTab>('COORDINATES')
   const [bottomTabCollapsed, setBottomTabCollapsed] = useState(false)
   const [feedback, setFeedback] = useState<string>('')
   const [generatedOutput, setGeneratedOutput] = useState<string>('')
   const [referenceCounter, setReferenceCounter] = useState(1)
+  const [printSequence, setPrintSequence] = useState(0)
 
   const layoutInputs = useMemo(() => paintings.map((painting) => toPrintInput(painting)), [paintings])
   const layout = useMemo(() => generatePrintTableLayout(layoutInputs), [layoutInputs])
@@ -124,24 +147,68 @@ const PrintTableOptimizerModule = () => {
     }
   }, [activeTableNumber, layout.tables, tableCount])
 
+  useEffect(() => {
+    if (printSequence === 0) {
+      return
+    }
+    const firstFrame = window.requestAnimationFrame(() => {
+      const secondFrame = window.requestAnimationFrame(() => {
+        window.print()
+      })
+      return () => window.cancelAnimationFrame(secondFrame)
+    })
+    return () => window.cancelAnimationFrame(firstFrame)
+  }, [printSequence])
+
   const addPainting = () => {
-    if (draft.widthIn <= 0 || draft.heightIn <= 0) {
-      setFeedback('Width and height must be greater than zero.')
+    const nextErrors: EntryErrors = {}
+    const parsedWidth = parseDimension(draft.widthRaw)
+    const parsedHeight = parseDimension(draft.heightRaw)
+
+    if (draft.widthRaw.trim().length === 0) {
+      nextErrors.width = 'Width is required.'
+    } else if (Number.isNaN(parsedWidth)) {
+      nextErrors.width = 'Enter a valid width.'
+    } else if ((parsedWidth ?? 0) <= 0) {
+      nextErrors.width = 'Width must be greater than 0.'
+    }
+
+    if (draft.heightRaw.trim().length === 0) {
+      nextErrors.height = 'Height is required.'
+    } else if (Number.isNaN(parsedHeight)) {
+      nextErrors.height = 'Enter a valid height.'
+    } else if ((parsedHeight ?? 0) <= 0) {
+      nextErrors.height = 'Height must be greater than 0.'
+    }
+
+    if (!draft.orientation) {
+      nextErrors.orientation = 'Select VERT or HORI.'
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setEntryErrors(nextErrors)
+      setFeedback('Fix the highlighted fields.')
       return
     }
 
+    const normalizedWidth = Number((parsedWidth ?? 0).toString())
+    const normalizedHeight = Number((parsedHeight ?? 0).toString())
+
+    const normalizedOrientation = draft.orientation as PrintOrientation
+
     const painting: OrderPainting = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      referenceNumber: `REF-${String(referenceCounter).padStart(3, '0')}`,
+      referenceNumber: `#${String(referenceCounter).padStart(2, '0')}`,
       optionalName: draft.name.trim(),
-      widthIn: Math.round(draft.widthIn * 100) / 100,
-      heightIn: Math.round(draft.heightIn * 100) / 100,
-      orientation: draft.orientation,
+      widthIn: Math.round(normalizedWidth * 100) / 100,
+      heightIn: Math.round(normalizedHeight * 100) / 100,
+      orientation: normalizedOrientation,
       colorHex: PAINT_COLORS[(referenceCounter - 1) % PAINT_COLORS.length],
     }
 
     setPaintings((current) => [...current, painting])
-    setDraft((current) => ({ ...createDefaultDraft(), orientation: current.orientation }))
+    setDraft(createDefaultDraft())
+    setEntryErrors({})
     setReferenceCounter((current) => current + 1)
     setGeneratedOutput('')
     setFeedback('Layout updated.')
@@ -167,7 +234,7 @@ const PrintTableOptimizerModule = () => {
       const duplicate: OrderPainting = {
         ...target,
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        referenceNumber: `REF-${String(nextReference).padStart(3, '0')}`,
+        referenceNumber: `#${String(nextReference).padStart(2, '0')}`,
         colorHex: PAINT_COLORS[(nextReference - 1) % PAINT_COLORS.length],
       }
       return [...current, duplicate]
@@ -184,6 +251,8 @@ const PrintTableOptimizerModule = () => {
 
   const clearAll = () => {
     setPaintings([])
+    setDraft(createDefaultDraft())
+    setEntryErrors({})
     setEditingPaintingId(null)
     setEditingDraft(null)
     setActiveTableNumber(1)
@@ -192,26 +261,34 @@ const PrintTableOptimizerModule = () => {
   }
 
   const handleGenerateLayoutPdf = () => {
+    if (paintings.length === 0) {
+      setFeedback('Add at least one painting before generating a layout.')
+      return
+    }
     setGeneratedOutput(buildPrintLayoutDocument(layout))
     setActiveBottomTab('EXPORT')
     setBottomTabCollapsed(false)
-    setFeedback('Packing complete. Layout PDF output is ready.')
+    setPrintSequence((current) => current + 1)
+    setFeedback('Packing complete. Print layout opened.')
   }
 
   const saveEditedPainting = (id: string, nextDraft: EntryDraft): void => {
-    if (nextDraft.widthIn <= 0 || nextDraft.heightIn <= 0) {
-      setFeedback('Width and height must be greater than zero.')
+    const parsedWidth = parseDimension(nextDraft.widthRaw)
+    const parsedHeight = parseDimension(nextDraft.heightRaw)
+    if (!nextDraft.orientation || parsedWidth === null || parsedHeight === null || Number.isNaN(parsedWidth) || Number.isNaN(parsedHeight) || parsedWidth <= 0 || parsedHeight <= 0) {
+      setFeedback('Edited rows require valid width, height, and orientation.')
       return
     }
+    const normalizedOrientation = nextDraft.orientation as PrintOrientation
     setPaintings((current) =>
       current.map((painting) =>
         painting.id === id
           ? {
               ...painting,
               optionalName: nextDraft.name.trim(),
-              widthIn: Math.round(nextDraft.widthIn * 100) / 100,
-              heightIn: Math.round(nextDraft.heightIn * 100) / 100,
-              orientation: nextDraft.orientation,
+              widthIn: Math.round(Number(parsedWidth.toString()) * 100) / 100,
+              heightIn: Math.round(Number(parsedHeight.toString()) * 100) / 100,
+              orientation: normalizedOrientation,
             }
           : painting,
       ),
@@ -244,8 +321,8 @@ const PrintTableOptimizerModule = () => {
 
   const toEditingDraft = (painting: OrderPainting): EntryDraft => ({
     name: painting.optionalName,
-    widthIn: painting.widthIn,
-    heightIn: painting.heightIn,
+    widthRaw: String(painting.widthIn),
+    heightRaw: String(painting.heightIn),
     orientation: painting.orientation,
   })
 
@@ -277,24 +354,22 @@ const PrintTableOptimizerModule = () => {
             <label>
               Width
               <input
-                type="number"
-                min={0.01}
-                step={0.01}
-                value={rowDraft.widthIn}
+                type="text"
+                inputMode="decimal"
+                value={rowDraft.widthRaw}
                 onChange={(event) =>
-                  setEditingDraft((current) => ({ ...(current ?? toEditingDraft(painting)), widthIn: Number(event.target.value) }))
+                  setEditingDraft((current) => ({ ...(current ?? toEditingDraft(painting)), widthRaw: event.target.value }))
                 }
               />
             </label>
             <label>
               Height
               <input
-                type="number"
-                min={0.01}
-                step={0.01}
-                value={rowDraft.heightIn}
+                type="text"
+                inputMode="decimal"
+                value={rowDraft.heightRaw}
                 onChange={(event) =>
-                  setEditingDraft((current) => ({ ...(current ?? toEditingDraft(painting)), heightIn: Number(event.target.value) }))
+                  setEditingDraft((current) => ({ ...(current ?? toEditingDraft(painting)), heightRaw: event.target.value }))
                 }
               />
             </label>
@@ -322,7 +397,20 @@ const PrintTableOptimizerModule = () => {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => saveEditedPainting(painting.id, rowDraft)}
+                onClick={() => {
+                  const parsedWidth = parseDimension(rowDraft.widthRaw)
+                  const parsedHeight = parseDimension(rowDraft.heightRaw)
+                  if (!rowDraft.orientation || parsedWidth === null || parsedHeight === null || Number.isNaN(parsedWidth) || Number.isNaN(parsedHeight) || parsedWidth <= 0 || parsedHeight <= 0) {
+                    setFeedback('Edited rows require valid width, height, and orientation.')
+                    return
+                  }
+                  saveEditedPainting(painting.id, {
+                    name: rowDraft.name,
+                    widthRaw: String(Number(parsedWidth.toString())),
+                    heightRaw: String(Number(parsedHeight.toString())),
+                    orientation: rowDraft.orientation,
+                  })
+                }}
               >
                 Save
               </button>
@@ -404,27 +492,31 @@ const PrintTableOptimizerModule = () => {
               <label>
                 Width
                 <input
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={draft.widthIn}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, widthIn: Number(event.target.value) }))
-                  }
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Width"
+                  value={draft.widthRaw}
+                  onChange={(event) => {
+                    setDraft((current) => ({ ...current, widthRaw: event.target.value }))
+                    setEntryErrors((current) => ({ ...current, width: undefined }))
+                  }}
                 />
+                {entryErrors.width ? <small className="pto-inline-error">{entryErrors.width}</small> : null}
               </label>
 
               <label>
                 Height
                 <input
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={draft.heightIn}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, heightIn: Number(event.target.value) }))
-                  }
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Height"
+                  value={draft.heightRaw}
+                  onChange={(event) => {
+                    setDraft((current) => ({ ...current, heightRaw: event.target.value }))
+                    setEntryErrors((current) => ({ ...current, height: undefined }))
+                  }}
                 />
+                {entryErrors.height ? <small className="pto-inline-error">{entryErrors.height}</small> : null}
               </label>
             </div>
 
@@ -432,18 +524,25 @@ const PrintTableOptimizerModule = () => {
               <button
                 type="button"
                 className={draft.orientation === 'VERT' ? 'btn btn-primary pto-orientation-btn' : 'btn pto-orientation-btn'}
-                onClick={() => setDraft((current) => ({ ...current, orientation: 'VERT' }))}
+                onClick={() => {
+                  setDraft((current) => ({ ...current, orientation: 'VERT' }))
+                  setEntryErrors((current) => ({ ...current, orientation: undefined }))
+                }}
               >
                 VERT
               </button>
               <button
                 type="button"
                 className={draft.orientation === 'HORI' ? 'btn btn-primary pto-orientation-btn' : 'btn pto-orientation-btn'}
-                onClick={() => setDraft((current) => ({ ...current, orientation: 'HORI' }))}
+                onClick={() => {
+                  setDraft((current) => ({ ...current, orientation: 'HORI' }))
+                  setEntryErrors((current) => ({ ...current, orientation: undefined }))
+                }}
               >
                 HORI
               </button>
             </div>
+            {entryErrors.orientation ? <small className="pto-inline-error">{entryErrors.orientation}</small> : null}
 
             <div className="button-row pto-action-row pto-large-actions">
               <button type="button" className="btn" onClick={addPainting}>
@@ -452,7 +551,6 @@ const PrintTableOptimizerModule = () => {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={layout.placedUnits === 0}
                 onClick={handleGenerateLayoutPdf}
               >
                 Generate Layout PDF
@@ -600,6 +698,7 @@ const PrintTableOptimizerModule = () => {
                 />
                 {(activeTable?.placements ?? []).map((placement) => {
                   const source = referenceById.get(placement.paintingId)
+                  const lineOne = source?.optionalName.trim() ? source.optionalName : (source?.referenceNumber ?? placement.label)
                   return (
                     <div
                       key={`${placement.paintingId}-${placement.label}-${placement.xIn}-${placement.yIn}`}
@@ -613,10 +712,9 @@ const PrintTableOptimizerModule = () => {
                       }}
                       title={`${placement.label} (${placement.xMm}, ${placement.yMm}) mm`}
                     >
-                      <span>{placement.label}</span>
-                      <small>
-                        {placement.xMm}, {placement.yMm} mm
-                      </small>
+                      <span>{lineOne}</span>
+                      <small>{placement.widthIn} × {placement.heightIn} in</small>
+                      <small>{placement.orientation}</small>
                     </div>
                   )
                 })}
@@ -680,7 +778,7 @@ const PrintTableOptimizerModule = () => {
                       <tbody>
                         {(activeTable?.placements ?? []).map((placement) => (
                           <tr key={`${placement.paintingId}-${placement.xMm}-${placement.yMm}`}>
-                            <td>{placement.label}</td>
+                            <td>{referenceById.get(placement.paintingId)?.optionalName.trim() || referenceById.get(placement.paintingId)?.referenceNumber || placement.label}</td>
                             <td>{placement.tableNumber}</td>
                             <td>{placement.xMm}</td>
                             <td>{placement.yMm}</td>
@@ -699,7 +797,7 @@ const PrintTableOptimizerModule = () => {
                       table.placements.map((placement) => (
                         <li key={`${table.tableNumber}-${placement.paintingId}-${placement.xMm}-${placement.yMm}`}>
                           <div>
-                            <strong>{placement.label}</strong>
+                            <strong>{referenceById.get(placement.paintingId)?.optionalName.trim() || referenceById.get(placement.paintingId)?.referenceNumber || placement.label}</strong>
                             <p>
                               Table {table.tableNumber} • {placement.orientation} • {placement.widthIn} x {placement.heightIn} in
                             </p>
@@ -777,6 +875,73 @@ const PrintTableOptimizerModule = () => {
           </article>
         </section>
       </div>
+
+      <section className="pto-print-layout" aria-hidden="true">
+        {layout.tables.map((table) => (
+          <article key={`print-${table.tableNumber}`} className="pto-print-page">
+            <h2>Print Table Layout - Table {table.tableNumber}</h2>
+            <div className="pto-print-canvas-wrap">
+              <div className="pto-print-canvas">
+                <div className="pto-table-sample">
+                  <span>Sample 6 x 8</span>
+                </div>
+                {table.placements.map((placement) => {
+                  const source = referenceById.get(placement.paintingId)
+                  const lineOne = source?.optionalName.trim() ? source.optionalName : (source?.referenceNumber ?? placement.label)
+                  return (
+                    <div
+                      key={`print-piece-${placement.paintingId}-${placement.xMm}-${placement.yMm}`}
+                      className="pto-piece"
+                      style={{
+                        width: `${(placement.widthIn / TABLE_WIDTH_IN) * 100}%`,
+                        height: `${(placement.heightIn / TABLE_DEPTH_IN) * 100}%`,
+                        right: `${(placement.xIn / TABLE_WIDTH_IN) * 100}%`,
+                        bottom: `${(placement.yIn / TABLE_DEPTH_IN) * 100}%`,
+                        background: source ? `${source.colorHex}cc` : undefined,
+                      }}
+                    >
+                      <span>{lineOne}</span>
+                      <small>{placement.widthIn} × {placement.heightIn} in</small>
+                      <small>{placement.orientation}</small>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="table-wrap">
+              <table className="workshop-table">
+                <thead>
+                  <tr>
+                    <th>Painting</th>
+                    <th>W</th>
+                    <th>H</th>
+                    <th>Orientation</th>
+                    <th>X (mm)</th>
+                    <th>Y (mm)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.placements.map((placement) => {
+                    const source = referenceById.get(placement.paintingId)
+                    const label = source?.optionalName.trim() ? source.optionalName : (source?.referenceNumber ?? placement.label)
+                    return (
+                      <tr key={`print-row-${placement.paintingId}-${placement.xMm}-${placement.yMm}`}>
+                        <td>{label}</td>
+                        <td>{placement.widthMm}</td>
+                        <td>{placement.heightMm}</td>
+                        <td>{placement.orientation}</td>
+                        <td>{placement.xMm}</td>
+                        <td>{placement.yMm}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        ))}
+      </section>
     </section>
   )
 }

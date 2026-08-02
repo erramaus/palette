@@ -1418,6 +1418,12 @@ button:focus {
   font-weight: 800;
 }
 
+.pto-inline-error {
+  color: #9f341d;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .pto-feedback {
   border: 1px solid #d7e3f4;
   background: #f3f8ff;
@@ -1634,15 +1640,23 @@ button:focus {
 }
 
 .pto-piece span {
-  font-size: 0.64rem;
+  font-size: clamp(0.5rem, 0.65vw, 0.76rem);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pto-piece small {
-  font-size: 0.58rem;
+  font-size: clamp(0.45rem, 0.5vw, 0.64rem);
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.05;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pto-origin-note {
@@ -1675,6 +1689,40 @@ button:focus {
   border-radius: 8px;
   padding: 10px;
   font-size: 0.84rem;
+}
+
+.pto-print-layout {
+  display: none;
+}
+
+.pto-print-page {
+  page-break-after: always;
+  break-after: page;
+  display: grid;
+  gap: 10px;
+}
+
+.pto-print-page:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+.pto-print-page h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pto-print-canvas-wrap {
+  border: 1px solid #111;
+  padding: 6px;
+}
+
+.pto-print-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 98 / 80;
+  border: 1px solid #111;
+  background: #fff;
 }
 
 .reports-page {
@@ -2656,5 +2704,75 @@ a:hover {
   .bp-group-actions button,
   .bp-group-actions select {
     display: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .sidebar,
+  .top-header,
+  .app-footer,
+  .pto-status-bar,
+  .pto-left-panel,
+  .pto-stat-strip,
+  .pto-bottom-panel,
+  .pto-table-tabs,
+  .pto-ruler-top,
+  .pto-ruler-right,
+  .pto-origin-note {
+    display: none !important;
+  }
+
+  .app-shell {
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  .app-main,
+  .app-content,
+  .print-table-optimizer-page,
+  .pto-module,
+  .pto-grid,
+  .pto-results,
+  .pto-right-panel,
+  .pto-table-stage,
+  .pto-table-scroll {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  .pto-table-canvas,
+  .pto-print-canvas {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .pto-table-stage {
+    display: none !important;
+  }
+
+  .pto-print-layout {
+    display: block !important;
+  }
+
+  .pto-print-layout .workshop-table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .pto-print-layout .workshop-table th,
+  .pto-print-layout .workshop-table td {
+    white-space: normal !important;
+    word-break: break-word;
   }
 }
