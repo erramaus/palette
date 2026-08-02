@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BattlePlanOptimizationService } from '../services/BattlePlanOptimizationService'
 import { ProductionForecastService } from '../services/ProductionForecastService'
+import {
+  DEFAULT_OPTIMIZATION_CONSTRAINTS,
+  DEFAULT_OPTIMIZATION_WEIGHTS,
+  loadDefaultOptimizationConstraints,
+  loadOptimizationWeights,
+  saveDefaultOptimizationConstraints,
+  saveOptimizationWeights,
+} from '../services/battlePlanOptimizationConfig'
 import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import StatusBadge from '../components/common/StatusBadge'
 import { useAppState } from '../state/AppStateContext'
 import type { BattlePlan, BattlePlanTask } from '../types/battlePlans'
+import type {
+  OptimizationConstraint,
+  OptimizationWeights,
+  OptimizedBattlePlanProposal,
+  OptimizationAcceptMode,
+} from '../types/battlePlanOptimization'
 import type { Employee } from '../types/employees'
 import type { ProductionStepName } from '../types/production'
 import type {
@@ -97,6 +112,12 @@ const applyOrder = (tasks: BattlePlanTask[]): BattlePlanTask[] =>
 
 const formatStatus = (value: string): string => value.replace('_', ' ')
 
+const toCsvIds = (value: string): string[] =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+
 const BattlePlansPage = () => {
   const navigate = useNavigate()
   const {
@@ -163,6 +184,19 @@ const BattlePlansPage = () => {
   const [expandedCompletedGroupsByPlan, setExpandedCompletedGroupsByPlan] = useState<Record<string, Record<string, boolean>>>({})
 
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
+  const [optimizationProposal, setOptimizationProposal] = useState<OptimizedBattlePlanProposal | null>(null)
+  const [proposalSelectedEmployeeId, setProposalSelectedEmployeeId] = useState('')
+  const [proposalSelectedOperationIds, setProposalSelectedOperationIds] = useState<Record<string, boolean>>({})
+  const [proposalEditMode, setProposalEditMode] = useState(false)
+  const [optimizationWeights, setOptimizationWeights] = useState<OptimizationWeights>(() => loadOptimizationWeights())
+  const [optimizationConstraints, setOptimizationConstraints] = useState<OptimizationConstraint>(() => loadDefaultOptimizationConstraints())
+  const [excludedEmployeeDraft, setExcludedEmployeeDraft] = useState(
+    () => loadDefaultOptimizationConstraints().excludedEmployeeIds.join(', '),
+  )
+  const [protectedWorkItemsDraft, setProtectedWorkItemsDraft] = useState(
+    () => loadDefaultOptimizationConstraints().protectedWorkItemIds.join(', '),
+  )
+  const [optimizationSettingsStatus, setOptimizationSettingsStatus] = useState('')
   const [addGroupDraft, setAddGroupDraft] = useState<AddTaskGroupDraft>({
     groupType: 'FRAMES_TO_MAKE',
     customGroupName: '',
@@ -186,6 +220,14 @@ const BattlePlansPage = () => {
       }),
     )
   }, [workers])
+
+  useEffect(() => {
+    setOptimizationConstraints((current) => ({
+      ...current,
+      excludedEmployeeIds: toCsvIds(excludedEmployeeDraft),
+      protectedWorkItemIds: toCsvIds(protectedWorkItemsDraft),
+    }))
+  }, [excludedEmployeeDraft, protectedWorkItemsDraft])
 
   const plansForDate = useMemo(
     () => battlePlans.filter((plan) => plan.date === generationDate),
@@ -273,6 +315,10 @@ const BattlePlansPage = () => {
     () => (selectedPlan ? toWorkflowGroups(selectedPlan, productionJobs) : []),
     [selectedPlan, productionJobs],
   )
+  const selectedProposalPlan = optimizationProposal?.employeePlans.find(
+    (plan) => plan.employeeId === proposalSelectedEmployeeId,
+  )
+  const selectedProposalOperationCount = Object.values(proposalSelectedOperationIds).filter(Boolean).length
   const isDirectorView = selectedTab?.kind === 'DIRECTOR'
   const isWorkerView = selectedTab?.kind === 'WORKER'
   const plannedMinutes = selectedPlan ? calculatePlannedMinutes(selectedPlan.tasks) : 0
@@ -814,6 +860,211 @@ const BattlePlansPage = () => {
     setShowAddGroupModal(false)
   }
 
+  const generateProposedPlans = (): void => {
+    if (!director) {
+      return
+    }
+
+    const scenarioConstraints: OptimizationConstraint = {
+      ...optimizationConstraints,
+      allowOvertime:
+        optimizationConstraints.allowOvertime ||
+        optimizationConstraints.scenarioMode === 'OVERTIME_ALLOWED',
+      prioritizeShipping:
+        optimizationConstraints.prioritizeShipping ||
+        optimizationConstraints.scenarioMode === 'RUSH_ORDER',
+      keepCurrentAssignments:
+        optimizationConstraints.keepCurrentAssignments ||
+        optimizationConstraints.scenarioMode === 'MOULDING_TOMORROW',
+    }
+
+    const service = new BattlePlanOptimizationService({
+      planDate: generationDate,
+      productionJobs,
+      battlePlans,
+      employees,
+      activityLogs,
+      constraints: scenarioConstraints,
+      weights: optimizationWeights,
+    })
+
+    const proposal = service.generateProposal(director.id)
+    setOptimizationProposal(proposal)
+    setProposalSelectedEmployeeId(proposal.employeePlans[0]?.employeeId ?? '')
+    setProposalSelectedOperationIds({})
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: proposal.id,
+      action: 'OPTIMIZATION_PROPOSAL_GENERATED',
+      actorEmployeeId: director.id,
+      metadata: {
+        planDate: proposal.planDate,
+        employeePlanCount: proposal.employeePlans.length,
+        unscheduledCount: proposal.unscheduledWork.length,
+        scenarioMode: proposal.constraints.scenarioMode,
+      },
+    })
+
+    if (proposal.constraints.scenarioMode !== 'NONE') {
+      addActivityLog({
+        entityType: 'BattlePlan',
+        entityId: proposal.id,
+        action: 'OPTIMIZATION_SCENARIO_RUN',
+        actorEmployeeId: director.id,
+        metadata: {
+          scenarioMode: proposal.constraints.scenarioMode,
+        },
+      })
+    }
+  }
+
+  const saveOptimizationSettings = (): void => {
+    saveDefaultOptimizationConstraints(optimizationConstraints)
+    saveOptimizationWeights(optimizationWeights)
+    setOptimizationSettingsStatus('Optimization settings saved.')
+  }
+
+  const resetOptimizationSettings = (): void => {
+    setOptimizationConstraints(DEFAULT_OPTIMIZATION_CONSTRAINTS)
+    setOptimizationWeights(DEFAULT_OPTIMIZATION_WEIGHTS)
+    setExcludedEmployeeDraft('')
+    setProtectedWorkItemsDraft('')
+    saveDefaultOptimizationConstraints(DEFAULT_OPTIMIZATION_CONSTRAINTS)
+    saveOptimizationWeights(DEFAULT_OPTIMIZATION_WEIGHTS)
+    setOptimizationSettingsStatus('Optimization settings reset to defaults.')
+  }
+
+  const rejectProposal = (): void => {
+    if (!optimizationProposal || !director) {
+      return
+    }
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: optimizationProposal.id,
+      action: 'OPTIMIZATION_PROPOSAL_REJECTED',
+      actorEmployeeId: director.id,
+      metadata: {
+        planDate: optimizationProposal.planDate,
+      },
+    })
+
+    setOptimizationProposal(null)
+    setProposalSelectedEmployeeId('')
+    setProposalSelectedOperationIds({})
+    setProposalEditMode(false)
+  }
+
+  const acceptProposal = (mode: OptimizationAcceptMode): void => {
+    if (!optimizationProposal || !director) {
+      return
+    }
+
+    const selectedEmployeePlans =
+      mode === 'ENTIRE_PROPOSAL'
+        ? optimizationProposal.employeePlans
+        : mode === 'SELECTED_EMPLOYEE'
+          ? optimizationProposal.employeePlans.filter((plan) => plan.employeeId === proposalSelectedEmployeeId)
+          : optimizationProposal.employeePlans.filter((plan) =>
+              plan.operationGroups.some((group) => proposalSelectedOperationIds[group.id]),
+            )
+
+    selectedEmployeePlans.forEach((employeePlan) => {
+      const existing = plansForDate.find((plan) => plan.assignedWorkerId === employeePlan.employeeId)
+      const lockedTasks = optimizationProposal.constraints.preserveLockedWork && existing
+        ? existing.tasks.filter((task) => task.locked)
+        : []
+
+      const includedGroups = mode === 'SELECTED_OPERATION'
+        ? employeePlan.operationGroups.filter((group) => proposalSelectedOperationIds[group.id])
+        : employeePlan.operationGroups
+
+      const proposalTasks: BattlePlanTask[] = includedGroups.flatMap((group) =>
+        group.workItemIds.map((workItemId, index) => ({
+          id: createTaskId(),
+          productionJobId: workItemId,
+          productionStep: group.operation,
+          description: `${group.workItemNumbers[index] ?? workItemId} | ${group.setupFamily.name}`,
+          estimatedMinutes: Math.max(1, Math.round(group.estimatedGroupMinutes / Math.max(1, group.workItemIds.length))),
+          completed: false,
+          sortOrder: index + 1,
+          notes: group.reasons.map((reason) => reason.description).slice(0, 2).join(' | '),
+          carryForward: false,
+          locked: false,
+        })),
+      )
+
+      const dedupe = new Set<string>()
+      const mergedTasks = [...lockedTasks, ...proposalTasks].filter((task) => {
+        const key = `${task.productionJobId}:${task.productionStep}`
+        if (dedupe.has(key)) {
+          return false
+        }
+        dedupe.add(key)
+        return true
+      }).map((task, index) => ({ ...task, sortOrder: index + 1 }))
+
+      const basePlan: BattlePlan = existing
+        ? {
+            ...existing,
+            status: 'DRAFT',
+            generationType: 'MANUAL',
+            tasks: mergedTasks,
+          }
+        : {
+            id: createPlanId(),
+            date: generationDate,
+            assignedWorkerId: employeePlan.employeeId,
+            createdById: director.id,
+            approvedById: director.id,
+            availableMinutes: employeePlan.availableMinutes,
+            generationType: 'MANUAL',
+            status: 'DRAFT',
+            tasks: mergedTasks,
+            endOfDayNotes: '',
+          }
+
+      if (existing) {
+        saveBattlePlan(basePlan)
+      } else {
+        createBattlePlan(basePlan)
+      }
+
+      addActivityLog({
+        entityType: 'BattlePlan',
+        entityId: basePlan.id,
+        action: 'OPTIMIZATION_PROPOSAL_ACCEPTED',
+        actorEmployeeId: director.id,
+        metadata: {
+          acceptanceMode: mode,
+          operationCount: includedGroups.length,
+          preservedLockedTasks: lockedTasks.length,
+        },
+      })
+    })
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: optimizationProposal.id,
+      action: 'OPTIMIZATION_PROPOSAL_ACCEPTED',
+      actorEmployeeId: director.id,
+      metadata: {
+        acceptanceMode: mode,
+        employeePlansApplied: selectedEmployeePlans.length,
+        snapshot: JSON.stringify({
+          comparison: optimizationProposal.comparison,
+          unscheduled: optimizationProposal.unscheduledWork.length,
+        }).slice(0, 1000),
+      },
+    })
+
+    setOptimizationProposal(null)
+    setProposalSelectedEmployeeId('')
+    setProposalSelectedOperationIds({})
+    setProposalEditMode(false)
+  }
+
   const renderChecklist = (
     key: string,
     items: BattlePlanChecklistItem[],
@@ -1162,6 +1413,9 @@ const BattlePlansPage = () => {
                   <button type="button" className="btn" onClick={() => generatePlans(true)}>
                     Regenerate Plan
                   </button>
+                  <button type="button" className="btn btn-primary" onClick={generateProposedPlans}>
+                    Generate Proposed Plans
+                  </button>
                   <button type="button" className="btn" onClick={openAddGroupModal}>
                     Add Task Group
                   </button>
@@ -1201,6 +1455,407 @@ const BattlePlansPage = () => {
 
           {selectedTab?.kind === 'DIRECTOR' ? (
             <section className="director-sections">
+              <article className="panel bp-optimization-controls">
+                <h4>Optimization Controls</h4>
+                <div className="form-grid bp-optimization-form-grid">
+                  <label>
+                    Scenario Mode
+                    <select
+                      value={optimizationConstraints.scenarioMode}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          scenarioMode: event.target.value as OptimizationConstraint['scenarioMode'],
+                        }))
+                      }
+                    >
+                      <option value="NONE">None</option>
+                      <option value="DANIEL_ABSENT">What if Daniel is absent?</option>
+                      <option value="PRINTER_DOWN">What if printer is down?</option>
+                      <option value="RUSH_ORDER">What if a rush order arrives?</option>
+                      <option value="OVERTIME_ALLOWED">What if overtime is allowed?</option>
+                      <option value="MOULDING_TOMORROW">What if moulding arrives tomorrow?</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Exclude Employees (CSV employee IDs)
+                    <input
+                      type="text"
+                      value={excludedEmployeeDraft}
+                      onChange={(event) => setExcludedEmployeeDraft(event.target.value)}
+                      placeholder="EMP-002, EMP-003"
+                    />
+                  </label>
+
+                  <label>
+                    Protect WorkItems (CSV production job IDs)
+                    <input
+                      type="text"
+                      value={protectedWorkItemsDraft}
+                      onChange={(event) => setProtectedWorkItemsDraft(event.target.value)}
+                      placeholder="JOB-1001, JOB-1011"
+                    />
+                  </label>
+
+                  <label>
+                    Cap operation switching
+                    <input
+                      type="number"
+                      min={1}
+                      value={optimizationConstraints.capOperationSwitching}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          capOperationSwitching: Math.max(1, Number(event.target.value)),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Reserve emergency minutes
+                    <input
+                      type="number"
+                      min={0}
+                      value={optimizationConstraints.reserveEmergencyMinutes}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          reserveEmergencyMinutes: Math.max(0, Number(event.target.value)),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Overtime limit minutes
+                    <input
+                      type="number"
+                      min={0}
+                      value={optimizationConstraints.overtimeLimitMinutes}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          overtimeLimitMinutes: Math.max(0, Number(event.target.value)),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Weight: deadline urgency
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={optimizationWeights.deadlineUrgency}
+                      onChange={(event) =>
+                        setOptimizationWeights((current) => ({
+                          ...current,
+                          deadlineUrgency: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Weight: setup reduction
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={optimizationWeights.setupReduction}
+                      onChange={(event) =>
+                        setOptimizationWeights((current) => ({
+                          ...current,
+                          setupReduction: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Weight: workload balance
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={optimizationWeights.workloadBalance}
+                      onChange={(event) =>
+                        setOptimizationWeights((current) => ({
+                          ...current,
+                          workloadBalance: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Weight: overtime penalty
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={optimizationWeights.overtimePenalty}
+                      onChange={(event) =>
+                        setOptimizationWeights((current) => ({
+                          ...current,
+                          overtimePenalty: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="button-row bp-optimization-toggle-row">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={optimizationConstraints.keepCurrentAssignments}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          keepCurrentAssignments: event.target.checked,
+                        }))
+                      }
+                    />
+                    Keep current assignments
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={optimizationConstraints.allowOvertime}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          allowOvertime: event.target.checked,
+                        }))
+                      }
+                    />
+                    Allow overtime
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={optimizationConstraints.prioritizeShipping}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          prioritizeShipping: event.target.checked,
+                        }))
+                      }
+                    />
+                    Prioritize shipping
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={optimizationConstraints.prioritizeOriginals}
+                      onChange={(event) =>
+                        setOptimizationConstraints((current) => ({
+                          ...current,
+                          prioritizeOriginals: event.target.checked,
+                        }))
+                      }
+                    />
+                    Prioritize originals
+                  </label>
+                </div>
+
+                <div className="button-row bp-optimization-actions-row">
+                  <button type="button" className="btn" onClick={saveOptimizationSettings}>
+                    Save Optimization Settings
+                  </button>
+                  <button type="button" className="btn" onClick={resetOptimizationSettings}>
+                    Reset Defaults
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={generateProposedPlans}>
+                    Regenerate with Adjustments
+                  </button>
+                </div>
+
+                {optimizationSettingsStatus ? (
+                  <p className="subtle bp-optimization-save-status" role="status" aria-live="polite">
+                    {optimizationSettingsStatus}
+                  </p>
+                ) : null}
+              </article>
+
+              {optimizationProposal ? (
+                <article className="panel bp-optimization-panel">
+                  <div className="work-item-section-header">
+                    <h4>Proposed Daily Plan</h4>
+                    <span className="subtle">Generated {new Date(optimizationProposal.generatedAt).toLocaleString()}</span>
+                  </div>
+
+                  <div className="summary-line-list bp-optimization-kpis" role="list" aria-label="Optimization proposal summary">
+                    <span>Deadline risks protected: {optimizationProposal.deadlineRisksProtected}</span>
+                    <span>Unscheduled work: {optimizationProposal.unscheduledWork.length}</span>
+                    <span>Warnings: {optimizationProposal.warnings.length}</span>
+                    <span>Confidence: {optimizationProposal.confidence}</span>
+                  </div>
+
+                  <p className="subtle bp-optimization-selection-status" role="status" aria-live="polite">
+                    {selectedProposalPlan
+                      ? `Selected proposal plan for ${selectedProposalPlan.employeeName}. ${selectedProposalOperationCount} operation${selectedProposalOperationCount === 1 ? '' : 's'} selected.`
+                      : 'No proposal employee plan selected.'}
+                  </p>
+
+                  <div className="table-wrap bp-optimization-table-wrap">
+                    <table className="workshop-table bp-optimization-table">
+                      <caption className="sr-only">
+                        Optimized employee plans. Use the Select button in each row to choose a worker plan for review or partial acceptance.
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Employee</th>
+                          <th scope="col">Select</th>
+                          <th>Assigned / Available</th>
+                          <th>Expected Completed</th>
+                          <th>Finish</th>
+                          <th>Utilization</th>
+                          <th>Warnings</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {optimizationProposal.employeePlans.map((plan) => (
+                          <tr key={plan.employeeId} className={proposalSelectedEmployeeId === plan.employeeId ? 'bp-optimization-row-selected' : ''}>
+                            <td>{plan.employeeName}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className={proposalSelectedEmployeeId === plan.employeeId ? 'bp-optimization-select-button bp-optimization-select-button-active' : 'bp-optimization-select-button'}
+                                aria-pressed={proposalSelectedEmployeeId === plan.employeeId}
+                                aria-describedby={`proposal-plan-${plan.employeeId}`}
+                                onClick={() => setProposalSelectedEmployeeId(plan.employeeId)}
+                              >
+                                {proposalSelectedEmployeeId === plan.employeeId ? 'Selected' : 'Select'}
+                              </button>
+                            </td>
+                            <td>{plan.proposedAssignedMinutes} / {plan.availableMinutes}</td>
+                            <td>{plan.expectedCompletedMinutes}</td>
+                            <td>{plan.projectedFinishTime}</td>
+                            <td>{plan.utilization}%</td>
+                            <td>
+                              <span id={`proposal-plan-${plan.employeeId}`}>
+                                {plan.warnings.length} warning{plan.warnings.length === 1 ? '' : 's'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="button-row bp-optimization-accept-actions">
+                    <button type="button" className="btn btn-primary" onClick={() => acceptProposal('ENTIRE_PROPOSAL')}>
+                      Accept Entire Proposal
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!proposalSelectedEmployeeId}
+                      onClick={() => acceptProposal('SELECTED_EMPLOYEE')}
+                    >
+                      Accept Selected Employee Plan
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!Object.values(proposalSelectedOperationIds).some(Boolean)}
+                      onClick={() => acceptProposal('SELECTED_OPERATION')}
+                    >
+                      Accept Selected Operation
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setProposalEditMode((current) => !current)}
+                    >
+                      {proposalEditMode ? 'Stop Editing Proposal' : 'Edit Before Accepting'}
+                    </button>
+                    <button type="button" className="btn" onClick={rejectProposal}>
+                      Reject Proposal
+                    </button>
+                  </div>
+
+                  {proposalSelectedEmployeeId ? (
+                    <>
+                      <h4 className="bp-optimization-selected-heading" id="proposal-operations-heading">
+                        Proposed Operations for {selectedProposalPlan?.employeeName}
+                      </h4>
+                      <ul className="plain-list bp-optimization-operation-list" aria-labelledby="proposal-operations-heading">
+                        {selectedProposalPlan?.operationGroups.map((group) => (
+                            <li key={group.id}>
+                              <div>
+                                <strong>{group.setupFamily.name}</strong>
+                                <p>
+                                  {group.workItemNumbers.join(', ')} • {group.estimatedGroupMinutes} min • {group.deadlineImpact}
+                                </p>
+                                <p className="subtle">
+                                  Setup: {group.setupMinutes} • Exec: {group.executionMinutes} • Cleanup: {group.cleanupMinutes} • Switch: {group.switchingCostMinutes}
+                                </p>
+                                <p className="subtle">Reason: {group.reasons[0]?.description}</p>
+                              </div>
+                              {proposalEditMode ? (
+                                <label className="checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(proposalSelectedOperationIds[group.id])}
+                                    aria-label={`Select operation group ${group.setupFamily.name} for ${selectedProposalPlan?.employeeName}`}
+                                    onChange={(event) =>
+                                      setProposalSelectedOperationIds((current) => ({
+                                        ...current,
+                                        [group.id]: event.target.checked,
+                                      }))
+                                    }
+                                  />
+                                  Select
+                                </label>
+                              ) : (
+                                <span className="subtle">{group.confidence}</span>
+                              )}
+                            </li>
+                          ))}
+                      </ul>
+                    </>
+                  ) : null}
+
+                  <h4>Plan Comparison</h4>
+                  <div className="summary-line-list bp-optimization-comparison" role="list" aria-label="Plan comparison metrics">
+                    <span>Minutes moved: {optimizationProposal.comparison.minutesMoved}</span>
+                    <span>WorkItems reassigned: {optimizationProposal.comparison.reassignedWorkItemCount}</span>
+                    <span>Late jobs before/after: {optimizationProposal.comparison.projectedLateJobsBefore} / {optimizationProposal.comparison.projectedLateJobsAfter}</span>
+                    <span>Carry-forward before/after: {optimizationProposal.comparison.projectedCarryForwardBefore} / {optimizationProposal.comparison.projectedCarryForwardAfter}</span>
+                    <span>Setup minutes saved: {optimizationProposal.comparison.setupMinutesSaved}</span>
+                    <span>Capacity balance before/after: {optimizationProposal.comparison.capacityBalanceBefore} / {optimizationProposal.comparison.capacityBalanceAfter}</span>
+                  </div>
+
+                  <h4>Unscheduled Work</h4>
+                  <ul className="plain-list bp-optimization-unscheduled-list">
+                    {optimizationProposal.unscheduledWork.length > 0 ? (
+                      optimizationProposal.unscheduledWork.map((item) => (
+                        <li key={`${item.workItemId}:${item.operation}`}>
+                          <div>
+                            <strong>{item.orderNumber} • {item.operation}</strong>
+                            <p>{item.reason}</p>
+                          </div>
+                          <span className="subtle">{item.blockingConstraint}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li>
+                        <div>
+                          <strong>All actionable work scheduled</strong>
+                          <p>No unscheduled items under current constraints.</p>
+                        </div>
+                      </li>
+                    )}
+                  </ul>
+                </article>
+              ) : null}
+
               <article className="panel">
                 <h4>Predictive Director View</h4>
                 <div className="table-wrap">
