@@ -1,0 +1,51 @@
+<svg width="976" height="768" viewBox="0 0 976 768" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Palette logo">
+  <rect width="976" height="768" fill="#F9FAFC"/>
+
+  <g stroke="#C8CCD4" stroke-width="1" opacity="0.56">
+    <path d="M0 60H976"/>
+    <path d="M0 124H976"/>
+    <path d="M0 188H976"/>
+    <path d="M0 252H976"/>
+    <path d="M0 316H976"/>
+    <path d="M0 380H976"/>
+    <path d="M0 444H976"/>
+    <path d="M0 508H976"/>
+    <path d="M0 572H976"/>
+    <path d="M0 636H976"/>
+    <path d="M0 700H976"/>
+
+    <path d="M52 0V768"/>
+    <path d="M116 0V768"/>
+    <path d="M180 0V768"/>
+    <path d="M244 0V768"/>
+    <path d="M308 0V768"/>
+    <path d="M372 0V768"/>
+    <path d="M436 0V768"/>
+    <path d="M500 0V768"/>
+    <path d="M564 0V768"/>
+    <path d="M628 0V768"/>
+    <path d="M692 0V768"/>
+    <path d="M756 0V768"/>
+    <path d="M820 0V768"/>
+    <path d="M884 0V768"/>
+    <path d="M948 0V768"/>
+  </g>
+
+  <g stroke="#C8CCD4" stroke-width="1.5" opacity="0.5" stroke-linecap="round">
+    <path d="M240 612V656"/><path d="M218 634H262"/>
+    <path d="M304 612V656"/><path d="M282 634H326"/>
+    <path d="M368 612V656"/><path d="M346 634H390"/>
+    <path d="M432 612V656"/><path d="M410 634H454"/>
+    <path d="M496 612V656"/><path d="M474 634H518"/>
+    <path d="M560 612V656"/><path d="M538 634H582"/>
+    <path d="M624 612V656"/><path d="M602 634H646"/>
+    <path d="M688 612V656"/><path d="M666 634H710"/>
+    <path d="M752 612V656"/><path d="M730 634H774"/>
+    <path d="M816 612V656"/><path d="M794 634H838"/>
+  </g>
+
+  <polygon points="96,58 380,58 332,422 48,422" fill="#6EA8E5"/>
+  <polygon points="468,58 744,58 696,422 420,422" fill="#F2C46A"/>
+  <polygon points="264,222 542,222 476,586 198,586" fill="#7B58E9"/>
+  <polygon points="640,222 908,222 852,586 584,586" fill="#CB63B4"/>
+</svg>

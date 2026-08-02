@@ -1,6 +1,7 @@
 import { branding } from '../../theme/branding'
-import paletteIcon from '../../assets/palette-icon.png'
-import { useState } from 'react'
+import paletteIconGrid from '../../assets/palette-icon.svg'
+import paletteIconTransparent from '../../assets/palette-icon-transparent.svg'
+import { useEffect, useMemo, useState } from 'react'
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large'
@@ -15,7 +16,15 @@ const Logo = ({
   variant = 'dark',
   className = '',
 }: LogoProps) => {
-  const [logoSrc, setLogoSrc] = useState(paletteIcon)
+  const preferredLogoSrc = useMemo(
+    () => (variant === 'light' ? paletteIconTransparent : paletteIconGrid),
+    [variant],
+  )
+  const [logoSrc, setLogoSrc] = useState(preferredLogoSrc)
+
+  useEffect(() => {
+    setLogoSrc(preferredLogoSrc)
+  }, [preferredLogoSrc])
 
   return (
     <div className={`logo-wrap logo-wrap-${size} logo-variant-${variant} ${className}`.trim()}>
@@ -24,7 +33,9 @@ const Logo = ({
         alt="Palette"
         className="palette-logo-image"
         onError={() => {
-          const fallback = `${import.meta.env.BASE_URL}assets/palette-icon.png`
+          const fallback = `${import.meta.env.BASE_URL}assets/${
+            variant === 'light' ? 'palette-icon-transparent.svg' : 'palette-icon.svg'
+          }`
           if (logoSrc !== fallback) {
             setLogoSrc(fallback)
           }

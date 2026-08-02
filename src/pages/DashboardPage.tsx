@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ProductionAnalyticsService } from '../services/ProductionAnalyticsService'
+import { loadProductionAnalyticsTargets } from '../services/productionAnalyticsTargets'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { useAppState } from '../state/AppStateContext'
 import type { IntelligenceRecommendation, RiskLevel } from '../types/productionIntelligence'
+import type { ProductionMetricDefinition } from '../types/productionAnalytics'
 import { PRODUCTION_STEP_LABELS, PRODUCTION_STEP_SEQUENCE } from '../utils/productionSteps'
 
 const formatPercent = (value: number): string => `${Math.max(0, Math.min(100, Math.round(value)))}%`
@@ -13,6 +16,34 @@ const riskBadgeClass: Record<RiskLevel, string> = {
   MEDIUM: 'badge-risk-medium',
   HIGH: 'badge-risk-high',
   CRITICAL: 'badge-risk-critical',
+}
+
+const formatDelta = (value: number | null): string => {
+  if (value === null) {
+    return 'vs last week --'
+  }
+
+  const rounded = Math.round(value * 10) / 10
+  return `vs last week ${rounded > 0 ? '+' : ''}${rounded}`
+}
+
+const formatWeeklyMetric = (metric: ProductionMetricDefinition | undefined): string => {
+  if (!metric || metric.trend.currentWeek === null) {
+    return '--'
+  }
+
+  const value = metric.trend.currentWeek
+  if (metric.benchmark.unit === 'PERCENT') {
+    return `${Math.round(value)}%`
+  }
+  if (metric.benchmark.unit === 'DAYS') {
+    return `${Math.round(value * 10) / 10}d`
+  }
+  if (metric.benchmark.unit === 'HOURS') {
+    return `${Math.round(value * 10) / 10}h`
+  }
+
+  return `${Math.round(value)}`
 }
 
 const DashboardPage = () => {
@@ -59,6 +90,39 @@ const DashboardPage = () => {
       }),
     [productionJobs, battlePlans, employees, activityLogs, intelligenceConfig],
   )
+
+  const analyticsService = useMemo(
+    () =>
+      new ProductionAnalyticsService({
+        productionJobs,
+        battlePlans,
+        employees,
+        activityLogs,
+        targets: loadProductionAnalyticsTargets(),
+      }),
+    [productionJobs, battlePlans, employees, activityLogs],
+  )
+
+  const weeklyAnalytics = useMemo(
+    () => analyticsService.getWeeklyAnalytics('PREVIOUS_WEEK'),
+    [analyticsService],
+  )
+
+  const weeklyMetricMap = useMemo(() => {
+    const map = new Map<ProductionMetricDefinition['key'], ProductionMetricDefinition>()
+    weeklyAnalytics.currentWeek.metricDefinitions.forEach((metric) => {
+      map.set(metric.key, metric)
+    })
+    return map
+  }, [weeklyAnalytics.currentWeek.metricDefinitions])
+
+  const weeklyOnTime = weeklyMetricMap.get('ON_TIME_COMPLETION_RATE')
+  const weeklySchedule = weeklyMetricMap.get('SCHEDULE_ATTAINMENT')
+  const weeklyQuality = weeklyMetricMap.get('FIRST_PASS_QUALITY')
+  const weeklyFinishedPieces = weeklyMetricMap.get('FINISHED_PIECE_THROUGHPUT')
+  const weeklyStandardMinutes = weeklyMetricMap.get('STANDARD_MINUTES_EARNED')
+  const weeklyCarryForwardRate = weeklyMetricMap.get('CARRY_FORWARD_RATE')
+  const weeklyLeadTime = weeklyMetricMap.get('MEDIAN_LEAD_TIME')
 
   const intelligenceForecast = useMemo(() => intelligenceService.getForecast(), [intelligenceService])
   const topRecommendations = useMemo(
@@ -398,6 +462,65 @@ const DashboardPage = () => {
         <article className="summary-card">
           <p>Carry-Forward Minutes</p>
           <h3>{carryForwardMinutes}</h3>
+        </article>
+      </section>
+
+      <section className="summary-grid dashboard-kpi-grid dashboard-weekly-kpi-grid">
+        <article className="summary-card summary-card-weekly">
+          <p>Weekly On-Time Completion</p>
+          <h3>{formatWeeklyMetric(weeklyOnTime)}</h3>
+          <span className="subtle">{formatDelta(weeklyOnTime?.trend.absoluteChange ?? null)}%</span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>Weekly Schedule Attainment</p>
+          <h3>{formatWeeklyMetric(weeklySchedule)}</h3>
+          <span className="subtle">{formatDelta(weeklySchedule?.trend.absoluteChange ?? null)}%</span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>Weekly First-Pass Quality</p>
+          <h3>{formatWeeklyMetric(weeklyQuality)}</h3>
+          <span className="subtle">{formatDelta(weeklyQuality?.trend.absoluteChange ?? null)}%</span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>Finished Pieces (Week)</p>
+          <h3>{formatWeeklyMetric(weeklyFinishedPieces)}</h3>
+          <span className="subtle">{formatDelta(weeklyFinishedPieces?.trend.absoluteChange ?? null)}</span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>Standard Hours Earned</p>
+          <h3>
+            {weeklyStandardMinutes?.trend.currentWeek === null || weeklyStandardMinutes === undefined
+              ? '--'
+              : `${Math.round((weeklyStandardMinutes.trend.currentWeek / 60) * 10) / 10}h`}
+          </h3>
+          <span className="subtle">
+            {weeklyStandardMinutes?.trend.absoluteChange === null || weeklyStandardMinutes === undefined
+              ? 'vs last week --'
+              : `vs last week ${Math.round((weeklyStandardMinutes.trend.absoluteChange / 60) * 10) / 10}h`}
+          </span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>Carry-Forward Hours</p>
+          <h3>{`${weeklyAnalytics.currentWeek.directorScorecard.carryForwardHours}h`}</h3>
+          <span className="subtle">Rate {formatWeeklyMetric(weeklyCarryForwardRate)}</span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>Median Lead Time</p>
+          <h3>{formatWeeklyMetric(weeklyLeadTime)}</h3>
+          <span className="subtle">{formatDelta(weeklyLeadTime?.trend.absoluteChange ?? null)}d</span>
+        </article>
+        <article className="summary-card summary-card-weekly">
+          <p>At-Risk / Overdue Jobs</p>
+          <h3>
+            {weeklyAnalytics.currentWeek.directorScorecard.atRiskBacklog} /
+            {' '}
+            {weeklyAnalytics.currentWeek.directorScorecard.overdueBacklog}
+          </h3>
+          <span className="subtle">
+            vs last week {weeklyAnalytics.previousWeek?.directorScorecard.atRiskBacklog ?? '--'} /
+            {' '}
+            {weeklyAnalytics.previousWeek?.directorScorecard.overdueBacklog ?? '--'}
+          </span>
         </article>
       </section>
 
