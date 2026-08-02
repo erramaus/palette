@@ -435,6 +435,11 @@ ul {
 
 .dashboard-command-center {
   gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-command-center > * {
+  min-width: 0;
 }
 
 .dashboard-kpi-grid {
@@ -445,6 +450,10 @@ ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
   gap: 12px;
+}
+
+.dashboard-two-col > * {
+  min-width: 0;
 }
 
 .dashboard-employee-grid {
@@ -511,15 +520,49 @@ ul {
   gap: 12px;
 }
 
+.dashboard-intelligence-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-intelligence-health {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-intelligence-score {
+  min-width: 58px;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dashboard-intelligence-health p,
+.dashboard-intelligence-explanation {
+  margin: 2px 0 0;
+}
+
 .dashboard-predictive-panel {
   display: grid;
   gap: 12px;
 }
 
+.dashboard-predictive-callout,
+.dashboard-director-bottleneck {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-predictive-callout p,
+.dashboard-director-bottleneck p {
+  margin: 0;
+}
+
 .dashboard-predictive-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .dashboard-intelligence-controls {
@@ -546,7 +589,7 @@ ul {
 .dashboard-intelligence-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .dashboard-intelligence-block {
@@ -2456,7 +2499,7 @@ a:hover {
   }
 
   .dashboard-two-col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-quick-actions {
@@ -2464,11 +2507,11 @@ a:hover {
   }
 
   .dashboard-intelligence-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-predictive-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .summary-grid {

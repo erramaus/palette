@@ -5,6 +5,7 @@ import { ProductionForecastService } from '../services/ProductionForecastService
 import { loadProductionAnalyticsTargets } from '../services/productionAnalyticsTargets'
 import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
+import { IntelligenceService } from '../services/intelligence/IntelligenceService'
 import { useAppState } from '../state/AppStateContext'
 import type { IntelligenceRecommendation, RiskLevel } from '../types/productionIntelligence'
 import type { ProductionMetricDefinition } from '../types/productionAnalytics'
@@ -93,6 +94,21 @@ const DashboardPage = () => {
     [productionJobs, battlePlans, employees, activityLogs, intelligenceConfig],
   )
 
+  const intelligenceFoundation = useMemo(() => {
+    const service = new IntelligenceService({
+      productionJobs,
+      employees,
+      battlePlans,
+    })
+
+    return {
+      health: service.getProductionHealth(),
+      bottleneck: service.getCurrentBottlenecks(),
+      dueDateRisks: service.getDueDateRisks(),
+      recommendations: service.getDirectorRecommendations().slice(0, 3),
+    }
+  }, [productionJobs, employees, battlePlans])
+
   const analyticsService = useMemo(
     () =>
       new ProductionAnalyticsService({
@@ -150,20 +166,12 @@ const DashboardPage = () => {
     () =>
       intelligenceForecast.recommendations
         .filter((recommendation) => !dismissedRecommendationIds[recommendation.id])
-        .slice(0, 5),
+        .slice(0, 3),
     [intelligenceForecast.recommendations, dismissedRecommendationIds],
   )
   const deadlineRiskHighlights = useMemo(
     () => intelligenceForecast.deadlineRisks.slice(0, 5),
     [intelligenceForecast.deadlineRisks],
-  )
-  const workerForecastHighlights = useMemo(
-    () => intelligenceForecast.workerForecasts.slice(0, 5),
-    [intelligenceForecast.workerForecasts],
-  )
-  const bottleneckHighlights = useMemo(
-    () => intelligenceForecast.bottleneckForecasts.slice(0, 4),
-    [intelligenceForecast.bottleneckForecasts],
   )
   const capacityOpportunities = useMemo(
     () => intelligenceForecast.capacityForecasts.filter((item) => item.status !== 'BALANCED').slice(0, 5),
@@ -549,20 +557,38 @@ const DashboardPage = () => {
         </article>
       </section>
 
+      <section className="panel dashboard-intelligence-summary">
+        <div className="work-item-section-header">
+          <div>
+            <h3>Production Health</h3>
+            <p className="subtle">Current deterministic operating status.</p>
+          </div>
+          <div className="dashboard-intelligence-health">
+            <span
+              className="dashboard-intelligence-score"
+              style={{ color: intelligenceFoundation.health.color }}
+            >
+              {intelligenceFoundation.health.score}
+            </span>
+            <div>
+              <strong style={{ color: intelligenceFoundation.health.color }}>
+                {intelligenceFoundation.health.status}
+              </strong>
+              <p className="subtle">Health Score</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="dashboard-intelligence-explanation">
+          {intelligenceFoundation.health.explanation}
+        </p>
+      </section>
+
       <section className="panel dashboard-predictive-panel">
         <div className="work-item-section-header">
           <h3>Predictive Intelligence</h3>
           <span className="subtle">Generated {new Date(predictiveForecast.generatedAt).toLocaleString()}</span>
         </div>
-
-        <p>
-          {predictiveSnapshot.likelyLateJobs.length} job(s) are likely to miss due dates without intervention.
-        </p>
-        <p>
-          {predictiveSnapshot.probableBottleneckTomorrow
-            ? `${predictiveSnapshot.probableBottleneckTomorrow.stage} is projected to exceed available capacity by ${Math.max(0, predictiveSnapshot.probableBottleneckTomorrow.predictedActualMinutes - predictiveSnapshot.probableBottleneckTomorrow.availableSkilledCapacityMinutes)} minutes tomorrow.`
-            : 'No strong bottleneck projection for tomorrow.'}
-        </p>
 
         <div className="dashboard-predictive-grid">
           <article>
@@ -614,81 +640,59 @@ const DashboardPage = () => {
           </article>
 
           <article>
-            <h4>Workers Projected To Finish Early</h4>
-            <ul className="plain-list">
-              {predictiveSnapshot.projectedEarlyFinishWorkers.length > 0 ? (
-                predictiveSnapshot.projectedEarlyFinishWorkers.slice(0, 5).map((worker) => (
-                  <li key={worker.employeeId}>
-                    <div>
-                      <strong>{worker.employeeName}</strong>
-                      <p>Likely finish around {worker.predictedFinishTime}</p>
-                    </div>
-                    <span className="subtle">{worker.projectedIdleMinutes} min available</span>
-                  </li>
-                ))
-              ) : (
-                <li>
-                  <div>
-                    <strong>No early finish projections</strong>
-                    <p>All workers are close to full utilization.</p>
-                  </div>
-                </li>
-              )}
-            </ul>
+            <h4>Projected Bottleneck</h4>
+            {predictiveSnapshot.probableBottleneckTomorrow ? (
+              <div className="dashboard-predictive-callout">
+                <strong>{predictiveSnapshot.probableBottleneckTomorrow.stage}</strong>
+                <p>
+                  {Math.max(
+                    0,
+                    predictiveSnapshot.probableBottleneckTomorrow.predictedActualMinutes -
+                      predictiveSnapshot.probableBottleneckTomorrow.availableSkilledCapacityMinutes,
+                  )} min above skilled capacity tomorrow
+                </p>
+                <span className="subtle">
+                  {predictiveSnapshot.probableBottleneckTomorrow.confidence} confidence
+                </span>
+              </div>
+            ) : (
+              <p className="subtle">No strong bottleneck projection for tomorrow.</p>
+            )}
           </article>
 
           <article>
-            <h4>Workers Projected To Exceed Capacity</h4>
+            <h4>Projected Worker Finish Times</h4>
             <ul className="plain-list">
-              {predictiveSnapshot.projectedOverCapacityWorkers.length > 0 ? (
-                predictiveSnapshot.projectedOverCapacityWorkers.slice(0, 5).map((worker) => (
+              {predictiveForecast.workerFinishProjections.length > 0 ? (
+                predictiveForecast.workerFinishProjections.slice(0, 6).map((worker) => (
                   <li key={worker.employeeId}>
                     <div>
                       <strong>{worker.employeeName}</strong>
-                      <p>Likely carry-forward tasks: {worker.likelyCarryForwardTaskIds.length}</p>
+                      <p>Projected finish {worker.predictedFinishTime}</p>
                     </div>
-                    <span className="subtle">{worker.projectedOverloadMinutes} min overload</span>
+                    <span className="subtle">
+                      {worker.projectedOverloadMinutes > 0
+                        ? `${worker.projectedOverloadMinutes} min over`
+                        : `${worker.projectedIdleMinutes} min available`}
+                    </span>
                   </li>
                 ))
               ) : (
                 <li>
                   <div>
-                    <strong>No overload projections</strong>
-                    <p>No worker currently projects above available capacity.</p>
+                    <strong>No worker finish projections</strong>
+                    <p>Finish-time projections are not currently available.</p>
                   </div>
                 </li>
               )}
             </ul>
           </article>
         </div>
-
-        <article>
-          <h4>Forecast Confidence Warnings</h4>
-          <ul className="plain-list">
-            {predictiveSnapshot.confidenceWarnings.length > 0 ? (
-              predictiveSnapshot.confidenceWarnings.slice(0, 6).map((warning) => (
-                <li key={warning}>
-                  <div>
-                    <strong>Data quality notice</strong>
-                    <p>{warning}</p>
-                  </div>
-                </li>
-              ))
-            ) : (
-              <li>
-                <div>
-                  <strong>No confidence warnings</strong>
-                  <p>Current forecasts have sufficient baseline depth for configured thresholds.</p>
-                </div>
-              </li>
-            )}
-          </ul>
-        </article>
       </section>
 
       <section className="panel dashboard-intelligence-panel">
         <div className="work-item-section-header">
-          <h3>Production Intelligence</h3>
+          <h3>Director Intelligence</h3>
           <div className="dashboard-intelligence-controls">
             <label>
               Threshold Profile
@@ -722,7 +726,76 @@ const DashboardPage = () => {
 
         <div className="dashboard-intelligence-grid">
           <article className="dashboard-intelligence-block">
-            <h4>Top Recommendations</h4>
+            <h4>Current Bottleneck</h4>
+            {intelligenceFoundation.bottleneck ? (
+              <div className="dashboard-director-bottleneck">
+                <strong>{intelligenceFoundation.bottleneck.stageLabel}</strong>
+                <p>
+                  {intelligenceFoundation.bottleneck.queueLength} queued •{' '}
+                  {intelligenceFoundation.bottleneck.estimatedWorkloadMinutes} min •{' '}
+                  {intelligenceFoundation.bottleneck.blockedItems} blocked
+                </p>
+                <p className="subtle">
+                  Oldest item: {intelligenceFoundation.bottleneck.oldestItem?.orderNumber ?? '--'}
+                </p>
+              </div>
+            ) : (
+              <p className="subtle">No active stage queue.</p>
+            )}
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Due-Date Risks</h4>
+            <ul className="plain-list">
+              {deadlineRiskHighlights.length > 0 ? (
+                deadlineRiskHighlights.map((risk) => (
+                  <li key={risk.workItemId}>
+                    <div>
+                      <strong>{risk.orderNumber}</strong>
+                      <p>
+                        {risk.minutesRequired} min required, {risk.availableMinutesBeforeDue} min available, ETA {risk.estimatedCompletionDate}
+                      </p>
+                      <p className="subtle">{risk.reasons[0]?.description}</p>
+                    </div>
+                    <span className={`badge ${riskBadgeClass[risk.riskLevel]}`}>{risk.riskLevel}</span>
+                  </li>
+                ))
+              ) : (
+                <li><div><strong>No due-date risks</strong><p>No active jobs require due-date intervention.</p></div></li>
+              )}
+            </ul>
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Capacity Warnings</h4>
+            <ul className="plain-list">
+              {capacityOpportunities.length > 0 ? (
+                capacityOpportunities.map((capacity) => (
+                  <li key={capacity.employeeId}>
+                    <div>
+                      <strong>{capacity.employeeName}</strong>
+                      <p>
+                        {capacity.status === 'OVERLOADED'
+                          ? `${Math.abs(capacity.capacityGapMinutes)} min over capacity`
+                          : `${Math.abs(capacity.capacityGapMinutes)} min available`}
+                      </p>
+                      <p className="subtle">{capacity.recommendation ?? 'Balanced allocation'}</p>
+                    </div>
+                    <span
+                      className={`badge ${capacity.status === 'OVERLOADED' ? riskBadgeClass.HIGH : riskBadgeClass.LOW}`}
+                    >
+                      {capacity.status}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li><div><strong>No capacity warnings</strong><p>Current worker allocation is balanced.</p></div></li>
+              )}
+            </ul>
+          </article>
+
+          <article className="dashboard-intelligence-block">
+            <h4>Top 3 Recommendations</h4>
             {topRecommendations.length === 0 ? (
               <p className="subtle">No recommendations available above confidence threshold.</p>
             ) : (
@@ -740,18 +813,10 @@ const DashboardPage = () => {
                       Reason: {recommendation.reasons[0]?.description ?? 'No supporting reason available.'}
                     </p>
                     <div className="dashboard-recommendation-actions">
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() => openRecommendationTarget(recommendation)}
-                      >
+                      <button type="button" className="btn" onClick={() => openRecommendationTarget(recommendation)}>
                         {recommendation.actionTarget.kind === 'BATTLE_PLAN' ? 'Open Battle Plan' : 'Open Work Item'}
                       </button>
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() => dismissRecommendation(recommendation)}
-                      >
+                      <button type="button" className="btn" onClick={() => dismissRecommendation(recommendation)}>
                         Dismiss
                       </button>
                       <button
@@ -775,86 +840,6 @@ const DashboardPage = () => {
                 ))}
               </div>
             )}
-          </article>
-
-          <article className="dashboard-intelligence-block">
-            <h4>Deadline Risks</h4>
-            <ul className="plain-list">
-              {deadlineRiskHighlights.map((risk) => (
-                <li key={risk.workItemId}>
-                  <div>
-                    <strong>{risk.orderNumber}</strong>
-                    <p>
-                      {risk.minutesRequired} min required, {risk.availableMinutesBeforeDue} min available, ETA {risk.estimatedCompletionDate}
-                    </p>
-                    <p className="subtle">{risk.reasons[0]?.description}</p>
-                  </div>
-                  <span className={`badge ${riskBadgeClass[risk.riskLevel]}`}>{risk.riskLevel}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="dashboard-intelligence-block">
-            <h4>Worker Forecasts</h4>
-            <ul className="plain-list">
-              {workerForecastHighlights.map((worker) => (
-                <li key={worker.employeeId}>
-                  <div>
-                    <strong>{worker.employeeName}</strong>
-                    <p>
-                      Utilization {worker.utilizationPercentage}% • Idle {worker.likelyIdleMinutes} • Over {worker.overCapacityMinutes}
-                    </p>
-                    <p className="subtle">
-                      Next operation: {worker.nextRecommendedOperation ?? '--'} • Projected finish: {worker.projectedFinishTime ?? '--'}
-                    </p>
-                  </div>
-                  <span className={`badge ${riskBadgeClass[worker.carryForwardRisk]}`}>{worker.carryForwardRisk}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="dashboard-intelligence-block">
-            <h4>Bottleneck Forecast</h4>
-            <ul className="plain-list">
-              {bottleneckHighlights.map((bottleneck) => (
-                <li key={bottleneck.stage}>
-                  <div>
-                    <strong>{PRODUCTION_STEP_LABELS[bottleneck.stage]}</strong>
-                    <p>
-                      Queue {bottleneck.activeWorkItems} • Load {bottleneck.capacityLoadPercentage}% • Incoming {bottleneck.incomingWorkFromPreviousStage}
-                    </p>
-                    <p className="subtle">{bottleneck.reasons[0]?.description}</p>
-                  </div>
-                  <span className={`badge ${riskBadgeClass[bottleneck.riskLevel]}`}>{bottleneck.riskLevel}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="dashboard-intelligence-block">
-            <h4>Capacity Opportunities</h4>
-            <ul className="plain-list">
-              {capacityOpportunities.map((capacity) => (
-                <li key={capacity.employeeId}>
-                  <div>
-                    <strong>{capacity.employeeName}</strong>
-                    <p>
-                      {capacity.status === 'OVERLOADED'
-                        ? `${Math.abs(capacity.capacityGapMinutes)} min over capacity`
-                        : `${Math.abs(capacity.capacityGapMinutes)} min available`}
-                    </p>
-                    <p className="subtle">{capacity.recommendation ?? 'Balanced allocation'}</p>
-                  </div>
-                  <span
-                    className={`badge ${capacity.status === 'OVERLOADED' ? riskBadgeClass.HIGH : riskBadgeClass.LOW}`}
-                  >
-                    {capacity.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
           </article>
         </div>
       </section>
