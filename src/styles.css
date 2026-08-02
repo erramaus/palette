@@ -511,6 +511,17 @@ ul {
   gap: 12px;
 }
 
+.dashboard-predictive-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-predictive-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+}
+
 .dashboard-intelligence-controls {
   display: flex;
   flex-wrap: wrap;
@@ -1871,6 +1882,10 @@ a:hover {
   }
 
   .dashboard-intelligence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-predictive-grid {
     grid-template-columns: 1fr;
   }
 

@@ -4,7 +4,10 @@ import {
   getWorkItemDetailService,
   type EditWorkItemInput,
 } from '../services/WorkItemDetailService'
+import { ProductionForecastService } from '../services/ProductionForecastService'
+import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
+import { useAppState } from '../state/AppStateContext'
 
 interface EditFormState {
   priority: number
@@ -53,9 +56,29 @@ const parseNotes = (notesInput: string): string[] =>
     .map((note) => note.trim())
     .filter((note) => note.length > 0)
 
+const promptActualMinutes = (label: string, suggestedMinutes: number): number | null => {
+  const response = window.prompt(
+    `Enter actual completion minutes for ${label}:`,
+    String(Math.max(1, Math.round(suggestedMinutes))),
+  )
+
+  if (response === null) {
+    return null
+  }
+
+  const parsed = Number(response)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    window.alert('A positive numeric actual minutes value is required.')
+    return null
+  }
+
+  return Math.round(parsed)
+}
+
 const WorkItemDetailPage = () => {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { productionJobs, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
 
   const environment = useMemo(() => getWorkshopListUiEnvironment(), [])
   const detailService = useMemo(() => getWorkItemDetailService(environment), [environment])
@@ -101,6 +124,46 @@ const WorkItemDetailPage = () => {
 
   const snapshot = snapshotResult.snapshot
   const loadError = snapshotResult.loadError
+
+  const forecastService = useMemo(
+    () =>
+      new ProductionForecastService({
+        productionJobs,
+        battlePlans,
+        employees,
+        activityLogs,
+        config: loadProductionForecastSettings(),
+      }),
+    [productionJobs, battlePlans, employees, activityLogs],
+  )
+
+  const forecastResult = useMemo(() => forecastService.getForecast(), [forecastService])
+
+  const mappedProductionJob = useMemo(() => {
+    if (!snapshot) {
+      return undefined
+    }
+
+    return productionJobs.find((job) =>
+      job.id === snapshot.workItem.id ||
+      job.orderNumber === snapshot.workItem.orderId ||
+      job.artworkTitle === snapshot.artworkName,
+    )
+  }, [snapshot, productionJobs])
+
+  const forecastPanelData = useMemo(() => {
+    if (!mappedProductionJob) {
+      return {
+        status: 'INSUFFICIENT_DATA' as const,
+        reasons: [
+          'No production-job mapping found for this work item.',
+          'Link work item to production job id or order number to enable deadline forecasting.',
+        ],
+      }
+    }
+
+    return forecastService.getWorkItemForecastPanelData(mappedProductionJob.id)
+  }, [mappedProductionJob, forecastService])
 
   const runAction = (action: () => void): void => {
     setIsWorking(true)
@@ -183,6 +246,32 @@ const WorkItemDetailPage = () => {
   const controls = snapshot.workflowControls
   const selectedJumpOption = controls.jumpOptions.find((option) => option.stageId === jumpStageId)
   const canJumpToSelectedStage = Boolean(selectedJumpOption?.enabled)
+
+  const completeCurrentStageWithActualMinutes = (): void => {
+    const actualMinutes = promptActualMinutes(
+      snapshot.currentStageName,
+      snapshot.workflowStages.find((stage) => stage.status === 'CURRENT')?.estimatedDuration ?? 30,
+    )
+    if (actualMinutes === null) {
+      return
+    }
+
+    runAction(() => {
+      detailService.completeCurrentStage(snapshot.workItem.id)
+      if (mappedProductionJob) {
+        addActivityLog({
+          entityType: 'WorkItem',
+          entityId: mappedProductionJob.id,
+          action: 'WORK_COMPLETED',
+          metadata: {
+            actualMinutes,
+            source: 'WORK_ITEM_DETAIL',
+            stage: snapshot.currentStageName,
+          },
+        })
+      }
+    })
+  }
 
   return (
     <section className="page work-item-detail-page">
@@ -277,6 +366,71 @@ const WorkItemDetailPage = () => {
       </section>
 
       <section className="panel">
+        <h3>Predictive Forecast</h3>
+        {forecastPanelData.status === 'READY' && forecastPanelData.forecast ? (
+          <>
+            <div className="work-item-overview-grid">
+              <p>
+                <strong>Expected completion date:</strong> {forecastPanelData.forecast.expectedDate}
+              </p>
+              <p>
+                <strong>Due date:</strong> {forecastPanelData.forecast.dueDate}
+              </p>
+              <p>
+                <strong>Deadline risk:</strong> {forecastPanelData.forecast.riskLevel}
+              </p>
+              <p>
+                <strong>Remaining estimated minutes:</strong> {forecastPanelData.forecast.remainingEstimatedMinutes}
+              </p>
+              <p>
+                <strong>Current stage delay:</strong> {forecastPanelData.forecast.expectedWaitingMinutes} min expected wait
+              </p>
+              <p>
+                <strong>Confidence:</strong> {forecastPanelData.forecast.confidence}
+              </p>
+              <p>
+                <strong>Optimistic / Conservative:</strong> {forecastPanelData.forecast.optimisticDate} / {forecastPanelData.forecast.conservativeDate}
+              </p>
+              <p>
+                <strong>Recommended action:</strong> {forecastPanelData.forecast.recommendedAction}
+              </p>
+            </div>
+
+            <h4>Reasons</h4>
+            <ul className="plain-list">
+              {forecastPanelData.forecast.reasons.slice(0, 8).map((reason) => (
+                <li key={`${reason.code}-${reason.description}`}>
+                  <div>
+                    <strong>{reason.code}</strong>
+                    <p>{reason.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <p><strong>INSUFFICIENT_DATA</strong></p>
+            <ul className="plain-list">
+              {forecastPanelData.reasons.map((reason) => (
+                <li key={reason}>
+                  <div>
+                    <strong>Data requirement</strong>
+                    <p>{reason}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <p className="subtle">
+          Historical profiles used: {forecastResult.historicalProfiles.stageProfiles.length} •
+          Missing actual times: {forecastResult.dataQuality.missingActualTimes}
+        </p>
+      </section>
+
+      <section className="panel">
         <h3>Workflow</h3>
         <div className="table-wrap">
           <table className="workshop-table">
@@ -316,7 +470,7 @@ const WorkItemDetailPage = () => {
               className="btn"
               disabled={!controls.completeCurrentStage.enabled}
               title={controls.completeCurrentStage.reason}
-              onClick={() => runAction(() => detailService.completeCurrentStage(snapshot.workItem.id))}
+              onClick={completeCurrentStageWithActualMinutes}
             >
               Complete Current Stage
             </button>

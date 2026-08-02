@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ProductionForecastService } from '../services/ProductionForecastService'
+import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import StatusBadge from '../components/common/StatusBadge'
 import { useAppState } from '../state/AppStateContext'
 import type { BattlePlan, BattlePlanTask } from '../types/battlePlans'
@@ -104,8 +106,9 @@ const BattlePlansPage = () => {
     createBattlePlan,
     replaceBattlePlansForDate,
     saveBattlePlan,
-    updateProductionStep,
+    completeProductionStep,
     addActivityLog,
+    activityLogs,
   } = useAppState()
 
   const today = formatLocalDate(new Date())
@@ -113,6 +116,28 @@ const BattlePlansPage = () => {
   const workers = useMemo(
     () => employees.filter((employee) => employee.role === 'WORKER' && employee.active),
     [employees],
+  )
+
+  const forecastService = useMemo(
+    () =>
+      new ProductionForecastService({
+        productionJobs,
+        battlePlans,
+        employees,
+        activityLogs,
+        config: loadProductionForecastSettings(),
+      }),
+    [productionJobs, battlePlans, employees, activityLogs],
+  )
+
+  const predictiveForecast = useMemo(() => forecastService.getForecast(), [forecastService])
+  const carryForwardByTaskId = useMemo(
+    () => new Map(predictiveForecast.carryForwardPredictions.map((item) => [item.taskId, item])),
+    [predictiveForecast.carryForwardPredictions],
+  )
+  const workerProjectionByEmployeeId = useMemo(
+    () => new Map(predictiveForecast.workerFinishProjections.map((item) => [item.employeeId, item])),
+    [predictiveForecast.workerFinishProjections],
   )
 
   const [generationDate, setGenerationDate] = useState(today)
@@ -484,19 +509,49 @@ const BattlePlansPage = () => {
     })
   }
 
+  const promptActualMinutes = (description: string, suggestedMinutes: number): number | null => {
+    const response = window.prompt(
+      `Enter actual completion minutes for ${description}:`,
+      String(Math.max(1, Math.round(suggestedMinutes))),
+    )
+
+    if (response === null) {
+      return null
+    }
+
+    const parsed = Number(response)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      window.alert('A positive numeric actual minutes value is required to complete and log this operation.')
+      return null
+    }
+
+    return Math.round(parsed)
+  }
+
   const updateTaskCompletion = (
     plan: BattlePlan,
     entry: BattlePlanWorkItemEntry,
     completed: boolean,
   ): void => {
-    const tasks = plan.tasks.map((task) =>
-      task.id === entry.taskId ? { ...task, completed } : task,
-    )
+    const targetTask = plan.tasks.find((task) => task.id === entry.taskId)
+    if (completed && targetTask) {
+      const actualMinutes = promptActualMinutes(entry.workItemNumber, targetTask.estimatedMinutes)
+      if (actualMinutes === null) {
+        return
+      }
 
-    saveUpdatedPlan(plan, tasks)
-
-    if (completed) {
       const employeeId = selectedEmployee?.id
+      completeProductionStep({
+        jobId: entry.workItemId,
+        stepName: entry.productionStep,
+        actualMinutes,
+        actorEmployeeId: employeeId,
+        metadata: {
+          planId: plan.id,
+          taskId: targetTask.id,
+        },
+      })
+
       setCompletionAudits((current) => ({
         ...current,
         [entry.taskId]: {
@@ -504,20 +559,13 @@ const BattlePlansPage = () => {
           completedBy: employeeId,
         },
       }))
-
-      const job = productionJobs.find((candidate) => candidate.id === entry.workItemId)
-      if (job && job.steps[entry.productionStep] !== 'COMPLETE') {
-        updateProductionStep(job.id, entry.productionStep)
-      }
-
-      addActivityLog({
-        entityType: 'ProductionStep',
-        entityId: `${entry.workItemId}:${entry.productionStep}`,
-        action: 'STEP_COMPLETED',
-        actorEmployeeId: employeeId,
-        metadata: { planId: plan.id },
-      })
     }
+
+    const tasks = plan.tasks.map((task) =>
+      task.id === entry.taskId ? { ...task, completed } : task,
+    )
+
+    saveUpdatedPlan(plan, tasks)
   }
 
   function canCompleteGroup(group: BattlePlanTaskGroup): boolean {
@@ -539,6 +587,20 @@ const BattlePlansPage = () => {
       overridden = true
     }
 
+    const actualMinutesByTaskId = new Map<string, number>()
+    for (const item of group.workItems) {
+      if (item.completed) {
+        continue
+      }
+      const task = plan.tasks.find((candidate) => candidate.id === item.taskId)
+      const suggestedMinutes = task?.estimatedMinutes ?? Math.max(1, Math.floor(group.totalEstimatedMinutes / Math.max(1, group.workItems.length)))
+      const actualMinutes = promptActualMinutes(item.workItemNumber, suggestedMinutes)
+      if (actualMinutes === null) {
+        return
+      }
+      actualMinutesByTaskId.set(item.taskId, actualMinutes)
+    }
+
     let tasks = [...plan.tasks]
 
     for (const item of group.workItems) {
@@ -550,6 +612,25 @@ const BattlePlansPage = () => {
     }
 
     saveUpdatedPlan(plan, tasks)
+
+    for (const item of group.workItems) {
+      const actualMinutes = actualMinutesByTaskId.get(item.taskId)
+      if (!actualMinutes) {
+        continue
+      }
+      completeProductionStep({
+        jobId: item.workItemId,
+        stepName: item.productionStep,
+        actualMinutes,
+        actorEmployeeId: director?.id,
+        metadata: {
+          planId: plan.id,
+          taskId: item.taskId,
+          groupId: group.id,
+        },
+      })
+    }
+
     setStartedGroupsByPlan((current) => ({
       ...current,
       [plan.id]: {
@@ -1121,6 +1202,60 @@ const BattlePlansPage = () => {
           {selectedTab?.kind === 'DIRECTOR' ? (
             <section className="director-sections">
               <article className="panel">
+                <h4>Predictive Director View</h4>
+                <div className="table-wrap">
+                  <table className="workshop-table">
+                    <thead>
+                      <tr>
+                        <th>Worker</th>
+                        <th>Predicted Finish</th>
+                        <th>Likely Carry-Forward Ops</th>
+                        <th>Unassigned Capacity</th>
+                        <th>Overload Minutes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workers.map((worker) => {
+                        const projection = workerProjectionByEmployeeId.get(worker.id)
+                        return (
+                          <tr key={worker.id}>
+                            <td>{worker.name}</td>
+                            <td>{projection?.predictedFinishTime ?? '--'}</td>
+                            <td>{projection?.likelyCarryForwardTaskIds.length ?? 0}</td>
+                            <td>{projection?.unassignedCapacityMinutes ?? worker.defaultAvailableMinutes}</td>
+                            <td>{projection?.projectedOverloadMinutes ?? 0}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <h4>Suggested Reassignments</h4>
+                <ul className="plain-list">
+                  {predictiveForecast.capacityRecommendations.length > 0 ? (
+                    predictiveForecast.capacityRecommendations.slice(0, 5).map((item) => (
+                      <li key={item.id}>
+                        <div>
+                          <strong>{item.summary}</strong>
+                          <p>{item.productionImpact}</p>
+                          <p className="subtle">Confidence: {item.confidence}</p>
+                        </div>
+                        <span className="subtle">{item.estimatedMinutesAffected} min</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
+                      <div>
+                        <strong>No reassignment recommendations</strong>
+                        <p>Current projected load is balanced within configured thresholds.</p>
+                      </div>
+                    </li>
+                  )}
+                </ul>
+              </article>
+
+              <article className="panel">
                 <h4>Worker Plan Reviews</h4>
                 <ul className="plain-list">
                   {workers.map((worker) => {
@@ -1187,7 +1322,12 @@ const BattlePlansPage = () => {
                   <div className="bp-current-operation-meta">
                     <p>Assigned Work Items: {currentOperation.workItems.length}</p>
                     <p>Estimated Time: {currentOperation.totalEstimatedMinutes} min</p>
+                    <p>Expected Duration: {Math.round(currentOperation.totalEstimatedMinutes * 1.05)} min</p>
                     <p>Status: {formatGroupUiStatus(getGroupUiStatus(selectedPlan.id, currentOperation))}</p>
+                    <p>
+                      Likely Completion Time:{' '}
+                      {workerProjectionByEmployeeId.get(selectedPlan.assignedWorkerId)?.predictedFinishTime ?? '--'}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -1206,6 +1346,30 @@ const BattlePlansPage = () => {
                   </button>
                 </section>
               ) : null}
+
+              <section className="panel bp-section-card">
+                <h4>Likely Carry-Forward Operations</h4>
+                <ul className="plain-list">
+                  {selectedPlan.tasks
+                    .filter((task) => !task.completed)
+                    .map((task) => {
+                      const prediction = carryForwardByTaskId.get(task.id)
+                      return (
+                        <li key={task.id}>
+                          <div>
+                            <strong>{task.description}</strong>
+                            <p>
+                              {prediction
+                                ? `${prediction.probabilityBand} probability • likely ${prediction.likelyCarryForwardMinutes} min`
+                                : 'INSUFFICIENT_DATA'}
+                            </p>
+                          </div>
+                          <span className="subtle">{prediction?.recommendedAction ?? 'Collect more actual completion history.'}</span>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </section>
 
               <section className="panel bp-section-card">
                 <h4>1. Start of Day Workshop Tasks</h4>

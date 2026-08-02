@@ -405,6 +405,7 @@ export type ActivityAction =
   | 'TARGET_CHANGED'
   | 'METRIC_EXCLUDED_MANUALLY'
   | 'DATA_QUALITY_ISSUE_ACKNOWLEDGED'
+  | 'FORECAST_CONFIG_CHANGED'
 
 export type ActivityEntityType =
   | 'Customer'

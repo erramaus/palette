@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ProductionAnalyticsService } from '../services/ProductionAnalyticsService'
+import { ProductionForecastService } from '../services/ProductionForecastService'
 import { loadProductionAnalyticsTargets } from '../services/productionAnalyticsTargets'
+import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { useAppState } from '../state/AppStateContext'
 import type { IntelligenceRecommendation, RiskLevel } from '../types/productionIntelligence'
@@ -103,9 +105,26 @@ const DashboardPage = () => {
     [productionJobs, battlePlans, employees, activityLogs],
   )
 
+  const productionForecastService = useMemo(
+    () =>
+      new ProductionForecastService({
+        productionJobs,
+        battlePlans,
+        employees,
+        activityLogs,
+        config: loadProductionForecastSettings(),
+      }),
+    [productionJobs, battlePlans, employees, activityLogs],
+  )
+
   const weeklyAnalytics = useMemo(
     () => analyticsService.getWeeklyAnalytics('PREVIOUS_WEEK'),
     [analyticsService],
+  )
+
+  const predictiveForecast = useMemo(
+    () => productionForecastService.getForecast(),
+    [productionForecastService],
   )
 
   const weeklyMetricMap = useMemo(() => {
@@ -123,6 +142,7 @@ const DashboardPage = () => {
   const weeklyStandardMinutes = weeklyMetricMap.get('STANDARD_MINUTES_EARNED')
   const weeklyCarryForwardRate = weeklyMetricMap.get('CARRY_FORWARD_RATE')
   const weeklyLeadTime = weeklyMetricMap.get('MEDIAN_LEAD_TIME')
+  const predictiveSnapshot = predictiveForecast.dashboardSnapshot
 
   const intelligenceForecast = useMemo(() => intelligenceService.getForecast(), [intelligenceService])
   const topRecommendations = useMemo(
@@ -521,6 +541,143 @@ const DashboardPage = () => {
             {' '}
             {weeklyAnalytics.previousWeek?.directorScorecard.overdueBacklog ?? '--'}
           </span>
+        </article>
+      </section>
+
+      <section className="panel dashboard-predictive-panel">
+        <div className="work-item-section-header">
+          <h3>Predictive Intelligence</h3>
+          <span className="subtle">Generated {new Date(predictiveForecast.generatedAt).toLocaleString()}</span>
+        </div>
+
+        <p>
+          {predictiveSnapshot.likelyLateJobs.length} job(s) are likely to miss due dates without intervention.
+        </p>
+        <p>
+          {predictiveSnapshot.probableBottleneckTomorrow
+            ? `${predictiveSnapshot.probableBottleneckTomorrow.stage} is projected to exceed available capacity by ${Math.max(0, predictiveSnapshot.probableBottleneckTomorrow.predictedActualMinutes - predictiveSnapshot.probableBottleneckTomorrow.availableSkilledCapacityMinutes)} minutes tomorrow.`
+            : 'No strong bottleneck projection for tomorrow.'}
+        </p>
+
+        <div className="dashboard-predictive-grid">
+          <article>
+            <h4>Jobs Likely To Become Late</h4>
+            <ul className="plain-list">
+              {predictiveSnapshot.likelyLateJobs.length > 0 ? (
+                predictiveSnapshot.likelyLateJobs.slice(0, 5).map((job) => (
+                  <li key={job.workItemId}>
+                    <div>
+                      <strong>{job.orderNumber}</strong>
+                      <p>{job.riskLevel} • Expected {job.expectedDate} • Due {job.dueDate}</p>
+                    </div>
+                    <span className="subtle">{job.remainingEstimatedMinutes} min</span>
+                  </li>
+                ))
+              ) : (
+                <li>
+                  <div>
+                    <strong>None currently projected</strong>
+                    <p>All active jobs are currently on track.</p>
+                  </div>
+                </li>
+              )}
+            </ul>
+          </article>
+
+          <article>
+            <h4>Likely Carry-Forward Operations</h4>
+            <ul className="plain-list">
+              {predictiveSnapshot.likelyCarryForwardOperations.length > 0 ? (
+                predictiveSnapshot.likelyCarryForwardOperations.slice(0, 5).map((item) => (
+                  <li key={item.taskId}>
+                    <div>
+                      <strong>{item.orderNumber} • {item.stage}</strong>
+                      <p>{item.probabilityBand} probability • {item.recommendedAction}</p>
+                    </div>
+                    <span className="subtle">{item.likelyCarryForwardMinutes} min</span>
+                  </li>
+                ))
+              ) : (
+                <li>
+                  <div>
+                    <strong>No carry-forward hotspots</strong>
+                    <p>Current plans are within projected daily capacity.</p>
+                  </div>
+                </li>
+              )}
+            </ul>
+          </article>
+
+          <article>
+            <h4>Workers Projected To Finish Early</h4>
+            <ul className="plain-list">
+              {predictiveSnapshot.projectedEarlyFinishWorkers.length > 0 ? (
+                predictiveSnapshot.projectedEarlyFinishWorkers.slice(0, 5).map((worker) => (
+                  <li key={worker.employeeId}>
+                    <div>
+                      <strong>{worker.employeeName}</strong>
+                      <p>Likely finish around {worker.predictedFinishTime}</p>
+                    </div>
+                    <span className="subtle">{worker.projectedIdleMinutes} min available</span>
+                  </li>
+                ))
+              ) : (
+                <li>
+                  <div>
+                    <strong>No early finish projections</strong>
+                    <p>All workers are close to full utilization.</p>
+                  </div>
+                </li>
+              )}
+            </ul>
+          </article>
+
+          <article>
+            <h4>Workers Projected To Exceed Capacity</h4>
+            <ul className="plain-list">
+              {predictiveSnapshot.projectedOverCapacityWorkers.length > 0 ? (
+                predictiveSnapshot.projectedOverCapacityWorkers.slice(0, 5).map((worker) => (
+                  <li key={worker.employeeId}>
+                    <div>
+                      <strong>{worker.employeeName}</strong>
+                      <p>Likely carry-forward tasks: {worker.likelyCarryForwardTaskIds.length}</p>
+                    </div>
+                    <span className="subtle">{worker.projectedOverloadMinutes} min overload</span>
+                  </li>
+                ))
+              ) : (
+                <li>
+                  <div>
+                    <strong>No overload projections</strong>
+                    <p>No worker currently projects above available capacity.</p>
+                  </div>
+                </li>
+              )}
+            </ul>
+          </article>
+        </div>
+
+        <article>
+          <h4>Forecast Confidence Warnings</h4>
+          <ul className="plain-list">
+            {predictiveSnapshot.confidenceWarnings.length > 0 ? (
+              predictiveSnapshot.confidenceWarnings.slice(0, 6).map((warning) => (
+                <li key={warning}>
+                  <div>
+                    <strong>Data quality notice</strong>
+                    <p>{warning}</p>
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li>
+                <div>
+                  <strong>No confidence warnings</strong>
+                  <p>Current forecasts have sufficient baseline depth for configured thresholds.</p>
+                </div>
+              </li>
+            )}
+          </ul>
         </article>
       </section>
 

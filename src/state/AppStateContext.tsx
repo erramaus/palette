@@ -36,12 +36,21 @@ export interface CreateActivityLogInput {
   metadata?: Record<string, string | number | boolean | null>
 }
 
+export interface CompleteProductionStepInput {
+  jobId: string
+  stepName: ProductionStepName
+  actualMinutes: number
+  actorEmployeeId?: string
+  metadata?: Record<string, string | number | boolean | null>
+}
+
 interface AppStateContextValue {
   employees: Employee[]
   productionJobs: ProductionJob[]
   battlePlans: BattlePlan[]
   activityLogs: AppActivityLog[]
   updateProductionStep: (jobId: string, stepName: ProductionStepName) => void
+  completeProductionStep: (input: CompleteProductionStepInput) => void
   createBattlePlan: (battlePlan: BattlePlan) => void
   replaceBattlePlansForDate: (date: string, nextPlans: BattlePlan[]) => void
   saveBattlePlan: (updatedPlan: BattlePlan) => void
@@ -77,6 +86,46 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       )
     },
     [setProductionJobs],
+  )
+
+  const completeProductionStep = useCallback(
+    (input: CompleteProductionStepInput) => {
+      setProductionJobs((currentJobs) =>
+        currentJobs.map((job) => {
+          if (job.id !== input.jobId) {
+            return job
+          }
+
+          const updatedSteps = {
+            ...job.steps,
+            [input.stepName]: 'COMPLETE',
+          }
+
+          return {
+            ...job,
+            steps: updatedSteps,
+            dueStatus: calculateDueStatus(job.dueDate, job.onHold),
+          }
+        }),
+      )
+
+      setActivityLogs((currentLogs) => [
+        {
+          id: createEntityId('activity'),
+          entityType: 'ProductionStep',
+          entityId: `${input.jobId}:${input.stepName}`,
+          action: 'STEP_COMPLETED',
+          actorEmployeeId: input.actorEmployeeId,
+          occurredAt: nowIso(),
+          metadata: {
+            actualMinutes: input.actualMinutes,
+            ...(input.metadata ?? {}),
+          },
+        },
+        ...currentLogs,
+      ])
+    },
+    [setProductionJobs, setActivityLogs],
   )
 
   const createBattlePlan = useCallback(
@@ -130,6 +179,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       battlePlans,
       activityLogs,
       updateProductionStep,
+      completeProductionStep,
       createBattlePlan,
       replaceBattlePlansForDate,
       saveBattlePlan,
@@ -140,6 +190,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       battlePlans,
       activityLogs,
       updateProductionStep,
+      completeProductionStep,
       createBattlePlan,
       replaceBattlePlansForDate,
       saveBattlePlan,
