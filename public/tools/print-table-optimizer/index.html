@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Palette</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/palette/assets/palette-icon.png" />
+    <script>
+      ;(function () {
+        const l = window.location
+        const target =
+          '/palette/?/tools/print-table-optimizer' +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        l.replace(target)
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>
