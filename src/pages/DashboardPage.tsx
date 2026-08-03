@@ -496,15 +496,15 @@ const DashboardPage = () => {
 
       <section className="summary-grid dashboard-kpi-grid">
         <article className="summary-card">
-          <p>Today's Shipments</p>
+          <p>Today's Production</p>
           <h3>{todayShipments.length}</h3>
         </article>
         <article className="summary-card">
-          <p>Overdue Orders</p>
+          <p>Late Orders</p>
           <h3>{overdueOrders.length}</h3>
         </article>
         <article className="summary-card">
-          <p>At-Risk Orders</p>
+          <p>Production Health</p>
           <h3>{atRiskOrders.length}</h3>
         </article>
         <article className="summary-card">
@@ -512,19 +512,19 @@ const DashboardPage = () => {
           <h3>{activeProductionCount}</h3>
         </article>
         <article className="summary-card">
-          <p>Department Schedule Attainment</p>
+          <p>Capacity</p>
           <h3>{formatPercent(scheduleAttainment)}</h3>
         </article>
         <article className="summary-card">
-          <p>First-Pass Quality</p>
+          <p>Materials</p>
           <h3>{formatPercent(firstPassQuality)}</h3>
         </article>
         <article className="summary-card">
-          <p>Production Minutes Completed Today</p>
+          <p>Print Queue</p>
           <h3>{completedMinutesToday}</h3>
         </article>
         <article className="summary-card">
-          <p>Carry-Forward Minutes</p>
+          <p>Timeline</p>
           <h3>{carryForwardMinutes}</h3>
         </article>
       </section>
@@ -733,7 +733,7 @@ const DashboardPage = () => {
 
       <section className="panel dashboard-intelligence-panel">
         <div className="work-item-section-header">
-          <h3>Director Intelligence</h3>
+          <h3>Director Assistant</h3>
           <div className="dashboard-intelligence-controls">
             <label>
               Threshold Profile

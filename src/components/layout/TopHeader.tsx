@@ -17,7 +17,12 @@ const pageTitles: Record<string, string> = {
   '/tools/print-table-optimizer': 'Print Table Optimizer',
 }
 
-const TopHeader = () => {
+interface TopHeaderProps {
+  sidebarCollapsed: boolean
+  onToggleSidebar: () => void
+}
+
+const TopHeader = ({ sidebarCollapsed, onToggleSidebar }: TopHeaderProps) => {
   const location = useLocation()
   const normalizedPath =
     location.pathname.length > 1 && location.pathname.endsWith('/')
@@ -38,12 +43,42 @@ const TopHeader = () => {
   return (
     <header className="top-header">
       <div className="top-header-brand">
+        <button
+          type="button"
+          className="top-header-sidebar-toggle"
+          onClick={onToggleSidebar}
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed ? '>>' : '<<'}
+        </button>
         <Logo size="small" showText={false} variant="dark" className="header-logo" />
         <div>
+          <p className="top-header-product-name">{branding.appName} Enterprise</p>
           <h2>{pageTitle}</h2>
         </div>
       </div>
-      <div className="top-header-date">{todayLabel}</div>
+
+      <div className="top-header-controls">
+        <label className="top-header-search" aria-label="Global search">
+          <span>Search</span>
+          <input
+            type="search"
+            placeholder="Search orders, work items, materials"
+          />
+        </label>
+
+        <button type="button" className="top-header-icon-btn" aria-label="Notifications">
+          !
+          <span className="top-header-icon-ping" aria-hidden="true">3</span>
+        </button>
+
+        <div className="top-header-chip top-header-chip-date">Production Date: {todayLabel}</div>
+        <div className="top-header-chip top-header-chip-health">Production Health: Stable</div>
+
+        <button type="button" className="top-header-user-menu" aria-label="User menu">
+          Director
+        </button>
+      </div>
     </header>
   )
 }
