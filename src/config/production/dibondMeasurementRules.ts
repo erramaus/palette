@@ -3,7 +3,23 @@ import type {
   UnresolvedMeasurementRule,
 } from './measurementRuleTypes'
 
-export const activeDibondMeasurementRules = [] as const satisfies readonly ConfirmedMeasurementRule[]
+export const activeDibondMeasurementRules = [{
+  id: 'dibond.exact-finished-dimensions.v1',
+  reconciliationKey: 'DIBOND:EXACT_FINISHED_DIMENSIONS',
+  status: 'CONFIRMED',
+  confidence: 'HIGH',
+  sources: [{
+    workbook: 'Production Director clarification',
+    worksheet: 'Production rules',
+    cells: 'Direct clarification',
+    ruleId: 'dibond-exact-finished-dimensions',
+    confirmationDate: '2026-08-03',
+  }],
+  productType: 'TEXTURED_REPLICA_3D',
+  frameFamily: 'ALL',
+  formula: 'cutWidth = finishedPaintingWidth; cutHeight = finishedPaintingHeight',
+  notes: 'Cut on CNC. Nesting, kerf, coordinates, sheet optimization, and placement belong to the future CNC Layout Tool.',
+}] as const satisfies readonly ConfirmedMeasurementRule[]
 
 export const dibondMeasurementRulesNeedsReview = [
   {

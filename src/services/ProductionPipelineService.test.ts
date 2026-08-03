@@ -154,9 +154,13 @@ describe('ProductionPipelineService', () => {
     })
 
     expect(result.operations.map((operation) => operation.name)).toEqual([
-      'FILES', 'PRINT', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT',
+      'FILES', 'PRINT', 'DIBOND', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT',
       'FRAME_CUT', 'FRAME_ASSEMBLY', 'FRAME', 'QC', 'SHIPPING',
     ])
+    expect(result.operations.find((operation) => operation.name === 'DIBOND')).toMatchObject({
+      workstation: 'cnc',
+      cutCalculation: { cutDimensions: { width: 20, height: 30 } },
+    })
     result.operations.slice(1).forEach((operation, index) => {
       expect(operation.dependsOnOperationIds).toEqual([result.operations[index].id])
     })
@@ -245,5 +249,38 @@ describe('ProductionPipelineService', () => {
     expect(groups.reduce((count, group) => count + group.workItems.length, 0)).toBe(operationTypes.length)
     expect(plans.workerPlans[0].tasks).toHaveLength(operationTypes.length)
     expect(plans.directorPlan.tasks.filter((task) => task.directorSection === 'REVIEW')).toEqual([])
+  })
+
+  it('adds strainer labor only to assembly and propagates it through scheduling and Battle Plans', () => {
+    const result = createService().importOrder({
+      orderNumber: 'CANVAS-70', customerName: 'Customer', artworkName: 'Large Canvas',
+      productType: 'CANVAS', width: 70, height: 40, orientation: 'HORIZ', priority: 80,
+      dueDate: '2026-08-05', notes: [], assignedEmployeeId: 'employee-daniel',
+      customFields: { frameStyle: 'None' },
+    })
+    const cut = result.operations.find((operation) => operation.name === 'STRETCHER_CUT')!
+    const assembly = result.operations.find((operation) => operation.name === 'STRETCHER_ASSEMBLY')!
+    expect(cut.estimatedMinutes).toBe(20)
+    expect(assembly.estimatedMinutes).toBe(53)
+
+    const schedule = new SchedulingService().schedule({
+      now: new Date(2026, 7, 3, 8, 0), calendar: DEFAULT_PRODUCTION_CALENDAR,
+      employees: [{ employeeId: 'employee-daniel', employeeName: 'Daniel', availableMinutes: 480, skills: ['STRETCHER_BASE'] }],
+      operations: [assembly].map((operation) => ({
+        id: operation.id, workItemId: operation.workItemId, orderNumber: 'CANVAS-70', pieceLabel: '70x40 Canvas',
+        operation: operation.name, status: operation.status, estimatedMinutes: operation.estimatedMinutes,
+        dependencyIds: [], dueDate: operation.dueDate!, priority: operation.priority, category: 'CUSTOMER' as const,
+        createdAt: '2026-08-02T08:00:00.000Z', assignedEmployeeId: 'employee-daniel',
+      })),
+    })
+    const plans = generateBattlePlansFromOperations({
+      date: '2026-08-03', operations: schedule.entries, employees: [],
+      workerConfigs: [{ workerId: 'employee-daniel', selected: true, availableMinutes: 480 }],
+      directorId: 'employee-director',
+    })
+
+    expect(schedule.entries[0].estimatedMinutes).toBe(53)
+    expect(plans.workerPlans[0].tasks[0].estimatedMinutes).toBe(53)
+    expect(plans.directorPlan.tasks[0].estimatedMinutes).toBe(53)
   })
 })

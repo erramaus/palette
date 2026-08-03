@@ -13,6 +13,7 @@
 - **Business purpose:** Allows the stretched canvas to fit its intended finished dimensions.
 - **Suggested TypeScript service:** `StretcherRules`
 - **Confidence:** High.
+- **Production Director clarification:** Confirmed 2026-08-03 with no rounding. The resulting outer dimensions are the basis for interior support spans.
 - **NEEDS_REVIEW:** Resolve the broken `stretch` named range and confirm whether the deduction is applied once in data or manually at the saw.
 
 ## Formula

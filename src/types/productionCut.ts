@@ -2,7 +2,7 @@ import type { MeasurementConfidence, MeasurementRuleSource } from '../config/pro
 import type { ProductType } from './production'
 
 export type ProductionCutCalculationStatus = 'CONFIRMED' | 'NEEDS_REVIEW'
-export type ProductionCutKind = 'FRAME' | 'BASE' | 'STRETCHER'
+export type ProductionCutKind = 'FRAME' | 'BASE' | 'STRETCHER' | 'DIBOND'
 export type ProductionCutMemberKind = 'LONG' | 'SHORT'
 
 export interface ProductionCutMember {
@@ -10,6 +10,24 @@ export interface ProductionCutMember {
   kind: ProductionCutMemberKind
   cutLengthInches: number
   quantity: 1
+}
+
+export type StrainerMemberType = 'CENTER' | 'ADDITIONAL_LENGTHWISE' | 'CORNER'
+export type StrainerOrientation = 'HORIZONTAL' | 'VERTICAL' | 'CORNER'
+
+export interface ProductionStrainerMember {
+  id: string
+  type: StrainerMemberType
+  cutLengthInches: number | null
+  quantity: number
+  placement: 'CENTERED' | 'EVENLY_SPACED_EACH_SIDE' | 'CORNERS'
+  orientation: StrainerOrientation
+  materialDimensions: {
+    widthInches: number
+    thicknessInches: number
+  }
+  formula: string
+  ruleId: string
 }
 
 export interface ProductionCutInputs {
@@ -43,5 +61,9 @@ export interface ProductionCutCalculationResult {
   centerStrainerRequired: boolean | null
   cornerStrainerRequired: boolean | null
   oppositeAdditionalStrainerRequired: boolean | null
+  strainerMembers?: ProductionStrainerMember[]
+  addedStandardMinutes?: number
+  cutDimensions?: { width: number; height: number }
+  workstation?: string
   trace: CalculationTrace
 }

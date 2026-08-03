@@ -94,6 +94,10 @@ Tag values are signed adjustments added to dimensions. BP values are subtracted,
 | `stretcher.canvas.cut-deduction.v1` | Production `BP!AL4,AN4`; `Helper BPs!A3:G32`; tags repeated cut blocks | Canvas | All | N/A | N/A | `dimension - 1/16 in` | Independently repeated | Repeated formula | High | CONFIRMED |
 | `stretcher.canvas.strainer-threshold.v1` | Production `Helper BPs!F6:F32` | Canvas | All | N/A | N/A | `max(width,height) > 30` | Equality policy unresolved but formula exact | Helper BPs | High | CONFIRMED |
 | `stretcher.canvas.corner-threshold.v1` | Production `Helper BPs!G6:G32` | Canvas | All | N/A | N/A | `max(width,height) > 45` | Equality policy unresolved but formula exact | Helper BPs | High | CONFIRMED |
+| `stretcher.canvas.material-dimensions.v1` | Production Director clarification, 2026-08-03 | Canvas | All | N/A | N/A | Stretcher face `1 15/16`; specified thickness `1 2/32`, normalized `1 1/16`; strainer width `1 7/16`; thickness `3/4` | None | Production Director clarification | High | CONFIRMED |
+| `stretcher.canvas.center-strainer.v1` | Production Director clarification, 2026-08-03 | Canvas | All | N/A | N/A | `perpendicularOuterDimension - (2 * 1.0625)`; quantity 1; centered | None | Production Director clarification | High | CONFIRMED |
+| `stretcher.canvas.over-60-additional-strainers.v1` | Production Director clarification, 2026-08-03 | Canvas | All | N/A | N/A | If longest finished dimension `> 60`: `(longInteriorSpan - 1.4375) / 2`; quantity 2 | None | Production Director clarification | High | CONFIRMED |
+| `stretcher.canvas.strainer-labor.v1` | Production Director clarification, 2026-08-03 | Canvas | All | N/A | N/A | `4 standard minutes * individual strainer quantity`; corners quantity 4 when required | None | Production Director clarification | High | CONFIRMED |
 | `stretcher.canvas.named-range.v1` | Production `BP` named range `stretch` | Canvas | All | N/A | N/A | `#REF!` | Broken named range | None | Low | NEEDS_REVIEW |
 
 ## Petite Frame Lookups
@@ -118,14 +122,16 @@ Tag values are signed adjustments added to dimensions. BP values are subtracted,
 
 | Canonical rule ID | Source workbook / worksheet / cells | Product type | Frame family | Imported frame name | Normalized production frame name | Adjustment/formula | Competing/conflicting sources | Recommended authoritative source | Confidence | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
+| `dibond.exact-finished-dimensions.v1` | Production Director clarification, 2026-08-03 | 3D | All | N/A | N/A | `cutWidth = finishedPaintingWidth; cutHeight = finishedPaintingHeight`; workstation CNC | Historical workbook allowance is not active | Production Director clarification | High | CONFIRMED |
 | `dibond.cut-millimeters.v1` | Production `Dibond Cutting!C2:C8,K2:K8,S7:S8`; `Dibond Pieces Cutting!C3:C26,K14:K77,AA25:AA26` | 3D | All | N/A | N/A | `ROUNDDOWN((inches + 9/32) * 25.4, 0)` | Repeated, but allowance rationale unresolved | None pending fabrication confirmation | High | NEEDS_REVIEW |
 | `dibond.layout-spacing.v1` | Production documented layout ranges | 3D | All | N/A | N/A | `nextOrigin=max(lines)+13`; boundary `1525 mm` | Rotation/order/width policy absent | None pending layout policy | Medium | NEEDS_REVIEW |
 | `dibond.inches-up-display.v1` | Production `Dibond Pieces Cutting` display helpers | 3D | All | N/A | N/A | Mixed `ROUND` / `ROUNDUP`, whole / one-decimal display | Formula blocks disagree | None pending operator standard | Medium | CONFLICT |
 
 ## Configuration Decision
 
-- Active configuration contains only the 18 `CONFIRMED` entries above: 7 frame allowances, 6 base adjustments, 3 stretcher rules, and 2 paper-frame mappings.
-- Dibond has no active entries in this phase.
+- Active configuration contains 23 `CONFIRMED` entries: 7 frame allowances, 6 base adjustments, 7 stretcher rules, 2 paper-frame mappings, and 1 exact-dimension Dibond rule.
+- Dibond runtime calculation is limited to exact finished width and height at the CNC workstation.
+- CNC nesting, sheet layout, coordinates, kerf optimization, multi-piece placement, and sheet optimization belong to the future CNC Layout Tool and are not implemented here.
 - Every `CONFLICT` and `NEEDS_REVIEW` entry is excluded from active arrays.
 - No source supports an `OBSOLETE` decision, so obsolete count is zero.
 - These drafts are not imported by production calculation services and do not change current behavior.

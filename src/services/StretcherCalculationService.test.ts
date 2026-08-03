@@ -15,7 +15,53 @@ describe('StretcherCalculationService', () => {
     ])
     expect(result.centerStrainerRequired).toBe(true)
     expect(result.cornerStrainerRequired).toBe(true)
-    expect(result.oppositeAdditionalStrainerRequired).toBeNull()
+    expect(result.oppositeAdditionalStrainerRequired).toBe(false)
+    expect(result.addedStandardMinutes).toBe(20)
+  })
+
+  it('cuts a centered strainer across the interior perpendicular span', () => {
+    const widthDominant = service.calculate({ productType: 'CANVAS', width: 40, height: 20 })
+    const heightDominant = service.calculate({ productType: 'CANVAS', width: 20, height: 40 })
+
+    expect(widthDominant.strainerMembers?.find((member) => member.type === 'CENTER')).toMatchObject({
+      cutLengthInches: 17.8125,
+      quantity: 1,
+      placement: 'CENTERED',
+      orientation: 'VERTICAL',
+      materialDimensions: { widthInches: 1.4375, thicknessInches: 0.75 },
+    })
+    expect(heightDominant.strainerMembers?.find((member) => member.type === 'CENTER')).toMatchObject({
+      cutLengthInches: 17.8125,
+      orientation: 'HORIZONTAL',
+    })
+  })
+
+  it('uses the horizontal span for a square canvas', () => {
+    const result = service.calculate({ productType: 'CANVAS', width: 40, height: 40 })
+
+    expect(result.strainerMembers?.find((member) => member.type === 'CENTER')).toMatchObject({
+      cutLengthInches: 37.8125,
+      orientation: 'HORIZONTAL',
+    })
+  })
+
+  it('adds two half-span lengthwise strainers only above 60 inches', () => {
+    const atSixty = service.calculate({ productType: 'CANVAS', width: 60, height: 40 })
+    const overSixty = service.calculate({ productType: 'CANVAS', width: 70, height: 40 })
+    const additional = overSixty.strainerMembers?.find((member) => member.type === 'ADDITIONAL_LENGTHWISE')
+
+    expect(atSixty.strainerMembers?.some((member) => member.type === 'ADDITIONAL_LENGTHWISE')).toBe(false)
+    expect(atSixty.addedStandardMinutes).toBe(20)
+    expect(additional).toMatchObject({
+      cutLengthInches: 33.1875,
+      quantity: 2,
+      placement: 'EVENLY_SPACED_EACH_SIDE',
+      orientation: 'HORIZONTAL',
+      formula: '(longInteriorSpan - 1.4375) / 2',
+    })
+    expect(overSixty.strainerMembers?.find((member) => member.type === 'CORNER')?.quantity).toBe(4)
+    expect(overSixty.addedStandardMinutes).toBe(28)
+    expect(overSixty.trace.calculatedOutputs.additionalStrainerLengthInches).toBe(33.1875)
   })
 
   it('uses strict confirmed thresholds', () => {

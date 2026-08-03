@@ -6,6 +6,7 @@ export interface MeasurementRuleSource {
   worksheet: string
   cells: string
   ruleId: string
+  confirmationDate?: string
 }
 
 export interface MeasurementRuleDraft {

@@ -4,6 +4,7 @@ import type { Employee } from '../types/employees'
 import type { ProductionStepName, ProductType } from '../types/production'
 import type { ProductionCutCalculationResult } from '../types/productionCut'
 import { BaseCalculationService } from './BaseCalculationService'
+import { DibondCalculationService } from './DibondCalculationService'
 import { FrameCalculationService } from './FrameCalculationService'
 import { StretcherCalculationService } from './StretcherCalculationService'
 import type { GenerationResult } from './battlePlanGenerator'
@@ -48,7 +49,7 @@ export interface ProductionOperation {
   cutMemberCount?: number
   cutLinearInches?: number
   materialRequirement?: {
-    kind: 'FRAME_MOULDING' | 'BASE_STOCK' | 'STRETCHER_STOCK'
+    kind: 'FRAME_MOULDING' | 'BASE_STOCK' | 'STRETCHER_STOCK' | 'DIBOND_PANEL'
     grossLinearInches: number | null
     reservedLinearInches: number
     availableLinearInches: number
@@ -260,6 +261,7 @@ export class ProductionPipelineService {
   private readonly createWorkItem: ProductionPipelineDependencies['createWorkItem']
   private readonly frameCalculationService = new FrameCalculationService()
   private readonly baseCalculationService = new BaseCalculationService()
+  private readonly dibondCalculationService = new DibondCalculationService()
   private readonly stretcherCalculationService = new StretcherCalculationService()
 
   constructor(dependencies: ProductionPipelineDependencies) {
@@ -410,7 +412,8 @@ export class ProductionPipelineService {
       name,
       sequence: index + 1,
       status: calculationBlocked ? 'BLOCKED' : index === 0 ? 'READY' : 'PENDING',
-      estimatedMinutes: OPERATION_MINUTES[name],
+      estimatedMinutes: OPERATION_MINUTES[name]
+        + (name === 'STRETCHER_ASSEMBLY' ? cutCalculation?.addedStandardMinutes ?? 0 : 0),
       cutCalculation,
       cutMemberCount: cutCalculation?.status === 'CONFIRMED' ? cutCalculation.members.length : undefined,
       cutLinearInches: cutCalculation?.status === 'CONFIRMED'
@@ -419,7 +422,8 @@ export class ProductionPipelineService {
       materialRequirement: cutCalculation ? {
         kind: cutCalculation.kind === 'FRAME'
           ? 'FRAME_MOULDING'
-          : cutCalculation.kind === 'BASE' ? 'BASE_STOCK' : 'STRETCHER_STOCK',
+          : cutCalculation.kind === 'BASE' ? 'BASE_STOCK'
+            : cutCalculation.kind === 'DIBOND' ? 'DIBOND_PANEL' : 'STRETCHER_STOCK',
         grossLinearInches,
         reservedLinearInches: 0,
         availableLinearInches: 0,
@@ -475,6 +479,13 @@ export class ProductionPipelineService {
         mouldingIdentifier,
       }))
     }
+    if (input.productType === 'THREE_D_PRINT' || input.productType === 'TEXTURED_REPLICA_3D') {
+      calculations.push(this.dibondCalculationService.calculate({
+        productType: input.productType,
+        width: input.width,
+        height: input.height,
+      }))
+    }
     if (input.productType === 'CANVAS' || input.productType === 'ORIGINAL') {
       calculations.push(this.stretcherCalculationService.calculate({
         productType: input.productType,
@@ -501,6 +512,8 @@ export class ProductionPipelineService {
         ? 'STRETCHER'
         : operation === 'BASE_CUT' || operation === 'BASE_ASSEMBLY'
           ? 'BASE'
+            : operation === 'DIBOND'
+              ? 'DIBOND'
           : undefined
     return kind ? calculations.find((calculation) => calculation.kind === kind) : undefined
   }
@@ -515,6 +528,7 @@ export class ProductionPipelineService {
     const route: ProductionOperationName[] = ['FILES']
 
     if (productType !== 'ORIGINAL') route.push('PRINT')
+    if (calculations.some((calculation) => calculation.kind === 'DIBOND')) route.push('DIBOND')
     if (base) route.push('BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT')
     if (stretcher) route.push('STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'STRETCH')
     if (frame) route.push('FRAME_CUT', 'FRAME_ASSEMBLY', 'FRAME')
@@ -524,7 +538,7 @@ export class ProductionPipelineService {
   }
 
   private isCutOperation(operation: ProductionOperationName): boolean {
-    return operation === 'FRAME_CUT' || operation === 'BASE_CUT' || operation === 'STRETCHER_CUT'
+    return operation === 'FRAME_CUT' || operation === 'BASE_CUT' || operation === 'STRETCHER_CUT' || operation === 'DIBOND'
   }
 
   private workstationForOperation(operation: ProductionOperationName): string {
@@ -532,6 +546,7 @@ export class ProductionPipelineService {
     if (operation === 'BASE_CUT' || operation === 'BASE_ASSEMBLY') return 'base-shop'
     if (operation === 'STRETCHER_CUT' || operation === 'STRETCHER_ASSEMBLY' || operation === 'STRETCH') return 'stretching'
     if (operation === 'PRINT' || operation === 'PRINTED' || operation === 'TRIM') return 'printing'
+    if (operation === 'DIBOND') return 'cnc'
     if (operation === 'MOUNT') return 'mounting'
     if (operation === 'QC') return 'qc'
     if (operation === 'SHIPPING') return 'shipping'

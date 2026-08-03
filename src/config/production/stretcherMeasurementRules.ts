@@ -3,6 +3,29 @@ import type {
   UnresolvedMeasurementRule,
 } from './measurementRuleTypes'
 
+export const STRETCHER_PRODUCTION_CONSTANTS = {
+  stretcherBar: {
+    faceHeightInches: 1.9375,
+    thicknessAsSpecifiedInches: 1.0625,
+    normalizedThicknessInches: 1.0625,
+  },
+  strainerBar: {
+    widthInches: 1.4375,
+    thicknessInches: 0.75,
+  },
+  standardMinutesPerStrainer: 4,
+  source: 'Production Director clarification',
+  confirmationDate: '2026-08-03',
+} as const
+
+const productionDirectorSource = (ruleId: string) => ({
+  workbook: 'Production Director clarification',
+  worksheet: 'Production rules',
+  cells: 'Direct clarification',
+  ruleId,
+  confirmationDate: '2026-08-03',
+})
+
 export const activeStretcherMeasurementRules = [
   {
     id: 'stretcher.canvas.cut-deduction.v1',
@@ -53,10 +76,50 @@ export const activeStretcherMeasurementRules = [
       worksheet: 'Helper BPs',
       cells: 'G6:G32',
       ruleId: 'stretcher-support-thresholds',
-    }],
+    }, productionDirectorSource('corner-strainer-quantity')],
     productType: 'CANVAS',
     frameFamily: 'ALL',
-    formula: 'cornersRequired = max(width, height) > 45',
+    formula: 'if max(width, height) > 45: cornersRequired = true; quantity = 4',
+  },
+  {
+    id: 'stretcher.canvas.material-dimensions.v1',
+    reconciliationKey: 'CANVAS:MATERIAL_DIMENSIONS',
+    status: 'CONFIRMED',
+    confidence: 'HIGH',
+    sources: [productionDirectorSource('stretcher-material-dimensions')],
+    productType: 'CANVAS',
+    frameFamily: 'ALL',
+    formula: 'stretcher face = 1.9375; specified thickness = 1 2/32; normalized thickness = 1 1/16; strainer width = 1.4375; strainer thickness = 0.75',
+  },
+  {
+    id: 'stretcher.canvas.center-strainer.v1',
+    reconciliationKey: 'CANVAS:CENTER_STRAINER',
+    status: 'CONFIRMED',
+    confidence: 'HIGH',
+    sources: [productionDirectorSource('center-strainer')],
+    productType: 'CANVAS',
+    frameFamily: 'ALL',
+    formula: 'centerLength = perpendicularOuterDimension - (2 * 1.0625)',
+  },
+  {
+    id: 'stretcher.canvas.over-60-additional-strainers.v1',
+    reconciliationKey: 'CANVAS:OVER_60_ADDITIONAL_STRAINERS',
+    status: 'CONFIRMED',
+    confidence: 'HIGH',
+    sources: [productionDirectorSource('over-60-additional-strainers')],
+    productType: 'CANVAS',
+    frameFamily: 'ALL',
+    formula: 'if max(width,height) > 60: quantity = 2; eachLength = (longInteriorSpan - 1.4375) / 2',
+  },
+  {
+    id: 'stretcher.canvas.strainer-labor.v1',
+    reconciliationKey: 'CANVAS:STRAINER_LABOR',
+    status: 'CONFIRMED',
+    confidence: 'HIGH',
+    sources: [productionDirectorSource('strainer-labor')],
+    productType: 'CANVAS',
+    frameFamily: 'ALL',
+    formula: 'addedStandardMinutes = totalIndividualStrainers * 4',
   },
 ] as const satisfies readonly ConfirmedMeasurementRule[]
 

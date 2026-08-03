@@ -50,7 +50,7 @@ const LEGACY_STEP_BY_OPERATION: Record<ProductionOperationName, ProductionStepNa
 export const DEFAULT_WORK_CENTER_BY_OPERATION: Record<ProductionOperationName, string> = {
   FILES: 'files', PRINT: 'printing', PRINTED: 'printing', BASE_CUT: 'base-shop', BASE_ASSEMBLY: 'base-shop',
   STRETCHER_CUT: 'stretching', STRETCHER_ASSEMBLY: 'stretching', STRETCHER: 'stretching', STRETCH: 'stretching',
-  TRIM: 'printing', SLICE: 'files', RESIZE: 'files', DIBOND: 'dibond', MOUNT: 'mounting',
+  TRIM: 'printing', SLICE: 'files', RESIZE: 'files', DIBOND: 'cnc', MOUNT: 'mounting',
   FRAME_CUT: 'frames', FRAME_ASSEMBLY: 'frames', FRAME: 'frames', QC: 'qc', SHIPPING: 'shipping',
 }
 
@@ -61,7 +61,7 @@ export const DEFAULT_PRODUCTION_CALENDAR: ProductionCalendar = {
   breaks: [{ start: '12:00', finish: '12:30' }],
   holidays: [],
   workCenters: [
-    ['files', 'Files'], ['printing', 'Printing'], ['dibond', 'Dibond'], ['stretching', 'Stretching'],
+    ['files', 'Files'], ['printing', 'Printing'], ['cnc', 'CNC'], ['stretching', 'Stretching'],
     ['base-shop', 'Base Shop'], ['mounting', 'Mounting'], ['frames', 'Frames'], ['qc', 'QC'], ['shipping', 'Shipping'],
   ].map(([id, name]) => ({ id, name, capacity: 1 })),
 }

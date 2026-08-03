@@ -70,6 +70,11 @@ describe('measurement rule reconciliation', () => {
       'stretcher.canvas.cut-deduction.v1',
       'stretcher.canvas.strainer-threshold.v1',
       'stretcher.canvas.corner-threshold.v1',
+      'stretcher.canvas.material-dimensions.v1',
+      'stretcher.canvas.center-strainer.v1',
+      'stretcher.canvas.over-60-additional-strainers.v1',
+      'stretcher.canvas.strainer-labor.v1',
+      'dibond.exact-finished-dimensions.v1',
       'frame-normalization.paper-white.v1',
       'frame-normalization.paper-black.v1',
     ])
