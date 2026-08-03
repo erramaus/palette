@@ -313,17 +313,26 @@ const BattlePlansPage = () => {
   const selectedEmployee = selectedEmployeeId
     ? employees.find((employee) => employee.id === selectedEmployeeId)
     : undefined
+  const isDirectorView = selectedTab?.kind === 'DIRECTOR'
+  const isWorkerView = selectedTab?.kind === 'WORKER'
 
   const selectedGroups = useMemo(
-    () => (selectedPlan ? toWorkflowGroups(selectedPlan, productionJobs) : []),
-    [selectedPlan, productionJobs],
+    () => selectedPlan ? toWorkflowGroups(
+      isDirectorView
+        ? { ...selectedPlan, tasks: selectedPlan.tasks.filter((task) => task.directorSection === 'PRODUCTION') }
+        : selectedPlan,
+      productionJobs,
+    ) : [],
+    [selectedPlan, productionJobs, isDirectorView],
+  )
+  const directorReviewTasks = useMemo(
+    () => isDirectorView ? selectedPlan?.tasks.filter((task) => task.directorSection === 'REVIEW') ?? [] : [],
+    [isDirectorView, selectedPlan],
   )
   const selectedProposalPlan = optimizationProposal?.employeePlans.find(
     (plan) => plan.employeeId === proposalSelectedEmployeeId,
   )
   const selectedProposalOperationCount = Object.values(proposalSelectedOperationIds).filter(Boolean).length
-  const isDirectorView = selectedTab?.kind === 'DIRECTOR'
-  const isWorkerView = selectedTab?.kind === 'WORKER'
   const selectedLifecycleOperations = useMemo(() => {
     if (isDirectorView) return productionOperations
     if (!isWorkerView || !selectedPlan) return []
@@ -1511,6 +1520,41 @@ const BattlePlansPage = () => {
 
           {selectedTab?.kind === 'DIRECTOR' ? (
             <section className="director-sections">
+              <section className="bp-production-groups" aria-label="Director production groups">
+                <div className="work-item-section-header">
+                  <div>
+                    <h4>Production Groups</h4>
+                    <p className="subtle">Cut and assembly operations grouped from their operation type.</p>
+                  </div>
+                  <span className="badge">{selectedGroups.reduce((count, group) => count + group.workItems.length, 0)} operations</span>
+                </div>
+                {selectedGroups.map((group) => renderGroup(group, selectedPlan))}
+                {selectedGroups.length === 0 && <p className="subtle">No ready frame, base, or stretcher operations are scheduled.</p>}
+              </section>
+
+              <article className="panel bp-section-card" aria-label="Director review section">
+                <div className="work-item-section-header">
+                  <div>
+                    <h4>Calculation Review</h4>
+                    <p className="subtle">Unresolved operations remain here until their calculation is confirmed.</p>
+                  </div>
+                  <span className="badge">{directorReviewTasks.length}</span>
+                </div>
+                <ul className="plain-list">
+                  {directorReviewTasks.map((task) => (
+                    <li key={task.id}>
+                      <div>
+                        <strong>{task.productionOperationName}</strong>
+                        <p>{task.description}</p>
+                        <p className="subtle">{task.cutSummary} · Tag: {task.tagStatus?.replaceAll('_', ' ') ?? 'NEEDS REVIEW'}</p>
+                      </div>
+                      {task.openWorkItemId && <button type="button" className="btn" onClick={() => navigate(`/work-items/${task.openWorkItemId}`)}>Open Work Item</button>}
+                    </li>
+                  ))}
+                  {directorReviewTasks.length === 0 && <li><span className="subtle">No calculations require review.</span></li>}
+                </ul>
+              </article>
+
               <article className="panel bp-optimization-controls">
                 <h4>Optimization Controls</h4>
                 <div className="form-grid bp-optimization-form-grid">

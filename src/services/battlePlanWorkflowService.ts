@@ -17,7 +17,7 @@ export const GROUP_LABELS: Record<BattlePlanTaskGroupType, string> = {
   FILES: 'Files',
   CANVASES_TO_PRINT: 'Canvases to Print',
   DIBOND_TO_CUT: 'Dibond to Cut',
-  STRETCHERS_TO_MAKE: 'Stretchers/Bases to Make',
+  STRETCHERS_TO_MAKE: 'Stretchers to Make',
   BASES_TO_MAKE: 'Bases to Make',
   PIECES_TO_STRETCH: 'Pieces to Stretch',
   PIECES_TO_BASE: 'Pieces to Base',
@@ -160,7 +160,7 @@ export const toWorkflowGroups = (
     const job = jobs.find((candidate) => candidate.id === task.productionJobId)
     const parsed = parseGroupMeta(task.notes)
     const fallbackType = stepToGroupType(task.productionStep)
-    const groupType = parsed.groupType ?? fallbackType
+    const groupType = task.productionGroup ?? parsed.groupType ?? fallbackType
     const groupId = parsed.groupId ?? `${plan.id}-${groupType}`
     const groupName = parsed.groupName ?? GROUP_LABELS[groupType]
 

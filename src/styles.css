@@ -1448,6 +1448,32 @@ button:focus {
   gap: 4px;
 }
 
+.tag-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tag-actions .btn {
+  padding: 5px 8px;
+  font-size: 0.76rem;
+}
+
+.tag-status {
+  display: inline-flex;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #e8edf3;
+  color: #334155;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tag-status-ready_to_print { background: #d9f2e4; color: #17603a; }
+.tag-status-printed { background: #dcecff; color: #174f86; }
+.tag-status-needs_review { background: #ffebd1; color: #8a4200; }
+.tag-status-regenerated, .tag-status-void { background: #eceff3; color: #59636f; }
+
 .work-item-activity-list {
   margin-top: 10px;
   display: grid;

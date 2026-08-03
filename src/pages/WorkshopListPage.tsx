@@ -610,6 +610,24 @@ const WorkshopListPage = () => {
                               <span className="priority-pill">P{piece.priority}</span><span>{piece.percentComplete}%</span>
                               {row && <button type="button" className="workshop-tree-open" onClick={() => navigate(`/work-items/${encodeURIComponent(row.workItemNumber)}`)}>Open</button>}
                             </div>
+                            {pieceExpanded && piece.cutCalculations.map((calculation) => (
+                              <div key={`${piece.id}-${calculation.kind}`} className="workshop-tree-row workshop-tree-level-operation">
+                                <span className="workshop-tree-operation-name">
+                                  {calculation.kind} CUTS
+                                </span>
+                                <span>{calculation.status === 'NEEDS_REVIEW'
+                                  ? <span className="tag-status tag-status-needs_review">Blocked by Calculation</span>
+                                  : <span className="tag-status tag-status-ready_to_print">Confirmed</span>}</span>
+                                <span>{calculation.trace.ruleId ?? 'Review required'}</span>
+                                <span>{calculation.members.length} members</span>
+                                <span>{calculation.trace.explanation}</span>
+                                {calculation.status === 'NEEDS_REVIEW' && row && (
+                                  <button type="button" className="workshop-tree-open" onClick={() => navigate(`/work-items/${encodeURIComponent(row.workItemNumber)}`)}>
+                                    Review Calculation
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                             {pieceExpanded && piece.operations.map((operation) => (
                               <div key={operation.id} className="workshop-tree-row workshop-tree-level-operation">
                                 <span className="workshop-tree-operation-name">{operation.label}</span>

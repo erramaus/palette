@@ -1,3 +1,5 @@
+import type { PackagingMethodCode } from './entities'
+
 export const PRODUCTION_STEP_NAMES = [
   'FILES',
   'PRINTED',
@@ -51,4 +53,9 @@ export interface ProductionJob {
   onHold?: boolean
   steps: ProductionStepsRecord
   estimatedMinutes: ProductionEstimatedMinutes
+  orderSource?: string
+  requestedDeliveryOrPickupDate?: string
+  redNotes?: string
+  shippingOrPickupMethod?: PackagingMethodCode
+  originalImport?: Record<string, unknown>
 }

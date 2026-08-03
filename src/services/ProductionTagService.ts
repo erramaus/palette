@@ -1,24 +1,23 @@
 import { ProductionTag, TagCheckpoint } from '../models'
 import {
-  productionMeasurementRules,
-  productionTagBaseStyles,
-  productionTagFrameStyles,
   productionTagPackagingMethods,
   productionTagShippingBoxes,
 } from '../data/productionTagSeeds'
 import type {
-  BaseStyle,
   DecimalDimensions,
-  FrameStyle,
   PackagingMethod,
   PackagingMethodCode,
-  ProductionMeasurementRule,
   ProductionTag as ProductionTagShape,
   ProductionTagType,
   ShippingBox,
   WorkItem,
 } from '../types/entities'
+import type { ProductType } from '../types/production'
+import type { ProductionCutCalculationResult } from '../types/productionCut'
 import { nowIso } from '../utils/time'
+import { BaseCalculationService } from './BaseCalculationService'
+import { FrameCalculationService } from './FrameCalculationService'
+import { StretcherCalculationService } from './StretcherCalculationService'
 import { type RecordWorkItemActivityInput, WorkItemService } from './WorkItemService'
 
 export interface ArtworkTagData {
@@ -58,7 +57,6 @@ export interface GenerateProductionTagsInput {
   workItemIds?: string[]
   batchId?: string
   generatedByEmployeeId?: string
-  preserveSnapshotAtPrint?: boolean
 }
 
 export interface ProductionTagPair {
@@ -67,22 +65,19 @@ export interface ProductionTagPair {
 }
 
 export interface ProductionTagServiceConfig {
-  frameStyles?: FrameStyle[]
-  baseStyles?: BaseStyle[]
   packagingMethods?: PackagingMethod[]
   shippingBoxes?: ShippingBox[]
-  measurementRules?: ProductionMeasurementRule[]
   nowProvider?: () => string
 }
 
 export class ProductionTagService {
   private readonly workItemService: WorkItemService
   private readonly lookups: ProductionTagLookupProvider
-  private readonly frameStyles: FrameStyle[]
-  private readonly baseStyles: BaseStyle[]
   private readonly packagingMethods: PackagingMethod[]
   private readonly shippingBoxes: ShippingBox[]
-  private readonly measurementRules: ProductionMeasurementRule[]
+  private readonly frameCalculationService = new FrameCalculationService()
+  private readonly baseCalculationService = new BaseCalculationService()
+  private readonly stretcherCalculationService = new StretcherCalculationService()
   private readonly nowProvider: () => string
 
   constructor(
@@ -92,11 +87,8 @@ export class ProductionTagService {
   ) {
     this.workItemService = workItemService
     this.lookups = lookups
-    this.frameStyles = config?.frameStyles ?? productionTagFrameStyles
-    this.baseStyles = config?.baseStyles ?? productionTagBaseStyles
     this.packagingMethods = config?.packagingMethods ?? productionTagPackagingMethods
     this.shippingBoxes = config?.shippingBoxes ?? productionTagShippingBoxes
-    this.measurementRules = config?.measurementRules ?? productionMeasurementRules
     this.nowProvider = config?.nowProvider ?? nowIso
   }
 
@@ -130,11 +122,22 @@ export class ProductionTagService {
       this.recordTagGenerationActivity(workItem.id, tags.filter((tag) => tag.workItemId === workItem.id), input.generatedByEmployeeId)
     }
 
-    if (input.preserveSnapshotAtPrint) {
-      this.captureTagSnapshot(tags, batchId, input.generatedByEmployeeId)
-    }
-
     return tags
+  }
+
+  printTags(tags: ProductionTagShape[], printedByEmployeeId?: string): ProductionTagShape[] {
+    const printable = tags.filter((tag) => tag.status === 'READY_TO_PRINT')
+    const printedAt = this.nowProvider()
+    printable.forEach((tag) => {
+      tag.status = 'PRINTED'
+      tag.printedAt = printedAt
+      tag.printedByEmployeeId = printedByEmployeeId
+      tag.updatedAt = printedAt
+    })
+    if (printable.length > 0) {
+      this.captureTagSnapshot(printable, `PRINT-${printedAt}`, printedByEmployeeId)
+    }
+    return printable
   }
 
   generatePrimaryTag(
@@ -153,14 +156,34 @@ export class ProductionTagService {
 
     const runOrEditionLabel = this.determineRunOrEditionLabel(productData.classification)
     const packagingMethod = this.determinePackagingMethod(workItem, packagingData)
+    const frameCalculation = frameStyleName && this.requiresFrame(frameStyleName)
+      ? this.frameCalculationService.calculate({
+          productType: this.resolveProductType(productData, primaryTagType),
+          width: artworkData.width,
+          height: artworkData.height,
+          importedFrameName: frameStyleName,
+          mouldingIdentifier: this.readStringCustomField(workItem, 'mouldingIdentifier'),
+        })
+      : undefined
+    const routeCalculation = this.getRequiredConstructionCalculation(
+      workItem,
+      productData,
+      primaryTagType,
+      artworkData,
+      baseStyleName ?? frameStyleName,
+    )
+    const needsReview = frameCalculation?.status === 'NEEDS_REVIEW'
+      || routeCalculation?.status === 'NEEDS_REVIEW'
 
     return new ProductionTag({
       workItemId: workItem.id,
       workItemNumber: workItem.workItemNumber,
       tagType: primaryTagType,
+      status: needsReview ? 'NEEDS_REVIEW' : 'READY_TO_PRINT',
       customerDisplayName: this.getDisplayedCustomerName(workItem, multiCustomerIds),
       artworkName: artworkData.name,
       productName: productData.name,
+      ...this.tagContext(workItem, productData, artworkData, frameStyleName, frameCalculation),
       runOrEditionLabel,
       runOrEditionValue: productData.runOrEditionValue,
       frameStyleName,
@@ -168,9 +191,10 @@ export class ProductionTagService {
       packagingMethod,
       shippingBoxCode: packagingData?.shippingBoxCode,
       frameDimensions:
-        frameStyleName !== undefined
-          ? this.calculateFrameDimensions(primaryTagType, frameStyleName, artworkData.width, artworkData.height)
+        frameCalculation?.status === 'CONFIRMED'
+          ? this.dimensionsFromCalculation(frameCalculation)
           : undefined,
+      cutCalculation: frameCalculation,
       packageDimensionsDisplay: this.calculatePackageDimensions({
         packagingMethod,
         shippingBoxCode: packagingData?.shippingBoxCode,
@@ -206,19 +230,32 @@ export class ProductionTagService {
     }
 
     const tagType = this.determinePrimaryTagType(productData.code)
+    const calculation = this.frameCalculationService.calculate({
+      productType: this.resolveProductType(productData, tagType),
+      width: artworkData.width,
+      height: artworkData.height,
+      importedFrameName: frameStyleName,
+      mouldingIdentifier: this.readStringCustomField(workItem, 'mouldingIdentifier'),
+    })
+    if (!calculation.canGenerateFinalSawTag) {
+      return null
+    }
 
     return new ProductionTag({
       workItemId: workItem.id,
       workItemNumber: workItem.workItemNumber,
       tagType: 'FRAME',
+      status: 'READY_TO_PRINT',
       customerDisplayName: this.getDisplayedCustomerName(workItem, multiCustomerIds),
       artworkName: artworkData.name,
       productName: productData.name,
+      ...this.tagContext(workItem, productData, artworkData, frameStyleName, calculation),
       runOrEditionLabel: this.determineRunOrEditionLabel(productData.classification),
       runOrEditionValue: productData.runOrEditionValue,
       frameStyleName,
       packagingMethod: 'STANDARD_BOX',
-      frameDimensions: this.calculateFrameDimensions(tagType, frameStyleName, artworkData.width, artworkData.height),
+      frameDimensions: this.dimensionsFromCalculation(calculation),
+      cutCalculation: calculation,
       checkpoints: [],
       notes: [],
       pairKey: `${batchId}:${workItem.id}:P2`,
@@ -238,16 +275,30 @@ export class ProductionTagService {
 
     const primaryTagType = this.determinePrimaryTagType(productData.code)
 
-    if (primaryTagType === 'CANVAS') {
+    const productType = this.resolveProductType(productData, primaryTagType)
+
+    if (productType === 'CANVAS' || productType === 'ORIGINAL') {
+      const calculation = this.stretcherCalculationService.calculate({
+        productType,
+        width: artworkData.width,
+        height: artworkData.height,
+      })
+      if (!calculation.canGenerateFinalSawTag) {
+        return null
+      }
+
       return new ProductionTag({
         workItemId: workItem.id,
         workItemNumber: workItem.workItemNumber,
         tagType: 'STRETCHER',
+        status: 'READY_TO_PRINT',
         customerDisplayName: this.getDisplayedCustomerName(workItem, multiCustomerIds),
         artworkName: artworkData.name,
         productName: productData.name,
+        ...this.tagContext(workItem, productData, artworkData, undefined, calculation),
         packagingMethod: 'STANDARD_BOX',
-        stretcherDimensions: this.calculateStretcherDimensions(artworkData.width, artworkData.height),
+        stretcherDimensions: this.dimensionsFromCalculation(calculation),
+        cutCalculation: calculation,
         checkpoints: [],
         notes: [],
         pairKey: `${batchId}:${workItem.id}:P2`,
@@ -258,17 +309,30 @@ export class ProductionTagService {
 
     if (primaryTagType === 'THREE_D_PRINT') {
       const baseStyleName = this.lookups.getBaseStyleName(workItem) ?? this.lookups.getFrameStyleName(workItem) ?? 'None'
+      const calculation = this.baseCalculationService.calculate({
+        productType: this.resolveProductType(productData, primaryTagType),
+        width: artworkData.width,
+        height: artworkData.height,
+        importedFrameName: baseStyleName,
+        mouldingIdentifier: this.readStringCustomField(workItem, 'mouldingIdentifier'),
+      })
+      if (!calculation.canGenerateFinalSawTag) {
+        return null
+      }
 
       return new ProductionTag({
         workItemId: workItem.id,
         workItemNumber: workItem.workItemNumber,
         tagType: 'THREE_D_BASE',
+        status: 'READY_TO_PRINT',
         customerDisplayName: this.getDisplayedCustomerName(workItem, multiCustomerIds),
         artworkName: artworkData.name,
         productName: productData.name,
+        ...this.tagContext(workItem, productData, artworkData, baseStyleName, calculation),
         baseStyleName,
         packagingMethod: 'STANDARD_BOX',
-        baseDimensions: this.calculateBaseDimensions(baseStyleName, artworkData.width, artworkData.height),
+        baseDimensions: this.dimensionsFromCalculation(calculation),
+        cutCalculation: calculation,
         checkpoints: [],
         notes: [],
         pairKey: `${batchId}:${workItem.id}:P2`,
@@ -296,45 +360,6 @@ export class ProductionTagService {
 
   determineRunOrEditionLabel(classification?: string): 'Run' | 'Edition' {
     return this.normalize(classification ?? '') === '2 3d' ? 'Edition' : 'Run'
-  }
-
-  calculateFrameDimensions(
-    primaryTagType: ProductionTagType,
-    frameStyleName: string,
-    artworkWidth: number,
-    artworkHeight: number,
-  ): DecimalDimensions {
-    const effectiveStyleName =
-      primaryTagType === 'PAPER' ? this.ensurePictureStyle(frameStyleName) : frameStyleName
-
-    const increase = this.getFrameIncrease(effectiveStyleName)
-
-    return {
-      width: artworkWidth + increase,
-      height: artworkHeight + increase,
-    }
-  }
-
-  calculateBaseDimensions(
-    baseStyleName: string,
-    artworkWidth: number,
-    artworkHeight: number,
-  ): DecimalDimensions {
-    const adjustment = this.getBaseAdjustment(baseStyleName)
-
-    return {
-      width: artworkWidth + adjustment,
-      height: artworkHeight + adjustment,
-    }
-  }
-
-  calculateStretcherDimensions(artworkWidth: number, artworkHeight: number): DecimalDimensions {
-    const offset = 1 / 16
-
-    return {
-      width: artworkWidth - offset,
-      height: artworkHeight - offset,
-    }
   }
 
   determinePackagingMethod(
@@ -501,11 +526,11 @@ export class ProductionTagService {
   }
 
   private captureTagSnapshot(
-    tags: ProductionTag[],
+    tags: ProductionTagShape[],
     batchId: string,
     generatedByEmployeeId?: string,
   ): void {
-    const byWorkItem = new Map<string, ProductionTag[]>()
+    const byWorkItem = new Map<string, ProductionTagShape[]>()
 
     for (const tag of tags) {
       const existing = byWorkItem.get(tag.workItemId) ?? []
@@ -578,48 +603,72 @@ export class ProductionTagService {
     return customerName
   }
 
-  private ensurePictureStyle(frameStyleName: string): string {
-    const normalized = this.normalize(frameStyleName)
-    if (normalized.startsWith('picture ')) {
-      return frameStyleName
+  private dimensionsFromCalculation(calculation: ProductionCutCalculationResult): DecimalDimensions {
+    return {
+      width: calculation.trace.calculatedOutputs.adjustedWidthInches as number,
+      height: calculation.trace.calculatedOutputs.adjustedHeightInches as number,
     }
-
-    return `Picture ${frameStyleName}`
   }
 
-  private getFrameIncrease(frameStyleName: string): number {
-    const normalizedStyle = this.normalize(frameStyleName)
-
-    const styleRule = this.frameStyles.find((frameStyle) => frameStyle.normalizedKey === normalizedStyle)
-    if (styleRule) {
-      return styleRule.increaseInches
+  private getRequiredConstructionCalculation(
+    workItem: WorkItem,
+    productData: ProductTagData,
+    primaryTagType: ProductionTagType,
+    artworkData: ArtworkTagData,
+    frameStyleName?: string,
+  ): ProductionCutCalculationResult | undefined {
+    const productType = this.resolveProductType(productData, primaryTagType)
+    if (productType === 'CANVAS' || productType === 'ORIGINAL') {
+      return this.stretcherCalculationService.calculate({
+        productType,
+        width: artworkData.width,
+        height: artworkData.height,
+      })
     }
-
-    const measurementRule = this.measurementRules.find(
-      (rule) => rule.active && rule.ruleType === 'FRAME_INCREASE' && rule.targetKey === normalizedStyle,
-    )
-
-    return measurementRule?.adjustment ?? 0
+    if ((productType === 'THREE_D_PRINT' || productType === 'TEXTURED_REPLICA_3D') && frameStyleName) {
+      return this.baseCalculationService.calculate({
+        productType,
+        width: artworkData.width,
+        height: artworkData.height,
+        importedFrameName: frameStyleName,
+        mouldingIdentifier: this.readStringCustomField(workItem, 'mouldingIdentifier'),
+      })
+    }
+    return undefined
   }
 
-  private getBaseAdjustment(baseStyleName: string): number {
-    const normalizedStyle = this.normalize(baseStyleName)
-
-    const styleRule = this.baseStyles.find((baseStyle) => baseStyle.normalizedKey === normalizedStyle)
-    if (styleRule) {
-      return styleRule.adjustmentInches
+  private tagContext(
+    workItem: WorkItem,
+    productData: ProductTagData,
+    artworkData: ArtworkTagData,
+    importedFrameName?: string,
+    calculation?: ProductionCutCalculationResult,
+  ): Pick<ProductionTagShape,
+    'productType' | 'finishedDimensions' | 'orientation' | 'originalImportedFrameName'
+    | 'normalizedFrameName' | 'dueDate' | 'priority' | 'assignedWorkstation'> {
+    return {
+      productType: productData.classification ?? productData.code,
+      finishedDimensions: { width: artworkData.width, height: artworkData.height },
+      orientation: this.readStringCustomField(workItem, 'orientation'),
+      originalImportedFrameName: importedFrameName,
+      normalizedFrameName: calculation?.normalizedFrame ?? undefined,
+      dueDate: workItem.dueDate,
+      priority: workItem.priority,
+      assignedWorkstation: this.readStringCustomField(workItem, 'assignedWorkstation')
+        ?? workItem.assignedDepartmentId,
     }
+  }
 
-    const measurementRule = this.measurementRules.find(
-      (rule) => rule.active && rule.ruleType === 'BASE_ADJUSTMENT' && rule.targetKey === normalizedStyle,
-    )
-
-    if (measurementRule) {
-      return measurementRule.adjustment
+  private resolveProductType(productData: ProductTagData, tagType: ProductionTagType): ProductType {
+    const supported: ProductType[] = [
+      'ORIGINAL', 'TEXTURED_REPLICA_3D', 'THREE_D_PRINT', 'CANVAS', 'PAPER', 'GALLERY_INVENTORY',
+    ]
+    if (supported.includes(productData.classification as ProductType)) {
+      return productData.classification as ProductType
     }
-
-    const defaultRule = this.baseStyles.find((baseStyle) => baseStyle.normalizedKey === 'none')
-    return defaultRule?.adjustmentInches ?? 0
+    if (tagType === 'CANVAS') return 'CANVAS'
+    if (tagType === 'PAPER') return 'PAPER'
+    return 'THREE_D_PRINT'
   }
 
   private requireArtworkData(workItem: WorkItem): ArtworkTagData {
@@ -640,14 +689,23 @@ export class ProductionTagService {
     return productData
   }
 
-  private toTagSnapshot(tag: ProductionTag): Omit<ProductionTagShape, 'id' | 'createdAt' | 'updatedAt'> {
+  private toTagSnapshot(tag: ProductionTagShape): Omit<ProductionTagShape, 'id' | 'createdAt' | 'updatedAt'> {
     return {
       workItemId: tag.workItemId,
       workItemNumber: tag.workItemNumber,
       tagType: tag.tagType,
+      status: tag.status,
       customerDisplayName: tag.customerDisplayName,
       artworkName: tag.artworkName,
       productName: tag.productName,
+      productType: tag.productType,
+      finishedDimensions: tag.finishedDimensions,
+      orientation: tag.orientation,
+      originalImportedFrameName: tag.originalImportedFrameName,
+      normalizedFrameName: tag.normalizedFrameName,
+      dueDate: tag.dueDate,
+      priority: tag.priority,
+      assignedWorkstation: tag.assignedWorkstation,
       runOrEditionLabel: tag.runOrEditionLabel,
       runOrEditionValue: tag.runOrEditionValue,
       frameStyleName: tag.frameStyleName,
@@ -657,12 +715,16 @@ export class ProductionTagService {
       frameDimensions: tag.frameDimensions,
       baseDimensions: tag.baseDimensions,
       stretcherDimensions: tag.stretcherDimensions,
+      cutCalculation: tag.cutCalculation,
       packageDimensionsDisplay: tag.packageDimensionsDisplay,
       checkpoints: tag.checkpoints,
       notes: tag.notes,
       pairKey: tag.pairKey,
       generatedAt: tag.generatedAt,
       generatedByEmployeeId: tag.generatedByEmployeeId,
+      printedAt: tag.printedAt,
+      printedByEmployeeId: tag.printedByEmployeeId,
+      previousTagId: tag.previousTagId,
     }
   }
 
@@ -670,7 +732,17 @@ export class ProductionTagService {
     return workItem.customFields[key]
   }
 
+  private readStringCustomField(workItem: WorkItem, key: string): string | undefined {
+    const value = this.readCustomField(workItem, key)
+    return typeof value === 'string' && value.trim().length > 0 ? value : undefined
+  }
+
   private normalize(value: string): string {
     return value.trim().toLowerCase().replace(/\s+/g, ' ')
+  }
+
+  private requiresFrame(frameStyleName: string): boolean {
+    const normalized = this.normalize(frameStyleName)
+    return normalized.length > 0 && normalized !== 'none' && normalized !== 'rolled' && normalized !== 'stretched'
   }
 }

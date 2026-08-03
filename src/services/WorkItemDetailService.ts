@@ -1,5 +1,6 @@
 import type { ActivityAction, WorkItemHistoryEntry } from '../types/entities'
 import type { ProductType, ProductionJob } from '../types/production'
+import type { ProductionCutCalculationResult } from '../types/productionCut'
 import type { WorkItem, WorkflowStage } from '../models'
 import type { ProductionTag } from '../types/entities'
 import { mockProductionJobs } from '../data/mockProductionJobs'
@@ -71,6 +72,7 @@ export interface WorkItemDetailSnapshot {
   workflowContext: WorkflowContext
   workflowStages: WorkflowStageView[]
   generatedTags: ProductionTag[]
+  cutCalculations: ProductionCutCalculationResult[]
   approvals: WorkItemApproval[]
   activityTimeline: ActivityTimelineEntry[]
   customerName: string
@@ -216,6 +218,7 @@ export class WorkItemDetailService {
       workflowContext,
       workflowStages,
       generatedTags: this.getGeneratedTagsForWorkItem(workItem.id),
+      cutCalculations: this.environment.productionPipelineService.getCutCalculations(workItem),
       approvals: this.getApprovals(workItem.id),
       activityTimeline: this.buildActivityTimeline(workItem),
       customerName: this.customersById.get(workItem.customerId)?.name ?? workItem.customerId,
@@ -450,16 +453,56 @@ export class WorkItemDetailService {
   }
 
   generateTags(workItemId: string, actorEmployeeId?: string): ProductionTag[] {
+    const previous = this.generatedTagsByWorkItem.get(workItemId) ?? []
+    previous
+      .filter((tag) => tag.status !== 'PRINTED' && tag.status !== 'VOID')
+      .forEach((tag) => {
+        tag.status = 'REGENERATED'
+        tag.updatedAt = nowIso()
+      })
     const generated = this.productionTagService.generateProductionTags({
       workItemIds: [workItemId],
       generatedByEmployeeId: actorEmployeeId,
-      preserveSnapshotAtPrint: true,
     })
+
+    generated.forEach((tag) => {
+      tag.previousTagId = previous.find((candidate) => candidate.tagType === tag.tagType)?.id
+    })
+    this.syncOperationTags(workItemId, generated)
 
     const existing = this.generatedTagsByWorkItem.get(workItemId) ?? []
     this.generatedTagsByWorkItem.set(workItemId, [...existing, ...generated])
 
     return this.getGeneratedTagsForWorkItem(workItemId)
+  }
+
+  printTag(workItemId: string, tagId: string, actorEmployeeId?: string): ProductionTag[] {
+    const tag = (this.generatedTagsByWorkItem.get(workItemId) ?? []).find((candidate) => candidate.id === tagId)
+    if (!tag) throw new Error(`Production tag ${tagId} was not found.`)
+    this.productionTagService.printTags([tag], actorEmployeeId)
+    this.syncOperationTags(workItemId, [tag])
+    return this.getGeneratedTagsForWorkItem(workItemId)
+  }
+
+  private syncOperationTags(workItemId: string, tags: ProductionTag[]): void {
+    const workItem = this.getRequiredWorkItem(workItemId)
+    const operations = this.environment.productionPipelineService.getOperations(workItem)
+    for (const tag of tags) {
+      const operationNames = tag.tagType === 'FRAME'
+        ? ['FRAME_CUT', 'FRAME_ASSEMBLY']
+        : tag.tagType === 'THREE_D_BASE'
+          ? ['BASE_CUT', 'BASE_ASSEMBLY']
+          : tag.tagType === 'STRETCHER'
+            ? ['STRETCHER_CUT', 'STRETCHER_ASSEMBLY']
+            : []
+      operations
+        .filter((operation) => operationNames.includes(operation.name))
+        .forEach((operation) => {
+          operation.tagIds = [...new Set([...(operation.tagIds ?? []), tag.id])]
+          operation.tagStatus = tag.status
+        })
+    }
+    workItem.touch()
   }
 
   getGeneratedTagsForWorkItem(workItemId: string): ProductionTag[] {

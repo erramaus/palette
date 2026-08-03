@@ -198,7 +198,8 @@ describe('PersistenceService', () => {
       afterEnvironment.productionPipelineService.getOperations(item).map((operation) => operation.id),
     )
 
-    expect(beforeTags).toHaveLength(3)
+    expect(beforeTags).toHaveLength(2)
+    expect(beforeTags.some((tag) => tag.tagType === 'FRAME')).toBe(false)
     expect(afterTags).toHaveLength(beforeTags.length)
     expect(afterTags.map(comparableTag)).toEqual(beforeTags.map(comparableTag))
     expect(afterDetail.getSnapshot(imported.workItem.id)).toMatchObject({
@@ -214,6 +215,35 @@ describe('PersistenceService', () => {
     expect(new Set(loaded.data.departments.map((record) => record.id)).size).toBe(loaded.data.departments.length)
     expect(loaded.data.activityLogs).toEqual(activityLogs)
     expect(loaded.data.timelineEvents).toEqual(timelineEvents)
-    expect(afterEnvironment.workItemService.getWorkItemById(imported.workItem.id)?.customFields.productionTagSnapshots).toHaveLength(1)
+    expect(afterEnvironment.workItemService.getWorkItemById(imported.workItem.id)?.customFields.productionTagSnapshots).toBeUndefined()
+  })
+
+  it('regenerates lifecycle tags and synchronizes saw operation tag IDs and status', () => {
+    const job: ProductionJob = {
+      id: 'job-tags-1', orderNumber: 'WEB-TAGS-1', customerName: 'Tag Gallery', artworkTitle: 'Tag Study',
+      productType: 'CANVAS', width: 20, height: 30, frameInfo: 'Silver EH', dueDate: '2026-08-08',
+      dueStatus: 'ON_TRACK', priority: 'CUSTOMER_PURCHASED', assignedWorkerId: 'employee-daniel', notes: '',
+      steps: { FILES: 'COMPLETE', PRINTED: 'COMPLETE', DIBOND: 'NOT_APPLICABLE', STRETCHER_BASE: 'WAITING', MOUNTED: 'WAITING', FRAME_MADE: 'WAITING', FRAMED: 'WAITING', SHIPPED: 'WAITING' },
+      estimatedMinutes: { FILES: 30, PRINTED: 55, DIBOND: 0, STRETCHER_BASE: 45, MOUNTED: 40, FRAME_MADE: 90, FRAMED: 20, SHIPPED: 35 },
+    }
+    const environment = createWorkshopListUiEnvironment()
+    const imported = environment.ingestProductionJob(job)
+    const detail = new WorkItemDetailService(environment)
+    detail.refreshLookupMaps([job])
+    const first = detail.generateTags(imported.workItem.id)
+    const second = detail.generateTags(imported.workItem.id)
+    const frameTag = second.find((tag) => tag.tagType === 'FRAME' && tag.status === 'READY_TO_PRINT')!
+    const firstFrameTag = first.find((tag) => tag.tagType === 'FRAME')!
+    const frameOperations = environment.productionPipelineService.getOperations(imported.workItem)
+      .filter((operation) => operation.name === 'FRAME_CUT' || operation.name === 'FRAME_ASSEMBLY')
+
+    expect(first.every((tag) => tag.status === 'REGENERATED')).toBe(true)
+    expect(frameTag.previousTagId).toBe(firstFrameTag.id)
+    expect(frameOperations).toHaveLength(2)
+    expect(frameOperations.every((operation) => operation.tagIds?.includes(frameTag.id))).toBe(true)
+    expect(frameOperations.every((operation) => operation.tagStatus === 'READY_TO_PRINT')).toBe(true)
+
+    detail.printTag(imported.workItem.id, frameTag.id, 'employee-daniel')
+    expect(frameOperations.every((operation) => operation.tagStatus === 'PRINTED')).toBe(true)
   })
 })

@@ -35,7 +35,7 @@ import type { Employee } from '../types/employees'
 import type { ProductionJob, ProductionStepName } from '../types/production'
 import type { ProductionEstimatedMinutes, ProductionStepsRecord } from '../types/production'
 import type { BattlePlan } from '../types/battlePlans'
-import type { ActivityAction, ActivityEntityType } from '../types/entities'
+import type { ActivityAction, ActivityEntityType, ProductionTag } from '../types/entities'
 import type {
   ThreeDFilePreparation,
   ThreeDOrderImportClassification,
@@ -116,6 +116,11 @@ export interface ImportProductionOrderInput {
   existingFilesCorrectSize?: boolean
   colorFilePresent?: boolean
   depthSlicesPresent?: boolean
+  orderSource?: string
+  requestedDeliveryOrPickupDate?: string
+  redNotes?: string
+  shippingOrPickupMethod?: import('../types/entities').PackagingMethodCode
+  originalImport?: Record<string, unknown>
 }
 
 interface AppStateContextValue {
@@ -126,6 +131,7 @@ interface AppStateContextValue {
   activityLogs: AppActivityLog[]
   productionOperations: ProductionOperation[]
   operationTags: OperationProductionTag[]
+  productionTags: ProductionTag[]
   scheduleResult: ScheduleResult
   scheduleEntries: ScheduleEntry[]
   operationBattlePlanItems: ScheduleEntry[]
@@ -164,6 +170,8 @@ interface AppStateContextValue {
   saveAnalyticsTargets: (targets: ProductionAnalyticsTargets) => void
   saveOptimizationSettings: (weights: OptimizationWeights, constraints: OptimizationConstraint) => void
   notifyWorkItemMutation: () => void
+  generateProductionTags: (workItemId: string, actorEmployeeId?: string) => void
+  printProductionTag: (workItemId: string, tagId: string, actorEmployeeId?: string) => void
   setIntelligenceReviewState: (state: IntelligenceReviewState) => void
   exportPersistenceBackup: () => string
   inspectPersistenceBackup: (serialized: string) => { snapshot: PersistenceSnapshot; summary: PersistenceRecordSummary }
@@ -353,6 +361,10 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       workshopHierarchy: pipeline.buildWorkshopHierarchy(workItems),
     }
   }, [environment, productionJobs, operationRevision])
+  const productionTags = useMemo(
+    () => workItemDetailService.listGeneratedTags().sort((left, right) => right.generatedAt.localeCompare(left.generatedAt)),
+    [workItemDetailService, operationRevision],
+  )
 
   const scheduleResult = useMemo(() => {
     const workItems = environment.workItemService.listWorkItems()
@@ -380,6 +392,10 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
           operation: operation.name,
           status: operation.status,
           estimatedMinutes: operation.estimatedMinutes,
+          cutMemberCount: operation.cutMemberCount,
+          cutLinearInches: operation.cutLinearInches,
+          cutCalculationStatus: operation.cutCalculation?.status,
+          tagStatus: operation.tagStatus,
           dependencyIds: operation.dependsOnOperationIds,
           dueDate: operation.dueDate ?? workItem.dueDate ?? '',
           priority: operation.priority,
@@ -405,7 +421,9 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
           return {
             operationId: operation.id,
             materialReadiness: /missing material|waiting (on )?material|supply unavailable/.test(notes) ? 'MISSING' as const
-              : /material|supply|crate|dibond/.test(notes) ? 'LIMITED' as const : 'READY' as const,
+              : operation.materialRequirement?.grossLinearInches === null
+                ? 'MISSING' as const
+                : /material|supply|crate|dibond/.test(notes) ? 'LIMITED' as const : 'READY' as const,
             approvalReady: !/missing approval|waiting (on )?approval/.test(notes),
             lockedEmployeeId: locked?.plan.assignedWorkerId,
             lockedStart: locked ? `${locked.plan.date}T08:00:00` : undefined,
@@ -751,6 +769,11 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
         notes: input.notes ?? '',
         steps: defaultStepsForProductType(productType),
         estimatedMinutes: defaultEstimatedMinutesForProductType(productType),
+        orderSource: input.orderSource ?? 'PALETTE_UI',
+        requestedDeliveryOrPickupDate: input.requestedDeliveryOrPickupDate,
+        redNotes: input.redNotes,
+        shippingOrPickupMethod: input.shippingOrPickupMethod,
+        originalImport: input.originalImport ?? { ...input },
       }
 
       const result = environment.ingestProductionJob(job)
@@ -905,6 +928,16 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     setOperationRevision((current) => current + 1)
   }, [])
 
+  const generateProductionTags = useCallback((workItemId: string, actorEmployeeId?: string): void => {
+    workItemDetailService.generateTags(workItemId, actorEmployeeId)
+    setOperationRevision((current) => current + 1)
+  }, [workItemDetailService])
+
+  const printProductionTag = useCallback((workItemId: string, tagId: string, actorEmployeeId?: string): void => {
+    workItemDetailService.printTag(workItemId, tagId, actorEmployeeId)
+    setOperationRevision((current) => current + 1)
+  }, [workItemDetailService])
+
   const exportPersistenceBackup = useCallback((): string =>
     persistenceService.exportBackup(buildSnapshot()),
   [buildSnapshot, persistenceService])
@@ -1006,6 +1039,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       operationBattlePlanItems,
       operationTimeline: scheduleEntries,
       operationIntelligence,
+      productionTags,
       forecastSettings,
       analyticsTargets,
       optimizationWeights,
@@ -1039,6 +1073,8 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       saveAnalyticsTargets,
       saveOptimizationSettings,
       notifyWorkItemMutation,
+      generateProductionTags,
+      printProductionTag,
       setIntelligenceReviewState,
       exportPersistenceBackup,
       inspectPersistenceBackup,
@@ -1062,6 +1098,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       scheduleEntries,
       operationBattlePlanItems,
       operationIntelligence,
+      productionTags,
       assignOperation,
       unassignOperation,
       startOperation,
@@ -1087,6 +1124,8 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       saveAnalyticsTargets,
       saveOptimizationSettings,
       notifyWorkItemMutation,
+      generateProductionTags,
+      printProductionTag,
       exportPersistenceBackup,
       inspectPersistenceBackup,
       restorePersistenceBackup,

@@ -9,6 +9,7 @@ import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstra
 import { useAppState } from '../state/AppStateContext'
 import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
 import type { ThreeDFilePreparation, ThreeDSignatureStatus } from '../types/threeDFilePreparation'
+import type { ProductionCutCalculationResult } from '../types/productionCut'
 
 interface EditFormState {
   priority: number
@@ -143,6 +144,9 @@ const WorkItemDetailPage = () => {
     [productionOperations, snapshot],
   )
   const directorId = employees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id ?? employees[0]?.id ?? 'system'
+  const viewCalculationSource = (calculation: ProductionCutCalculationResult): void => {
+    window.alert(`${calculation.trace.explanation}\n\nRules: ${calculation.trace.ruleIds.join(', ') || 'No confirmed rule'}\nConfidence: ${calculation.trace.confidence}\nInputs: ${JSON.stringify(calculation.trace.normalizedInputs, null, 2)}`)
+  }
 
   const forecastService = useMemo(
     () =>
@@ -401,6 +405,38 @@ const WorkItemDetailPage = () => {
           <strong>Tags:</strong>{' '}
           {snapshot.workItem.tags.length > 0 ? snapshot.workItem.tags.join(', ') : '--'}
         </p>
+      </section>
+
+      <section className="panel">
+        <div className="work-item-section-header">
+          <h3>Production Cut Calculations</h3>
+          <span className="badge">{snapshot.cutCalculations.length}</span>
+        </div>
+        {snapshot.cutCalculations.length > 0 ? (
+          <ul className="plain-list">
+            {snapshot.cutCalculations.map((calculation) => (
+              <li key={calculation.kind}>
+                <div>
+                  <strong>{calculation.kind}: {calculation.status}</strong>
+                  <p>{calculation.trace.explanation}</p>
+                  <p className="subtle">
+                    Rule: {calculation.trace.ruleId ?? 'No confirmed rule'} | Members: {calculation.members.length}
+                  </p>
+                  {calculation.members.length > 0 && (
+                    <p className="subtle">
+                      Cuts: {calculation.members.map((member) => `${member.kind} ${member.cutLengthInches} in`).join(' | ')}
+                    </p>
+                  )}
+                  <button type="button" className="btn" onClick={() => viewCalculationSource(calculation)}>
+                    View Calculation Source
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="subtle">No frame, base, or stretcher calculation applies to this work item.</p>
+        )}
       </section>
 
       <section className="panel">
@@ -844,7 +880,7 @@ const WorkItemDetailPage = () => {
             className="btn btn-primary"
             onClick={() => runAction(() => detailService.generateTags(snapshot.workItem.id))}
           >
-            Generate Tags
+            {snapshot.generatedTags.length > 0 ? 'Regenerate Tags' : 'Generate Tags'}
           </button>
         </div>
 
@@ -857,6 +893,7 @@ const WorkItemDetailPage = () => {
             {snapshot.generatedTags.map((tag) => (
               <article key={tag.id} className="work-item-tag-card">
                 <h4>{tag.tagType}</h4>
+                <p><strong>Status:</strong> {tag.status.split('_').join(' ')}</p>
                 <p>
                   <strong>Product type:</strong> {tag.productName}
                 </p>
@@ -889,6 +926,14 @@ const WorkItemDetailPage = () => {
                 <p>
                   <strong>Generated:</strong> {formatDateTime(tag.generatedAt)}
                 </p>
+                <div className="tag-actions">
+                  <button type="button" className="btn" onClick={() => tag.cutCalculation && viewCalculationSource(tag.cutCalculation)} disabled={!tag.cutCalculation}>
+                    View Calculation Source
+                  </button>
+                  <button type="button" className="btn btn-primary" disabled={tag.status !== 'READY_TO_PRINT'} onClick={() => runAction(() => detailService.printTag(snapshot.workItem.id, tag.id, directorId))}>
+                    Print Tag
+                  </button>
+                </div>
               </article>
             ))}
           </div>

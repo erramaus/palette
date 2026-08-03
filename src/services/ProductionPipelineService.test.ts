@@ -2,6 +2,34 @@ import { describe, expect, it } from 'vitest'
 import { WorkItem } from '../models'
 import { generateBattlePlansFromOperations, ProductionPipelineService } from './ProductionPipelineService'
 import { DEFAULT_PRODUCTION_CALENDAR, SchedulingService } from './scheduling'
+import { toWorkflowGroups } from './battlePlanWorkflowService'
+
+const createService = (): ProductionPipelineService => new ProductionPipelineService({
+  nowProvider: () => new Date('2026-08-02T08:00:00.000Z'),
+  createWorkItem: (input) => new WorkItem({
+    id: `workitem-${input.orderNumber}`,
+    workItemNumber: `WI-${input.orderNumber}`,
+    type: input.productType,
+    customerId: 'customer-1',
+    orderId: input.orderNumber,
+    artworkId: 'artwork-1',
+    productId: 'product-1',
+    workflowId: 'workflow-1',
+    currentStageId: 'FILES',
+    quantity: 1,
+    status: 'READY',
+    priority: input.priority,
+    dueDate: input.dueDate,
+    assignedEmployeeId: input.assignedEmployeeId,
+    notes: input.notes,
+    attachments: [],
+    tags: [],
+    customFields: input.customFields ?? {},
+    activityHistory: [],
+    productionStepIds: [],
+    tagLabels: [],
+  }),
+})
 
 describe('ProductionPipelineService', () => {
   it('projects one imported WorkItem operation identity through the full pipeline', () => {
@@ -44,13 +72,17 @@ describe('ProductionPipelineService', () => {
       dueDate: '2026-08-05',
       notes: ['Rush order'],
       assignedEmployeeId: 'employee-daniel',
+      customFields: { frameStyle: 'Silver EH' },
     })
 
     expect(result.operations.map((operation) => operation.name)).toEqual([
       'FILES',
-      'PRINTED',
-      'STRETCHER',
+      'PRINT',
+      'STRETCHER_CUT',
+      'STRETCHER_ASSEMBLY',
       'STRETCH',
+      'FRAME_CUT',
+      'FRAME_ASSEMBLY',
       'FRAME',
       'QC',
       'SHIPPING',
@@ -59,6 +91,9 @@ describe('ProductionPipelineService', () => {
 
     const operationIds = result.operations.map((operation) => operation.id)
     expect(result.tags.map((tag) => tag.operationId)).toEqual(operationIds)
+    expect(result.cutCalculations.map((calculation) => calculation.kind)).toEqual(['FRAME', 'STRETCHER'])
+    expect(result.operations.find((operation) => operation.name === 'FRAME_CUT')?.cutLinearInches).toBe(114.25)
+    expect(result.operations.find((operation) => operation.name === 'STRETCHER_CUT')?.cutMemberCount).toBe(4)
 
     const hierarchy = service.buildWorkshopHierarchy([result.workItem])
     expect(hierarchy).toHaveLength(1)
@@ -81,6 +116,9 @@ describe('ProductionPipelineService', () => {
         operation: operation.name,
         status: operation.status,
         estimatedMinutes: operation.estimatedMinutes,
+        cutMemberCount: operation.cutMemberCount,
+        cutLinearInches: operation.cutLinearInches,
+        cutCalculationStatus: operation.cutCalculation?.status,
         dependencyIds: operation.dependsOnOperationIds,
         dueDate: operation.dueDate ?? '2026-08-05',
         priority: operation.priority,
@@ -102,17 +140,110 @@ describe('ProductionPipelineService', () => {
       directorId: 'employee-director',
     })
     expect(generatedPlans.workerPlans[0].tasks.map((task) => task.productionOperationId)).toEqual(operationIds)
-    expect(generatedPlans.workerPlans[0].tasks[4].description).toContain('FRAME | WEB-4821')
+    expect(generatedPlans.workerPlans[0].tasks.some((task) => task.description.includes('FRAME_CUT | WEB-4821'))).toBe(true)
+    expect(schedule.entries.find((entry) => entry.operation === 'FRAME_CUT')?.cutLinearInches).toBe(114.25)
+    expect(schedule.entries.find((entry) => entry.operation === 'FRAME_CUT')?.scheduleReason).toContain('4 members')
   })
 
-  it('creates only product-specific operations', () => {
-    const service = new ProductionPipelineService({
-      createWorkItem: () => { throw new Error('not used') },
+  it('creates framed 3D cut and assembly dependencies', () => {
+    const result = createService().importOrder({
+      orderNumber: '3D-1', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'THREE_D_PRINT', width: 20, height: 30, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [],
+      customFields: { frameStyle: 'B&G Plein Faux', baseStyle: 'B&G Plein Faux' },
     })
 
-    expect(service.getRequiredOperationNames('PAPER')).toEqual(['FILES', 'PRINTED', 'TRIM', 'QC', 'SHIPPING'])
-    expect(service.getRequiredOperationNames('THREE_D_PRINT')).toEqual([
-      'FILES', 'SLICE', 'RESIZE', 'DIBOND', 'MOUNT', 'FRAME', 'QC', 'SHIPPING',
+    expect(result.operations.map((operation) => operation.name)).toEqual([
+      'FILES', 'PRINT', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT',
+      'FRAME_CUT', 'FRAME_ASSEMBLY', 'FRAME', 'QC', 'SHIPPING',
     ])
+    result.operations.slice(1).forEach((operation, index) => {
+      expect(operation.dependsOnOperationIds).toEqual([result.operations[index].id])
+    })
+  })
+
+  it('omits frame operations for unframed canvas', () => {
+    const service = createService()
+    const result = service.importOrder({
+      orderNumber: 'CANVAS-NONE', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'CANVAS', width: 20, height: 30, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'None' },
+    })
+
+    expect(result.operations.map((operation) => operation.name)).toEqual([
+      'FILES', 'PRINT', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'STRETCH', 'QC', 'SHIPPING',
+    ])
+    expect(result.operations.some((operation) => operation.name.startsWith('FRAME'))).toBe(false)
+    expect(service.getOperations(result.workItem).map((operation) => operation.id)).toEqual(
+      result.operations.map((operation) => operation.id),
+    )
+  })
+
+  it('blocks unresolved cut work and every downstream dependency', () => {
+    const result = createService().importOrder({
+      orderNumber: 'CANVAS-REVIEW', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'CANVAS', width: 20, height: 30, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'Gold' },
+    })
+    const frameCutIndex = result.operations.findIndex((operation) => operation.name === 'FRAME_CUT')
+
+    expect(result.operations[frameCutIndex].tagStatus).toBe('NEEDS_REVIEW')
+    expect(result.operations.slice(frameCutIndex).every((operation) => operation.status === 'BLOCKED')).toBe(true)
+  })
+
+  it('excludes unresolved saw work from worker Battle Plans', () => {
+    const blockedEntry = {
+      id: 'schedule:frame-cut-review', operationId: 'frame-cut-review', workItemId: 'workitem-review',
+      orderNumber: 'ORDER-REVIEW', pieceLabel: '20x30 Canvas', operation: 'FRAME_CUT' as const,
+      status: 'BLOCKED' as const, plannedStart: '2026-08-03T08:00:00.000Z', plannedFinish: '2026-08-03T08:45:00.000Z',
+      assignedEmployee: 'employee-daniel', assignedWorkCenter: 'frames', estimatedMinutes: 45,
+      confidence: 'LOW' as const, scheduleReason: 'Blocked by Calculation.', dependencyIds: [],
+      dueDate: '2026-08-05', priority: 80, locked: false, cutCalculationStatus: 'NEEDS_REVIEW' as const,
+      tagStatus: 'NEEDS_REVIEW' as const, materialReadiness: 'MISSING' as const,
+    }
+    const plans = generateBattlePlansFromOperations({
+      date: '2026-08-03', operations: [blockedEntry], employees: [],
+      workerConfigs: [{ workerId: 'employee-daniel', selected: true, availableMinutes: 480 }],
+      directorId: 'employee-director',
+    })
+
+    expect(plans.workerPlans[0].tasks).toEqual([])
+    expect(plans.directorPlan.tasks).toHaveLength(1)
+    expect(plans.directorPlan.tasks[0]).toMatchObject({
+      tagStatus: 'NEEDS_REVIEW', openWorkItemId: 'workitem-review', cutSummary: 'Unresolved cut dimensions',
+      directorSection: 'REVIEW',
+    })
+    expect(plans.directorPlan.tasks.some((task) => task.directorSection === 'PRODUCTION')).toBe(false)
+  })
+
+  it('groups Director production operations by operation type with matching counts', () => {
+    const operationTypes = [
+      'FRAME_CUT', 'FRAME_ASSEMBLY', 'BASE_CUT', 'BASE_ASSEMBLY',
+      'STRETCHER_CUT', 'STRETCHER_ASSEMBLY',
+    ] as const
+    const entries = operationTypes.map((operation, index) => ({
+      id: `schedule:${operation}`, operationId: `operation:${operation}`, workItemId: `workitem:${operation}`,
+      orderNumber: `ORDER-${index}`, pieceLabel: '20x30 Piece', operation, status: 'READY' as const,
+      plannedStart: `2026-08-03T${String(8 + index).padStart(2, '0')}:00:00.000Z`,
+      plannedFinish: `2026-08-03T${String(8 + index).padStart(2, '0')}:30:00.000Z`,
+      assignedEmployee: 'employee-daniel', assignedWorkCenter: 'saw', estimatedMinutes: 30,
+      confidence: 'HIGH' as const, scheduleReason: 'Ready.', dependencyIds: [], dueDate: '2026-08-05',
+      priority: 80, locked: false, cutCalculationStatus: 'CONFIRMED' as const,
+      tagStatus: 'READY_TO_PRINT' as const, materialReadiness: 'READY' as const,
+    }))
+    const plans = generateBattlePlansFromOperations({
+      date: '2026-08-03', operations: entries, employees: [],
+      workerConfigs: [{ workerId: 'employee-daniel', selected: true, availableMinutes: 480 }],
+      directorId: 'employee-director',
+    })
+    const productionTasks = plans.directorPlan.tasks.filter((task) => task.directorSection === 'PRODUCTION')
+    const groups = toWorkflowGroups({ ...plans.directorPlan, tasks: productionTasks }, [])
+
+    expect(groups.map((group) => [group.operationName, group.workItems.length])).toEqual([
+      ['Frames to Make', 2], ['Bases to Make', 2], ['Stretchers to Make', 2],
+    ])
+    expect(groups.reduce((count, group) => count + group.workItems.length, 0)).toBe(operationTypes.length)
+    expect(plans.workerPlans[0].tasks).toHaveLength(operationTypes.length)
+    expect(plans.directorPlan.tasks.filter((task) => task.directorSection === 'REVIEW')).toEqual([])
   })
 })

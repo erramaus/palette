@@ -18,6 +18,10 @@ export interface SchedulingOperation {
   operation: ProductionOperationName
   status: ProductionOperationStatus
   estimatedMinutes: number
+  cutMemberCount?: number
+  cutLinearInches?: number
+  cutCalculationStatus?: 'CONFIRMED' | 'NEEDS_REVIEW'
+  tagStatus?: import('../../types/entities').ProductionTagStatus
   dependencyIds: string[]
   dueDate: string
   priority: number
@@ -37,15 +41,17 @@ export interface SchedulingInput {
 }
 
 const LEGACY_STEP_BY_OPERATION: Record<ProductionOperationName, ProductionStepName> = {
-  FILES: 'FILES', PRINTED: 'PRINTED', STRETCHER: 'STRETCHER_BASE', STRETCH: 'STRETCHER_BASE',
+  FILES: 'FILES', PRINT: 'PRINTED', PRINTED: 'PRINTED', BASE_CUT: 'STRETCHER_BASE', BASE_ASSEMBLY: 'STRETCHER_BASE',
+  STRETCHER_CUT: 'STRETCHER_BASE', STRETCHER_ASSEMBLY: 'STRETCHER_BASE', STRETCHER: 'STRETCHER_BASE', STRETCH: 'STRETCHER_BASE',
   TRIM: 'PRINTED', SLICE: 'FILES', RESIZE: 'FILES', DIBOND: 'DIBOND', MOUNT: 'MOUNTED',
-  FRAME: 'FRAMED', QC: 'SHIPPED', SHIPPING: 'SHIPPED',
+  FRAME_CUT: 'FRAME_MADE', FRAME_ASSEMBLY: 'FRAME_MADE', FRAME: 'FRAMED', QC: 'SHIPPED', SHIPPING: 'SHIPPED',
 }
 
 export const DEFAULT_WORK_CENTER_BY_OPERATION: Record<ProductionOperationName, string> = {
-  FILES: 'files', PRINTED: 'printing', STRETCHER: 'stretching', STRETCH: 'stretching',
+  FILES: 'files', PRINT: 'printing', PRINTED: 'printing', BASE_CUT: 'base-shop', BASE_ASSEMBLY: 'base-shop',
+  STRETCHER_CUT: 'stretching', STRETCHER_ASSEMBLY: 'stretching', STRETCHER: 'stretching', STRETCH: 'stretching',
   TRIM: 'printing', SLICE: 'files', RESIZE: 'files', DIBOND: 'dibond', MOUNT: 'mounting',
-  FRAME: 'frames', QC: 'qc', SHIPPING: 'shipping',
+  FRAME_CUT: 'frames', FRAME_ASSEMBLY: 'frames', FRAME: 'frames', QC: 'qc', SHIPPING: 'shipping',
 }
 
 export const DEFAULT_PRODUCTION_CALENDAR: ProductionCalendar = {
@@ -56,7 +62,7 @@ export const DEFAULT_PRODUCTION_CALENDAR: ProductionCalendar = {
   holidays: [],
   workCenters: [
     ['files', 'Files'], ['printing', 'Printing'], ['dibond', 'Dibond'], ['stretching', 'Stretching'],
-    ['mounting', 'Mounting'], ['frames', 'Frames'], ['qc', 'QC'], ['shipping', 'Shipping'],
+    ['base-shop', 'Base Shop'], ['mounting', 'Mounting'], ['frames', 'Frames'], ['qc', 'QC'], ['shipping', 'Shipping'],
   ].map(([id, name]) => ({ id, name, capacity: 1 })),
 }
 
@@ -152,10 +158,15 @@ export class SchedulingService {
         assignedEmployee: employeeId,
         assignedWorkCenter: workCenterId,
         estimatedMinutes: operation.estimatedMinutes,
+        cutMemberCount: operation.cutMemberCount,
+        cutLinearInches: operation.cutLinearInches,
+        cutCalculationStatus: operation.cutCalculationStatus,
+        tagStatus: operation.tagStatus,
+        materialReadiness: constraint?.materialReadiness ?? 'UNKNOWN',
         confidence: readinessRisk ? 'LOW' : constraint?.materialReadiness === 'LIMITED' || constraint?.materialReadiness === 'UNKNOWN' ? 'MEDIUM' : 'HIGH',
         scheduleReason: constraint?.lockedStart
           ? 'Preserved locked Battle Plan assignment.'
-          : `Scheduled by category, due date, age, priority, dependency, employee, and ${center.name} capacity.`,
+          : `Scheduled by category, due date, age, priority, dependency, employee, and ${center.name} capacity.${operation.cutCalculationStatus ? ` Cut input: ${operation.cutCalculationStatus}, ${operation.cutMemberCount ?? 0} members, ${operation.cutLinearInches ?? 'unresolved'} linear inches.` : ''}`,
         dependencyIds: [...operation.dependencyIds],
         dueDate: operation.dueDate,
         priority: operation.priority,

@@ -15,6 +15,11 @@ export interface ScheduleEntry {
   assignedEmployee: string
   assignedWorkCenter: string
   estimatedMinutes: number
+  cutMemberCount?: number
+  cutLinearInches?: number
+  cutCalculationStatus?: 'CONFIRMED' | 'NEEDS_REVIEW'
+  tagStatus?: import('../../types/entities').ProductionTagStatus
+  materialReadiness?: 'READY' | 'LIMITED' | 'MISSING' | 'UNKNOWN'
   confidence: ScheduleConfidence
   scheduleReason: string
   dependencyIds: string[]

@@ -3,6 +3,7 @@ import type { ProductionStepName } from './production'
 export type BattlePlanGenerationType = 'AUTOMATIC' | 'MANUAL'
 
 export type BattlePlanStatus = 'DRAFT' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED'
+export type ProductionBattlePlanGroup = 'FRAMES_TO_MAKE' | 'BASES_TO_MAKE' | 'STRETCHERS_TO_MAKE'
 
 export interface BattlePlanTask {
   id: string
@@ -21,6 +22,12 @@ export interface BattlePlanTask {
   operationAssignedEmployeeId?: string
   operationDueDate?: string
   operationPriority?: number
+  cutSummary?: string
+  materialReadiness?: string
+  tagStatus?: import('./entities').ProductionTagStatus
+  openWorkItemId?: string
+  productionGroup?: ProductionBattlePlanGroup
+  directorSection?: 'PRODUCTION' | 'REVIEW'
 }
 
 export interface BattlePlan {

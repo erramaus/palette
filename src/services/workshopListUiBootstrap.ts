@@ -274,6 +274,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
         workItem,
         operations: productionPipelineService.getOperations(workItem),
         tags: productionPipelineService.buildTags(workItem),
+        cutCalculations: productionPipelineService.getCutCalculations(workItem),
         artworkId: workItem.artworkId ?? createId('artwork', `${job.customerName}-${job.artworkTitle}`),
       }
     }

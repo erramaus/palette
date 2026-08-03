@@ -43,6 +43,14 @@ export type ProductionTagType =
   | 'STRETCHER'
   | 'THREE_D_BASE'
 
+export type ProductionTagStatus =
+  | 'DRAFT'
+  | 'NEEDS_REVIEW'
+  | 'READY_TO_PRINT'
+  | 'PRINTED'
+  | 'REGENERATED'
+  | 'VOID'
+
 export type PackagingMethodCode =
   | 'STANDARD_BOX'
   | 'CNC'
@@ -104,9 +112,18 @@ export interface ProductionTag extends AuditedEntity {
   workItemId: EntityId
   workItemNumber: string
   tagType: ProductionTagType
+  status: ProductionTagStatus
   customerDisplayName: string
   artworkName: string
   productName: string
+  productType?: string
+  finishedDimensions?: DecimalDimensions
+  orientation?: string
+  originalImportedFrameName?: string
+  normalizedFrameName?: string
+  dueDate?: string
+  priority?: number
+  assignedWorkstation?: string
   runOrEditionLabel?: 'Run' | 'Edition'
   runOrEditionValue?: string
   frameStyleName?: string
@@ -116,12 +133,16 @@ export interface ProductionTag extends AuditedEntity {
   frameDimensions?: DecimalDimensions
   baseDimensions?: DecimalDimensions
   stretcherDimensions?: DecimalDimensions
+  cutCalculation?: import('./productionCut').ProductionCutCalculationResult
   packageDimensionsDisplay?: string
   checkpoints: TagCheckpoint[]
   notes: string[]
   pairKey?: string
   generatedAt: IsoDateTime
   generatedByEmployeeId?: EntityId
+  printedAt?: IsoDateTime
+  printedByEmployeeId?: EntityId
+  previousTagId?: EntityId
 }
 
 export type BattlePlanStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
