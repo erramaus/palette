@@ -1,6 +1,8 @@
 import { mockEmployees } from '../data/mockEmployees'
 import { mockProductionJobs } from '../data/mockProductionJobs'
 import type { ProductType, ProductionJob } from '../types/production'
+import type { CanonicalOrderImport, NormalizationResult } from '../types/orderImport'
+import { OrderImportService } from './OrderImportService'
 import {
   ProductionPipelineService,
   type ProductionPipelineResult,
@@ -48,6 +50,21 @@ const createId = (prefix: string, value: string): string =>
     .replace(/(^-|-$)/g, '')}`
 
 const normalize = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, ' ')
+
+const requireNormalized = <T>(field: string, result: NormalizationResult<unknown, T>): T => {
+  if (result.normalized === null || result.normalized === undefined) {
+    throw new Error(`Cannot import order: ${field} ${result.reviewReason ?? 'requires review.'}`)
+  }
+  return result.normalized
+}
+
+const pipelineOrientation = (
+  orientation: NonNullable<CanonicalOrderImport['orientation']['normalized']>,
+): 'HORIZ' | 'VERT' | 'SQUARE' | 'PANORAMA' => {
+  if (orientation === 'HORIZONTAL') return 'HORIZ'
+  if (orientation === 'VERTICAL') return 'VERT'
+  return orientation
+}
 
 const inferProductCode = (productType: ProductType): string => {
   if (productType === 'CANVAS') {
@@ -218,6 +235,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
   const employees = new Map<string, NamedEntity>()
   const workItemIdByOrderNumber = new Map<string, string>()
   const workItemIdByPieceKey = new Map<string, string>()
+  const orderImportService = new OrderImportService()
 
   for (const employee of mockEmployees) {
     employees.set(employee.id, { id: employee.id, name: employee.name })
@@ -265,49 +283,89 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
   })
 
   const ingestProductionJob = (job: ProductionJob): ProductionPipelineResult & { artworkId: string } => {
-    const pieceKey = `${job.orderNumber}:${job.artworkTitle}:${job.productType}:${job.width}x${job.height}`
+    const canonicalImport = orderImportService.normalize({
+      source: job.orderSource ?? 'UNSPECIFIED',
+      orderIdentifier: job.orderNumber,
+      customerIdentifier: job.customerName,
+      artwork: job.artworkTitle,
+      productType: job.productType,
+      width: job.width,
+      height: job.height,
+      frameSelection: job.frameInfo,
+      dueDate: job.dueDate,
+      redNotes: job.redNotes,
+      requestedDeliveryOrPickupDate: job.requestedDeliveryOrPickupDate,
+      priority: job.priority,
+      shippingOrPickupMethod: job.shippingOrPickupMethod,
+      originalImport: job.originalImport ?? {
+        orderNumber: job.orderNumber,
+        customerName: job.customerName,
+        artworkTitle: job.artworkTitle,
+        productType: job.productType,
+        width: job.width,
+        height: job.height,
+        frameInfo: job.frameInfo,
+        dueDate: job.dueDate,
+        priority: job.priority,
+        notes: job.notes,
+      },
+    })
+    const productionPiece = requireNormalized('production piece', canonicalImport.productionPiece)
+    const orderNumber = requireNormalized('order identifier', canonicalImport.orderIdentifier)
+    const customerName = requireNormalized('customer identifier', canonicalImport.customerIdentifier)
+    const artworkTitle = requireNormalized('artwork', canonicalImport.artwork)
+    const productType = requireNormalized('product type', canonicalImport.productType)
+    const size = requireNormalized('size', canonicalImport.size)
+    const orientation = requireNormalized('orientation', canonicalImport.orientation)
+    const frameSelection = requireNormalized('frame selection', canonicalImport.frameSelection)
+    const dueDate = requireNormalized('due date', canonicalImport.dueDate)
+    const priority = requireNormalized('priority', canonicalImport.priority)
+    const pieceKey = productionPiece.key
     const existingWorkItemId = workItemIdByPieceKey.get(pieceKey)
     if (existingWorkItemId) {
       const workItem = workItemService.getWorkItemById(existingWorkItemId)
-      if (!workItem) throw new Error(`WorkItem not found for order ${job.orderNumber}`)
+      if (!workItem) throw new Error(`WorkItem not found for order ${orderNumber}`)
       return {
         workItem,
         operations: productionPipelineService.getOperations(workItem),
         tags: productionPipelineService.buildTags(workItem),
         cutCalculations: productionPipelineService.getCutCalculations(workItem),
-        artworkId: workItem.artworkId ?? createId('artwork', `${job.customerName}-${job.artworkTitle}`),
+        artworkId: workItem.artworkId ?? createId('artwork', `${customerName}-${artworkTitle}`),
       }
     }
-    const artworkId = createId('artwork', `${job.customerName}-${job.artworkTitle}`)
+    const artworkId = createId('artwork', `${customerName}-${artworkTitle}`)
     const departmentName = inferDepartment(job)
+    const packagingMethod = canonicalImport.shippingOrPickupMethod.normalized
+      ?? (productType === 'GALLERY_INVENTORY' ? 'GALLERY' : 'STANDARD_BOX')
     const result = productionPipelineService.importOrder({
-      orderNumber: job.orderNumber,
-      customerName: job.customerName,
-      artworkName: job.artworkTitle,
-      productType: job.productType,
-      width: job.width,
-      height: job.height,
-      orientation: job.width === job.height ? 'SQUARE' : job.width > job.height ? 'HORIZ' : 'VERT',
+      orderNumber,
+      customerName,
+      artworkName: artworkTitle,
+      productType,
+      width: size.width,
+      height: size.height,
+      orientation: pipelineOrientation(orientation),
       priority:
-        job.priority === 'ORIGINALS'
+        priority === 'ORIGINALS'
           ? 100
-          : job.priority === 'CUSTOMER_PURCHASED'
+          : priority === 'CUSTOMER_PURCHASED'
             ? 80
             : 60,
-      dueDate: job.dueDate,
+      dueDate,
       assignedEmployeeId: job.assignedWorkerId,
-      notes: [job.notes],
+      notes: [job.notes, canonicalImport.redNotes.normalized].filter((note): note is string => Boolean(note)),
       departmentName,
       customFields: {
-        frameStyle: job.frameInfo,
+        canonicalOrderImport: canonicalImport,
+        frameStyle: frameSelection,
         departmentTag: normalize(departmentName).replaceAll(' ', '_').toUpperCase(),
-        packagingMethod: job.orderNumber.startsWith('GAL-') ? 'GALLERY' : 'STANDARD_BOX',
+        packagingMethod,
       },
     })
 
     workItemIdByPieceKey.set(pieceKey, result.workItem.id)
-    if (!workItemIdByOrderNumber.has(job.orderNumber)) {
-      workItemIdByOrderNumber.set(job.orderNumber, result.workItem.id)
+    if (!workItemIdByOrderNumber.has(orderNumber)) {
+      workItemIdByOrderNumber.set(orderNumber, result.workItem.id)
     }
 
     if (job.onHold) {
