@@ -92,7 +92,7 @@ export interface EditWorkItemInput {
   actorEmployeeId?: string
 }
 
-class WorkItemDetailService {
+export class WorkItemDetailService {
   private readonly environment: WorkshopListUiEnvironment
   private readonly productionTagService: ProductionTagService
   private readonly generatedTagsByWorkItem = new Map<string, ProductionTag[]>()
@@ -106,12 +106,13 @@ class WorkItemDetailService {
 
   constructor(environment: WorkshopListUiEnvironment) {
     this.environment = environment
-    this.jobsByOrderNumber = new Map(mockProductionJobs.map((job) => [job.orderNumber, job]))
-    this.customersById = new Map(environment.customers.map((customer) => [customer.id, customer]))
-    this.artworksById = new Map(environment.artworks.map((artwork) => [artwork.id, artwork]))
-    this.productsById = new Map(environment.products.map((product) => [product.id, product]))
-    this.departmentsById = new Map(environment.departments.map((department) => [department.id, department]))
+    this.jobsByOrderNumber = new Map()
+    this.customersById = new Map()
+    this.artworksById = new Map()
+    this.productsById = new Map()
+    this.departmentsById = new Map()
     this.employeesById = new Map(environment.employees.map((employee) => [employee.id, employee]))
+    this.refreshLookupMaps(mockProductionJobs)
 
     const lookupProvider: ProductionTagLookupProvider = {
       getCustomerName: (customerId) => this.customersById.get(customerId)?.name,
@@ -187,6 +188,19 @@ class WorkItemDetailService {
       environment.workItemService,
       lookupProvider,
     )
+  }
+
+  refreshLookupMaps(productionJobs: ProductionJob[]): void {
+    this.jobsByOrderNumber.clear()
+    productionJobs.forEach((job) => this.jobsByOrderNumber.set(job.orderNumber, job))
+    this.customersById.clear()
+    this.environment.listCustomers().forEach((customer) => this.customersById.set(customer.id, customer))
+    this.artworksById.clear()
+    this.environment.listArtworks().forEach((artwork) => this.artworksById.set(artwork.id, artwork))
+    this.productsById.clear()
+    this.environment.listProducts().forEach((product) => this.productsById.set(product.id, product))
+    this.departmentsById.clear()
+    this.environment.listDepartments().forEach((department) => this.departmentsById.set(department.id, department))
   }
 
   getSnapshot(workItemId: string): WorkItemDetailSnapshot {

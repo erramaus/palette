@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkItem as WorkItemShape } from '../../types/entities'
+import type { ProductionJob } from '../../types/production'
+import { ProductionPipelineService } from '../ProductionPipelineService'
+import { WorkItemDetailService } from '../WorkItemDetailService'
+import { WorkItemService } from '../WorkItemService'
+import { createWorkshopListUiEnvironment } from '../workshopListUiBootstrap'
 import type { PersistenceAdapter } from './PersistenceAdapter'
 import { PersistenceService } from './PersistenceService'
-import {
-  createPersistenceSnapshot,
-  rebuildWorkItemsFromSnapshot,
-} from './PersistenceSnapshot'
+import { createPersistenceSnapshot, rebuildWorkItemsFromSnapshot } from './PersistenceSnapshot'
 import { snapshotV1Fixture } from './fixtures/snapshot-v1'
-import { WorkItemService } from '../WorkItemService'
-import { ProductionPipelineService } from '../ProductionPipelineService'
 
 class MemoryPersistenceAdapter implements PersistenceAdapter {
   value: string | null = null
@@ -52,7 +52,10 @@ const createFixture = () => createPersistenceSnapshot({
     steps: { FILES: 'WAITING', PRINTED: 'WAITING', DIBOND: 'NOT_APPLICABLE', STRETCHER_BASE: 'WAITING', MOUNTED: 'WAITING', FRAME_MADE: 'WAITING', FRAMED: 'WAITING', SHIPPED: 'WAITING' },
     estimatedMinutes: { FILES: 30, PRINTED: 55, DIBOND: 0, STRETCHER_BASE: 45, MOUNTED: 40, FRAME_MADE: 90, FRAMED: 20, SHIPPED: 35 },
   }],
+  customers: [{ id: 'customer-1', name: 'Customer' }],
   artworks: [{ id: 'artwork-1', name: 'Artwork' }],
+  products: [{ id: 'product-1', name: 'Canvas Product', code: '3 Canv', type: 'CANVAS' }],
+  departments: [{ id: 'department-1', name: 'Production' }],
   productionPieces: [],
   workItems: [workItem],
   productionOperations: [{
@@ -75,9 +78,7 @@ describe('PersistenceService', () => {
   it('saves and reloads stable operations, dates, histories, and ActivityLogs', () => {
     const adapter = new MemoryPersistenceAdapter()
     const service = new PersistenceService(adapter)
-    const original = createFixture()
-
-    service.save(original)
+    service.save(createFixture())
     const loaded = service.load().snapshot!
     const restoredItems = rebuildWorkItemsFromSnapshot(loaded)
     const restoredOperations = (restoredItems[0].customFields.pipeline as { operations: Array<{ id: string; history: unknown[]; startedAt?: string }> }).operations
@@ -116,7 +117,7 @@ describe('PersistenceService', () => {
     const result = new PersistenceService(adapter).load()
 
     expect(result.migrated).toBe(true)
-    expect(result.snapshot?.schemaVersion).toBe(2)
+    expect(result.snapshot?.schemaVersion).toBe(3)
     expect(result.snapshot?.data.intelligenceReviewState.reviewedRecommendationIds).toEqual({})
   })
 
@@ -130,10 +131,89 @@ describe('PersistenceService', () => {
 
   it('exports and imports a validated backup', () => {
     const service = new PersistenceService(new MemoryPersistenceAdapter())
-    const backup = service.exportBackup(createFixture())
-    const restored = service.importBackup(backup)
+    const restored = service.importBackup(service.exportBackup(createFixture()))
     expect(restored.data.orders[0].id).toBe('job-1')
     expect(restored.data.intelligenceReviewState.reviewedRecommendationIds['recommendation-1']).toBe(true)
   })
 
+  it('preserves normalized tag lookups, tag values, operations, logs, and timeline across reload', () => {
+    const importedJob: ProductionJob = {
+      id: 'job-reload-1', orderNumber: 'WEB-RELOAD-1', customerName: 'Reload Gallery',
+      artworkTitle: 'Persistent Horizon', productType: 'CANVAS', width: 24, height: 30,
+      frameInfo: 'Gallery Black', dueDate: '2026-08-08', dueStatus: 'ON_TRACK',
+      priority: 'CUSTOMER_PURCHASED', assignedWorkerId: 'employee-daniel',
+      notes: 'Persistence regression scenario',
+      steps: { FILES: 'COMPLETE', PRINTED: 'COMPLETE', DIBOND: 'NOT_APPLICABLE', STRETCHER_BASE: 'WAITING', MOUNTED: 'WAITING', FRAME_MADE: 'WAITING', FRAMED: 'WAITING', SHIPPED: 'WAITING' },
+      estimatedMinutes: { FILES: 30, PRINTED: 55, DIBOND: 0, STRETCHER_BASE: 45, MOUNTED: 40, FRAME_MADE: 90, FRAMED: 20, SHIPPED: 35 },
+    }
+    const beforeEnvironment = createWorkshopListUiEnvironment()
+    const imported = beforeEnvironment.ingestProductionJob(importedJob)
+    const beforeDetail = new WorkItemDetailService(beforeEnvironment)
+    beforeDetail.refreshLookupMaps([importedJob])
+    const beforeTags = beforeDetail.generateTags(imported.workItem.id, 'employee-daniel')
+    const beforeDetailSnapshot = beforeDetail.getSnapshot(imported.workItem.id)
+    const beforeOperationIds = imported.operations.map((operation) => operation.id)
+    const activityLogs = [{ id: 'activity-reload-1', entityType: 'ProductionOperation' as const, entityId: beforeOperationIds[0], action: 'OPERATION_STARTED' as const, occurredAt: '2026-08-02T08:00:00.000Z' }]
+    const timelineEvents = [{
+      id: `schedule-${beforeOperationIds[0]}`, operationId: beforeOperationIds[0], workItemId: imported.workItem.id,
+      orderNumber: importedJob.orderNumber, pieceLabel: '24x30 CANVAS', operation: imported.operations[0].name,
+      status: imported.operations[0].status, plannedStart: '2026-08-03T08:00:00.000Z', plannedFinish: '2026-08-03T08:30:00.000Z',
+      assignedEmployee: 'employee-daniel', assignedWorkCenter: 'files', estimatedMinutes: 30,
+      confidence: 'HIGH' as const, scheduleReason: 'Priority and dependency order.', dependencyIds: [],
+      dueDate: importedJob.dueDate, priority: 80, locked: false,
+    }]
+    const snapshot = createPersistenceSnapshot({
+      applicationVersion: '0.0.0', orders: [importedJob], customers: beforeEnvironment.listCustomers(),
+      artworks: beforeEnvironment.listArtworks(), products: beforeEnvironment.listProducts(),
+      departments: beforeEnvironment.listDepartments(), productionPieces: [],
+      workItems: [beforeEnvironment.workItemService.getWorkItemById(imported.workItem.id)!],
+      productionOperations: imported.operations, battlePlans: [], productionTags: beforeTags,
+      tagSnapshots: imported.tags, timelineEvents, activityLogs,
+      intelligenceReviewState: { dismissedRecommendationIds: {}, reviewedRecommendationIds: {}, acceptedRecommendationIds: {} },
+      settings: { workflowContexts: beforeEnvironment.workflowContexts },
+    })
+    const adapter = new MemoryPersistenceAdapter()
+    const persistence = new PersistenceService(adapter)
+    persistence.save(snapshot)
+    const loaded = persistence.load().snapshot!
+
+    const afterEnvironment = createWorkshopListUiEnvironment()
+    afterEnvironment.replaceWorkflowContexts(loaded.data.settings.workflowContexts as typeof afterEnvironment.workflowContexts)
+    afterEnvironment.replaceCustomers(loaded.data.customers)
+    afterEnvironment.replaceArtworks(loaded.data.artworks)
+    afterEnvironment.replaceProducts(loaded.data.products)
+    afterEnvironment.replaceDepartments(loaded.data.departments)
+    afterEnvironment.workItemService.replaceAllWorkItems(rebuildWorkItemsFromSnapshot(loaded))
+    const afterDetail = new WorkItemDetailService(afterEnvironment)
+    afterDetail.refreshLookupMaps(loaded.data.orders)
+    afterDetail.replaceGeneratedTags(loaded.data.productionTags)
+
+    const afterTags = afterDetail.getGeneratedTagsForWorkItem(imported.workItem.id)
+    const comparableTag = (tag: (typeof beforeTags)[number]) => ({
+      tagType: tag.tagType, customerDisplayName: tag.customerDisplayName, artworkName: tag.artworkName,
+      productName: tag.productName, frameStyleName: tag.frameStyleName,
+      packagingMethod: tag.packagingMethod, checkpoints: tag.checkpoints,
+    })
+    const restoredOperationIds = afterEnvironment.workItemService.listWorkItems().flatMap((item) =>
+      afterEnvironment.productionPipelineService.getOperations(item).map((operation) => operation.id),
+    )
+
+    expect(beforeTags).toHaveLength(3)
+    expect(afterTags).toHaveLength(beforeTags.length)
+    expect(afterTags.map(comparableTag)).toEqual(beforeTags.map(comparableTag))
+    expect(afterDetail.getSnapshot(imported.workItem.id)).toMatchObject({
+      customerName: beforeDetailSnapshot.customerName,
+      artworkName: beforeDetailSnapshot.artworkName,
+      productName: beforeDetailSnapshot.productName,
+      assignedDepartmentName: beforeDetailSnapshot.assignedDepartmentName,
+    })
+    expect(restoredOperationIds).toEqual(beforeOperationIds)
+    expect(new Set(restoredOperationIds).size).toBe(restoredOperationIds.length)
+    expect(new Set(loaded.data.customers.map((record) => record.id)).size).toBe(loaded.data.customers.length)
+    expect(new Set(loaded.data.products.map((record) => record.id)).size).toBe(loaded.data.products.length)
+    expect(new Set(loaded.data.departments.map((record) => record.id)).size).toBe(loaded.data.departments.length)
+    expect(loaded.data.activityLogs).toEqual(activityLogs)
+    expect(loaded.data.timelineEvents).toEqual(timelineEvents)
+    expect(afterEnvironment.workItemService.getWorkItemById(imported.workItem.id)?.customFields.productionTagSnapshots).toHaveLength(1)
+  })
 })

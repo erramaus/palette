@@ -5,12 +5,18 @@ import type { ThreeDFilePreparation } from '../../types/threeDFilePreparation'
 import type { AppActivityLog } from '../../state/AppStateContext'
 import type { OperationProductionTag, ProductionOperation } from '../ProductionPipelineService'
 import type { ScheduleEntry } from '../scheduling'
+import type { ProductType } from '../../types/production'
 
-export const CURRENT_PERSISTENCE_SCHEMA_VERSION = 2
+export const CURRENT_PERSISTENCE_SCHEMA_VERSION = 3
 
-export interface PersistedArtwork {
+export interface PersistedNamedEntity {
   id: string
   name: string
+}
+
+export interface PersistedProduct extends PersistedNamedEntity {
+  code: string
+  type: ProductType
 }
 
 export interface IntelligenceReviewState {
@@ -21,7 +27,10 @@ export interface IntelligenceReviewState {
 
 export interface PersistenceData {
   orders: ProductionJob[]
-  artworks: PersistedArtwork[]
+  customers: PersistedNamedEntity[]
+  artworks: PersistedNamedEntity[]
+  products: PersistedProduct[]
+  departments: PersistedNamedEntity[]
   productionPieces: ThreeDFilePreparation[]
   workItems: WorkItem[]
   productionOperations: ProductionOperation[]
@@ -43,12 +52,20 @@ export interface PersistenceSnapshot {
 
 export type PersistenceSnapshotV1 = Omit<PersistenceSnapshot, 'schemaVersion' | 'data'> & {
   schemaVersion: 1
-  data: Omit<PersistenceData, 'tagSnapshots' | 'timelineEvents' | 'intelligenceReviewState' | 'settings'>
+  data: Omit<PersistenceData, 'customers' | 'products' | 'departments' | 'tagSnapshots' | 'timelineEvents' | 'intelligenceReviewState' | 'settings'>
+}
+
+export type PersistenceSnapshotV2 = Omit<PersistenceSnapshot, 'schemaVersion' | 'data'> & {
+  schemaVersion: 2
+  data: Omit<PersistenceData, 'customers' | 'products' | 'departments'>
 }
 
 export interface PersistenceRecordSummary {
   orders: number
+  customers: number
   artworks: number
+  products: number
+  departments: number
   productionPieces: number
   workItems: number
   productionOperations: number
@@ -82,7 +99,10 @@ export const createPersistenceSnapshot = (input: CreatePersistenceSnapshotInput)
   applicationVersion: input.applicationVersion,
   data: {
     orders: input.orders,
+    customers: input.customers,
     artworks: input.artworks,
+    products: input.products,
+    departments: input.departments,
     productionPieces: input.productionPieces,
     workItems: input.workItems.map(withoutEmbeddedOperations),
     productionOperations: input.productionOperations,
@@ -121,7 +141,10 @@ export const rebuildWorkItemsFromSnapshot = (snapshot: PersistenceSnapshot): Wor
 
 export const summarizeSnapshot = (snapshot: PersistenceSnapshot): PersistenceRecordSummary => ({
   orders: snapshot.data.orders.length,
+  customers: snapshot.data.customers.length,
   artworks: snapshot.data.artworks.length,
+  products: snapshot.data.products.length,
+  departments: snapshot.data.departments.length,
   productionPieces: snapshot.data.productionPieces.length,
   workItems: snapshot.data.workItems.length,
   productionOperations: snapshot.data.productionOperations.length,

@@ -8,7 +8,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const requiredArrays = [
   'orders',
+  'customers',
   'artworks',
+  'products',
+  'departments',
   'productionPieces',
   'workItems',
   'productionOperations',
@@ -57,6 +60,18 @@ export const validatePersistenceSnapshot = (value: unknown): PersistenceSnapshot
   })
   if (new Set(workItemIds).size !== workItemIds.length) {
     throw new Error('Persistence snapshot contains duplicate WorkItem IDs.')
+  }
+
+  for (const key of ['customers', 'artworks', 'products', 'departments'] as const) {
+    const ids = (value.data[key] as unknown[]).map((record) => {
+      if (!isRecord(record) || typeof record.id !== 'string' || !record.id) {
+        throw new Error(`Every persisted ${key} record must have an ID.`)
+      }
+      return record.id
+    })
+    if (new Set(ids).size !== ids.length) {
+      throw new Error(`Persistence snapshot contains duplicate ${key} IDs.`)
+    }
   }
 
   return value as unknown as PersistenceSnapshot

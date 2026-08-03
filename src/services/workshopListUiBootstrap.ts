@@ -30,8 +30,14 @@ export interface WorkshopListUiEnvironment {
   productionPipelineService: ProductionPipelineService
   ingestProductionJob: (job: ProductionJob) => ProductionPipelineResult & { artworkId: string }
   getWorkItemIdForOrderNumber: (orderNumber: string) => string | undefined
+  listCustomers: () => NamedEntity[]
+  replaceCustomers: (customers: NamedEntity[]) => void
   listArtworks: () => NamedEntity[]
   replaceArtworks: (artworks: NamedEntity[]) => void
+  listProducts: () => Array<NamedEntity & { code: string; type: ProductType }>
+  replaceProducts: (products: Array<NamedEntity & { code: string; type: ProductType }>) => void
+  listDepartments: () => NamedEntity[]
+  replaceDepartments: (departments: NamedEntity[]) => void
   replaceWorkflowContexts: (contexts: Record<string, WorkflowContext>) => void
 }
 
@@ -354,10 +360,25 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     productionPipelineService,
     ingestProductionJob,
     getWorkItemIdForOrderNumber: (orderNumber: string) => workItemIdByOrderNumber.get(orderNumber),
+    listCustomers: () => [...customers.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    replaceCustomers: (nextCustomers) => {
+      customers.clear()
+      nextCustomers.forEach((customer) => customers.set(customer.id, customer))
+    },
     listArtworks: () => [...artworks.values()].sort((a, b) => a.name.localeCompare(b.name)),
     replaceArtworks: (nextArtworks) => {
       artworks.clear()
       nextArtworks.forEach((artwork) => artworks.set(artwork.id, artwork))
+    },
+    listProducts: () => [...products.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    replaceProducts: (nextProducts) => {
+      products.clear()
+      nextProducts.forEach((product) => products.set(product.id, product))
+    },
+    listDepartments: () => [...departments.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    replaceDepartments: (nextDepartments) => {
+      departments.clear()
+      nextDepartments.forEach((department) => departments.set(department.id, department))
     },
     replaceWorkflowContexts: (nextContexts) => {
       Object.keys(workflowContexts).forEach((id) => delete workflowContexts[id])

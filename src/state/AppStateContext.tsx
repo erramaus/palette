@@ -274,8 +274,11 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
         if (restoredWorkflowContexts && typeof restoredWorkflowContexts === 'object') {
           environment.replaceWorkflowContexts(restoredWorkflowContexts as typeof environment.workflowContexts)
         }
-        environment.workItemService.replaceAllWorkItems(rebuildWorkItemsFromSnapshot(result.snapshot))
+        environment.replaceCustomers(result.snapshot.data.customers)
         environment.replaceArtworks(result.snapshot.data.artworks)
+        environment.replaceProducts(result.snapshot.data.products)
+        environment.replaceDepartments(result.snapshot.data.departments)
+        environment.workItemService.replaceAllWorkItems(rebuildWorkItemsFromSnapshot(result.snapshot))
       }
       return { ...result, error: null as string | null }
     } catch (error) {
@@ -318,7 +321,11 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const [operationRevision, setOperationRevision] = useState(0)
   const persistenceUnlocked = useRef(initialPersistence.error === null)
   const skipInitialSave = useRef(true)
-  const workItemDetailService = useMemo(() => getWorkItemDetailService(environment), [environment])
+  const workItemDetailService = useMemo(() => {
+    const service = getWorkItemDetailService(environment)
+    service.refreshLookupMaps(productionJobs)
+    return service
+  }, [environment, productionJobs])
   useEffect(() => {
     if (initialPersistence.snapshot) {
       workItemDetailService.replaceGeneratedTags(initialPersistence.snapshot.data.productionTags)
@@ -435,7 +442,10 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const buildSnapshot = useCallback((): PersistenceSnapshot => createPersistenceSnapshot({
     applicationVersion: APPLICATION_VERSION,
     orders: productionJobs,
+    customers: environment.listCustomers(),
     artworks: environment.listArtworks(),
+    products: environment.listProducts(),
+    departments: environment.listDepartments(),
     productionPieces: threeDFilePreparations,
     workItems: environment.workItemService.listWorkItems(),
     productionOperations: pipelineProjections.productionOperations,
@@ -909,8 +919,12 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     if (restoredWorkflowContexts && typeof restoredWorkflowContexts === 'object') {
       environment.replaceWorkflowContexts(restoredWorkflowContexts as typeof environment.workflowContexts)
     }
-    environment.workItemService.replaceAllWorkItems(rebuildWorkItemsFromSnapshot(snapshot))
+    environment.replaceCustomers(snapshot.data.customers)
     environment.replaceArtworks(snapshot.data.artworks)
+    environment.replaceProducts(snapshot.data.products)
+    environment.replaceDepartments(snapshot.data.departments)
+    environment.workItemService.replaceAllWorkItems(rebuildWorkItemsFromSnapshot(snapshot))
+    workItemDetailService.refreshLookupMaps(snapshot.data.orders)
     setProductionJobs(snapshot.data.orders)
     setThreeDFilePreparations(snapshot.data.productionPieces)
     setBattlePlans(snapshot.data.battlePlans)
