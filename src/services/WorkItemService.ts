@@ -1,5 +1,5 @@
 import { ActivityLog, WorkItem, Workflow, WorkflowRule, WorkflowStage, WorkflowTransition } from '../models'
-import type { ActivityAction, ActivityEntityType, WorkItemAttachment, WorkItemHistoryEntry, WorkItemStatus } from '../types/entities'
+import type { ActivityAction, ActivityEntityType, WorkItem as WorkItemShape, WorkItemAttachment, WorkItemHistoryEntry, WorkItemStatus } from '../types/entities'
 import { createEntityId } from '../utils/id'
 import { nowIso } from '../utils/time'
 import { WorkflowService, type WorkflowTransitionApproval } from './WorkflowService'
@@ -579,6 +579,17 @@ export class WorkItemService {
 
   listWorkItems(): WorkItem[] {
     return [...this.workItems.values()]
+  }
+
+  replaceAllWorkItems(workItems: WorkItemShape[]): void {
+    const restored = workItems.map((workItem) => new WorkItem(workItem))
+    const ids = restored.map((workItem) => workItem.id)
+    if (new Set(ids).size !== ids.length) {
+      throw new Error('Cannot hydrate duplicate WorkItem IDs.')
+    }
+
+    this.workItems.clear()
+    restored.forEach((workItem) => this.workItems.set(workItem.id, workItem))
   }
 
   listActivityLogs(): ActivityLog[] {

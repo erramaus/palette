@@ -1,35 +1,100 @@
-import { useState } from 'react'
-import {
-	loadProductionForecastSettings,
-	saveProductionForecastSettings,
-} from '../services/productionForecastSettings'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import { useAppState } from '../state/AppStateContext'
 import type { ForecastConfig } from '../types/productionForecasting'
+import type { PersistenceRecordSummary } from '../services/persistence'
+
+interface PendingBackup {
+	serialized: string
+	summary: PersistenceRecordSummary
+}
+
+const downloadJson = (contents: string, fileName: string): void => {
+	const blob = new Blob([contents], { type: 'application/json' })
+	const url = URL.createObjectURL(blob)
+	const anchor = document.createElement('a')
+	anchor.href = url
+	anchor.download = fileName
+	anchor.click()
+	URL.revokeObjectURL(url)
+}
 
 const SettingsPage = () => {
-	const { addActivityLog } = useAppState()
-	const [settings, setSettings] = useState<ForecastConfig>(() => loadProductionForecastSettings())
+	const {
+		forecastSettings,
+		saveForecastSettings,
+		persistenceStatus,
+		persistenceWarning,
+		exportPersistenceBackup,
+		inspectPersistenceBackup,
+		restorePersistenceBackup,
+		resetLocalPersistence,
+	} = useAppState()
+	const [settings, setSettings] = useState<ForecastConfig>(forecastSettings)
+	const [pendingBackup, setPendingBackup] = useState<PendingBackup | null>(null)
+	const [restoreConfirmed, setRestoreConfirmed] = useState(false)
+	const [backupMessage, setBackupMessage] = useState<string | null>(null)
+
+	useEffect(() => {
+		setSettings(forecastSettings)
+	}, [forecastSettings])
 
 	const save = (): void => {
-		saveProductionForecastSettings(settings)
-		addActivityLog({
-			entityType: 'BattlePlan',
-			entityId: 'PRODUCTION_FORECAST_SETTINGS',
-			action: 'FORECAST_CONFIG_CHANGED',
-			metadata: {
-				minimumHistoricalSampleCount: settings.minimumHistoricalSampleCount,
-				conservativePercentile: settings.conservativePercentile,
-				forecastBufferHours: settings.forecastBufferHours,
-			},
-		})
+		saveForecastSettings(settings)
+	}
+
+	const exportBackup = (): void => {
+		downloadJson(exportPersistenceBackup(), `palette-backup-${new Date().toISOString().slice(0, 10)}.json`)
+		setBackupMessage('Backup exported.')
+	}
+
+	const selectBackup = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+		const file = event.target.files?.[0]
+		if (!file) return
+		try {
+			const serialized = await file.text()
+			const { summary } = inspectPersistenceBackup(serialized)
+			setPendingBackup({ serialized, summary })
+			setRestoreConfirmed(false)
+			setBackupMessage(null)
+		} catch (error) {
+			setPendingBackup(null)
+			setBackupMessage(error instanceof Error ? error.message : 'Backup could not be validated.')
+		} finally {
+			event.target.value = ''
+		}
+	}
+
+	const restoreBackup = (): void => {
+		if (!pendingBackup || !restoreConfirmed) return
+		const result = restorePersistenceBackup(pendingBackup.serialized)
+		downloadJson(result.preRestoreBackup, `palette-pre-restore-${new Date().toISOString().replaceAll(':', '-')}.json`)
+		setSettings(forecastSettings)
+		setPendingBackup(null)
+		setRestoreConfirmed(false)
+		setBackupMessage('Backup restored. A pre-restore backup was downloaded automatically.')
+	}
+
+	const reset = (): void => {
+		if (!window.confirm('Reset local production data to the application defaults? Export a backup first if this data is needed.')) return
+		resetLocalPersistence()
+		setSettings(forecastSettings)
+		setPendingBackup(null)
+		setBackupMessage('Local production data was reset.')
 	}
 
 	return (
 		<section className="page">
 			<div className="page-heading">
-				<h2>Settings</h2>
-				<p>Predictive forecasting controls for baseline depth, confidence, queue weighting, and risk buffers.</p>
+				<div>
+					<h2>Settings</h2>
+					<p>Predictive forecasting controls for baseline depth, confidence, queue weighting, and risk buffers.</p>
+				</div>
+				<span className={`persistence-status persistence-status-${persistenceStatus.toLowerCase().replaceAll(' ', '-')}`}>
+					{persistenceStatus}
+				</span>
 			</div>
+
+			{persistenceWarning ? <p className="warning" role="alert">Recovery required: {persistenceWarning}</p> : null}
 
 			<section className="panel">
 				<h3>Forecast Configuration</h3>
@@ -189,6 +254,36 @@ const SettingsPage = () => {
 						Save Forecast Settings
 					</button>
 				</div>
+			</section>
+
+			<section className="panel">
+				<h3>Local Data</h3>
+				<p className="subtle">Export a portable snapshot or restore validated production data.</p>
+				<div className="button-row">
+					<button type="button" className="btn" onClick={exportBackup}>Export Backup</button>
+					<label className="btn persistence-file-button">
+						Import Backup
+						<input type="file" accept="application/json,.json" onChange={selectBackup} />
+					</label>
+					<button type="button" className="btn" onClick={reset}>Reset Local Data</button>
+				</div>
+
+				{pendingBackup ? (
+					<div className="persistence-restore-summary">
+						<h4>Records to restore</h4>
+						<dl>
+							{Object.entries(pendingBackup.summary).map(([label, count]) => (
+								<div key={label}><dt>{label.replace(/([A-Z])/g, ' $1')}</dt><dd>{count}</dd></div>
+							))}
+						</dl>
+						<label className="checkbox-label">
+							<input type="checkbox" checked={restoreConfirmed} onChange={(event) => setRestoreConfirmed(event.target.checked)} />
+							Replace current local production data
+						</label>
+						<button type="button" className="btn btn-primary" disabled={!restoreConfirmed} onClick={restoreBackup}>Confirm Restore</button>
+					</div>
+				) : null}
+				{backupMessage ? <p className="subtle" role="status">{backupMessage}</p> : null}
 			</section>
 		</section>
 	)

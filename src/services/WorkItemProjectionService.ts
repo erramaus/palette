@@ -48,16 +48,6 @@ export interface ReportSnapshot {
   workflowLoadByDepartment: Record<string, number>
 }
 
-export interface BattlePlanQueueItem {
-  workItemId: string
-  orderNumber: string
-  customerName: string
-  nextStep: string
-  estimatedMinutes: number
-  dueAt?: string
-  priority: number
-}
-
 export class WorkItemProjectionService {
   private readonly domain: PrintShopDomainService
 
@@ -172,32 +162,4 @@ export class WorkItemProjectionService {
     }
   }
 
-  buildBattlePlanQueue(): BattlePlanQueueItem[] {
-    const workshopRows = this.buildWorkshopList()
-    const steps = new Map(this.domain.listProductionSteps().map((step) => [step.id, step]))
-
-    return workshopRows
-      .map((row) => {
-        const workItem = this.domain.listWorkItems().find((candidate) => candidate.id === row.workItemId)
-        const step = workItem?.currentStepId ? steps.get(workItem.currentStepId) : undefined
-
-        return {
-          workItemId: row.workItemId,
-          orderNumber: row.orderNumber,
-          customerName: row.customerName,
-          nextStep: row.nextStep,
-          estimatedMinutes: step?.estimatedMinutes ?? 0,
-          dueAt: row.dueAt,
-          priority: row.priority,
-        }
-      })
-      .filter((item) => item.nextStep !== 'N/A')
-      .sort((a, b) => {
-        if (a.priority !== b.priority) {
-          return a.priority - b.priority
-        }
-
-        return (a.dueAt ?? '').localeCompare(b.dueAt ?? '')
-      })
-  }
 }

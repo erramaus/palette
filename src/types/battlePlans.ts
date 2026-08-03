@@ -15,6 +15,12 @@ export interface BattlePlanTask {
   notes: string
   carryForward: boolean
   locked: boolean
+  productionOperationId?: string
+  productionOperationName?: string
+  productionOperationStatus?: 'PENDING' | 'READY' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETE'
+  operationAssignedEmployeeId?: string
+  operationDueDate?: string
+  operationPriority?: number
 }
 
 export interface BattlePlan {

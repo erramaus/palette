@@ -5,9 +5,9 @@ import {
   type EditWorkItemInput,
 } from '../services/WorkItemDetailService'
 import { ProductionForecastService } from '../services/ProductionForecastService'
-import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
 import { useAppState } from '../state/AppStateContext'
+import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
 import type { ThreeDFilePreparation, ThreeDSignatureStatus } from '../types/threeDFilePreparation'
 
 interface EditFormState {
@@ -85,9 +85,13 @@ const WorkItemDetailPage = () => {
     battlePlans,
     employees,
     activityLogs,
+    forecastSettings,
+    productionOperations,
+    getOperationHistory,
     addActivityLog,
     saveThreeDFilePreparation,
     validateThreeDFilePreparation,
+    notifyWorkItemMutation,
   } = useAppState()
 
   const environment = useMemo(() => getWorkshopListUiEnvironment(), [])
@@ -134,6 +138,11 @@ const WorkItemDetailPage = () => {
 
   const snapshot = snapshotResult.snapshot
   const loadError = snapshotResult.loadError
+  const workItemOperations = useMemo(
+    () => snapshot ? productionOperations.filter((operation) => operation.workItemId === snapshot.workItem.id) : [],
+    [productionOperations, snapshot],
+  )
+  const directorId = employees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id ?? employees[0]?.id ?? 'system'
 
   const forecastService = useMemo(
     () =>
@@ -143,9 +152,9 @@ const WorkItemDetailPage = () => {
         battlePlans,
         employees,
         activityLogs,
-        config: loadProductionForecastSettings(),
+        config: forecastSettings,
       }),
-    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs],
+    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs, forecastSettings],
   )
 
   const forecastResult = useMemo(() => forecastService.getForecast(), [forecastService])
@@ -198,6 +207,7 @@ const WorkItemDetailPage = () => {
 
     try {
       action()
+      notifyWorkItemMutation()
       setRefreshKey((value) => value + 1)
       setErrorMessage(null)
     } catch (error) {
@@ -608,6 +618,32 @@ const WorkItemDetailPage = () => {
           </ul>
         </section>
       ) : null}
+
+      <section className="panel">
+        <div className="work-item-section-header">
+          <div><h3>Production Operations</h3><p className="subtle">Lifecycle state shared across Workshop, Battle Plans, Timeline, Tags, and Intelligence.</p></div>
+          <span className="badge">{workItemOperations.length} operations</span>
+        </div>
+        <div className="work-item-operation-list">
+          {workItemOperations.map((operation) => {
+            const history = getOperationHistory(operation.id)
+            return (
+              <article key={operation.id} className="work-item-operation-card">
+                <div className="work-item-section-header">
+                  <div><strong>{operation.name}</strong><p className="subtle">{operation.estimatedMinutes} min · {operation.status}</p></div>
+                  <span className="priority-pill">P{operation.priority}</span>
+                </div>
+                <OperationLifecycleActions operation={operation} role="DIRECTOR" actorEmployeeId={directorId} />
+                {history.length > 0 && (
+                  <details><summary>History ({history.length})</summary><ul className="plain-list">
+                    {history.map((entry) => <li key={entry.id}><div><strong>{entry.action}</strong><p>{entry.detail}</p></div><span className="subtle">{formatDateTime(entry.occurredAt)}</span></li>)}
+                  </ul></details>
+                )}
+              </article>
+            )
+          })}
+        </div>
+      </section>
 
       <section className="panel">
         <h3>Workflow</h3>

@@ -1,6 +1,7 @@
 import type { ActivityAction, WorkItemHistoryEntry } from '../types/entities'
 import type { ProductType, ProductionJob } from '../types/production'
-import type { ProductionTag, WorkItem, WorkflowStage } from '../models'
+import type { WorkItem, WorkflowStage } from '../models'
+import type { ProductionTag } from '../types/entities'
 import { mockProductionJobs } from '../data/mockProductionJobs'
 import { nowIso } from '../utils/time'
 import {
@@ -451,6 +452,18 @@ class WorkItemDetailService {
     return [...(this.generatedTagsByWorkItem.get(workItemId) ?? [])].sort((left, right) =>
       right.generatedAt.localeCompare(left.generatedAt),
     )
+  }
+
+  listGeneratedTags(): ProductionTag[] {
+    return [...this.generatedTagsByWorkItem.values()].flat()
+  }
+
+  replaceGeneratedTags(tags: ProductionTag[]): void {
+    this.generatedTagsByWorkItem.clear()
+    tags.forEach((tag) => {
+      const current = this.generatedTagsByWorkItem.get(tag.workItemId) ?? []
+      this.generatedTagsByWorkItem.set(tag.workItemId, [...current, tag])
+    })
   }
 
   private changeStage(

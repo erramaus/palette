@@ -14,6 +14,7 @@ const navSections = [
       { to: '/workshop-list', label: 'Workshop List' },
       { to: '/battle-plans', label: 'Battle Plans' },
       { to: '/tags', label: 'Production Tags' },
+      { to: '/timeline', label: 'Timeline' },
       { to: '/shipping', label: 'Shipping' },
     ],
   },

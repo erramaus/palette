@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAppState } from '../state/AppStateContext'
+import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
 import type {
   WorkshopListFilter,
   WorkshopListRow,
@@ -46,14 +48,6 @@ const sortMappings: Partial<Record<SortableColumn, WorkshopListSort['field']>> =
   updatedDate: 'updatedDate',
 }
 
-const formatDateTime = (value?: string): string => {
-  if (!value) {
-    return '--'
-  }
-
-  return new Date(value).toLocaleString()
-}
-
 const formatDate = (value?: string): string => {
   if (!value) {
     return '--'
@@ -81,6 +75,8 @@ const defaultFormState = (env: WorkshopListUiEnvironment): AddWorkItemFormState 
 
 const WorkshopListPage = () => {
   const navigate = useNavigate()
+  const { workshopHierarchy, employees } = useAppState()
+  const directorId = employees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id ?? employees[0]?.id ?? 'system'
 
   const [environment] = useState<WorkshopListUiEnvironment>(() =>
     getWorkshopListUiEnvironment(),
@@ -93,6 +89,7 @@ const WorkshopListPage = () => {
   const [searchText, setSearchText] = useState('')
   const [showFilters, setShowFilters] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() => new Set())
 
   const [selectedSort, setSelectedSort] = useState<SortableColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -227,6 +224,30 @@ const WorkshopListPage = () => {
     () => environment.workshopListService.getSummary(filteredRows),
     [environment, filteredRows],
   )
+
+  const filteredHierarchy = useMemo(() => {
+    const visibleWorkItemIds = new Set(filteredRows.map((row) => row.workItemId))
+    return workshopHierarchy
+      .map((order) => ({
+        ...order,
+        artworks: order.artworks
+          .map((artwork) => ({
+            ...artwork,
+            pieces: artwork.pieces.filter((piece) => visibleWorkItemIds.has(piece.workItemId)),
+          }))
+          .filter((artwork) => artwork.pieces.length > 0),
+      }))
+      .filter((order) => order.artworks.length > 0)
+  }, [filteredRows, workshopHierarchy])
+
+  const toggleNode = (nodeId: string): void => {
+    setExpandedNodeIds((current) => {
+      const next = new Set(current)
+      if (next.has(nodeId)) next.delete(nodeId)
+      else next.add(nodeId)
+      return next
+    })
+  }
 
   const stageOptions = useMemo(() => {
     const stages = new Set(allRows.map((row) => row.currentStage))
@@ -543,124 +564,70 @@ const WorkshopListPage = () => {
         </div>
       )}
 
-      {!loading && !errorMessage && filteredRows.length > 0 && (
-        <div className="table-wrap">
-          <table className="workshop-table workshop-v2-table">
-            <thead>
-              <tr>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('priority')}>
-                    Priority
+      {!loading && !errorMessage && filteredHierarchy.length > 0 && (
+        <section className="workshop-tree" aria-label="Production hierarchy">
+          <div className="workshop-tree-header">
+            <span>Production hierarchy</span>
+            <span>Status</span>
+            <button type="button" className="th-sort" onClick={() => onSort('dueDate')}>Due</button>
+            <button type="button" className="th-sort" onClick={() => onSort('priority')}>Priority</button>
+            <span>Complete</span>
+          </div>
+          {filteredHierarchy.map((order) => {
+            const orderExpanded = expandedNodeIds.has(order.id)
+            return (
+              <div key={order.id} className="workshop-tree-order">
+                <div className="workshop-tree-row workshop-tree-level-order">
+                  <button type="button" className="workshop-tree-toggle" onClick={() => toggleNode(order.id)} aria-expanded={orderExpanded}>
+                    <span aria-hidden="true">{orderExpanded ? '-' : '+'}</span>
+                    <strong>{order.label}</strong>
+                    <span className="subtle">{order.customerName}</span>
                   </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('workItemNumber')}>
-                    Work Item #
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('customer')}>
-                    Customer
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('artwork')}>
-                    Artwork
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('product')}>
-                    Product
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('type')}>
-                    Type
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('currentStage')}>
-                    Current Stage
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('assignedEmployee')}>
-                    Assigned Employee
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('dueDate')}>
-                    Due Date
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('status')}>
-                    Status
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('progress')}>
-                    Progress
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="th-sort" onClick={() => onSort('updatedDate')}>
-                    Updated
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.map((row) => (
-                <tr
-                  key={row.workItemId}
-                  className={row.isLate ? 'row-overdue' : row.isBlocked ? 'row-due-soon' : ''}
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => navigate(`/work-items/${encodeURIComponent(row.workItemNumber)}`)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      navigate(`/work-items/${encodeURIComponent(row.workItemNumber)}`)
-                    }
-                  }}
-                  aria-label={`Open details for ${row.workItemNumber}`}
-                >
-                  <td>
-                    <span className="priority-pill">P{row.priority}</span>
-                  </td>
-                  <td>{row.workItemNumber}</td>
-                  <td>{row.customerName}</td>
-                  <td>{row.artworkName}</td>
-                  <td>{row.productName}</td>
-                  <td>{row.workItemType}</td>
-                  <td>{row.currentStage}</td>
-                  <td>{row.assignedEmployee}</td>
-                  <td>
-                    {formatDate(row.dueDate)}
-                    {row.isLate && <span className="inline-indicator late-indicator">Late</span>}
-                  </td>
-                  <td>
-                    {row.status}
-                    {row.isBlocked && (
-                      <span className="inline-indicator blocked-indicator">Blocked</span>
-                    )}
-                  </td>
-                  <td>
-                    <div className="progress-wrap" aria-label={`${row.workflowProgress}% complete`}>
-                      <div
-                        className="progress-bar"
-                        style={{ width: `${Math.max(0, Math.min(100, row.workflowProgress))}%` }}
-                      />
+                  <span>{order.status}</span><span>{formatDate(order.dueDate)}</span>
+                  <span className="priority-pill">P{order.priority}</span><span>{order.percentComplete}%</span>
+                </div>
+                {orderExpanded && order.artworks.map((artwork) => {
+                  const artworkExpanded = expandedNodeIds.has(artwork.id)
+                  return (
+                    <div key={artwork.id}>
+                      <div className="workshop-tree-row workshop-tree-level-artwork">
+                        <button type="button" className="workshop-tree-toggle" onClick={() => toggleNode(artwork.id)} aria-expanded={artworkExpanded}>
+                          <span aria-hidden="true">{artworkExpanded ? '-' : '+'}</span><strong>{artwork.label}</strong>
+                        </button>
+                        <span>{artwork.status}</span><span>{formatDate(artwork.dueDate)}</span>
+                        <span className="priority-pill">P{artwork.priority}</span><span>{artwork.percentComplete}%</span>
+                      </div>
+                      {artworkExpanded && artwork.pieces.map((piece) => {
+                        const pieceExpanded = expandedNodeIds.has(piece.id)
+                        const row = filteredRows.find((candidate) => candidate.workItemId === piece.workItemId)
+                        return (
+                          <div key={piece.id}>
+                            <div className="workshop-tree-row workshop-tree-level-piece">
+                              <button type="button" className="workshop-tree-toggle" onClick={() => toggleNode(piece.id)} aria-expanded={pieceExpanded}>
+                                <span aria-hidden="true">{pieceExpanded ? '-' : '+'}</span><strong>{piece.label}</strong>
+                              </button>
+                              <span>{piece.status}</span><span>{formatDate(piece.dueDate)}</span>
+                              <span className="priority-pill">P{piece.priority}</span><span>{piece.percentComplete}%</span>
+                              {row && <button type="button" className="workshop-tree-open" onClick={() => navigate(`/work-items/${encodeURIComponent(row.workItemNumber)}`)}>Open</button>}
+                            </div>
+                            {pieceExpanded && piece.operations.map((operation) => (
+                              <div key={operation.id} className="workshop-tree-row workshop-tree-level-operation">
+                                <span className="workshop-tree-operation-name">{operation.label}</span>
+                                <span>{operation.status}</span><span>{formatDate(operation.dueDate)}</span>
+                                <span className="priority-pill">P{operation.priority}</span><span>{operation.percentComplete}%</span>
+                                <OperationLifecycleActions operation={operation.operation} role="DIRECTOR" actorEmployeeId={directorId} compact />
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })}
                     </div>
-                    <span className="progress-label">{row.workflowProgress}%</span>
-                  </td>
-                  <td>{formatDateTime(row.updatedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </section>
       )}
 
       {showAddDialog && (

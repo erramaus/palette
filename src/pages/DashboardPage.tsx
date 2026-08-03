@@ -1,9 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ProductionAnalyticsService } from '../services/ProductionAnalyticsService'
-import { ProductionForecastService } from '../services/ProductionForecastService'
-import { loadProductionAnalyticsTargets } from '../services/productionAnalyticsTargets'
-import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { IntelligenceService } from '../services/intelligence/IntelligenceService'
 import { useAppState } from '../state/AppStateContext'
@@ -12,6 +9,9 @@ import type { ProductionMetricDefinition } from '../types/productionAnalytics'
 import { PRODUCTION_STEP_LABELS, PRODUCTION_STEP_SEQUENCE } from '../utils/productionSteps'
 
 const formatPercent = (value: number): string => `${Math.max(0, Math.min(100, Math.round(value)))}%`
+
+const localDateKey = (value: Date): string =>
+  `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
 
 const riskBadgeClass: Record<RiskLevel, string> = {
   INFO: 'badge-risk-info',
@@ -51,11 +51,28 @@ const formatWeeklyMetric = (metric: ProductionMetricDefinition | undefined): str
 
 const DashboardPage = () => {
   const navigate = useNavigate()
-  const { productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
+  const {
+    productionJobs,
+    threeDFilePreparations,
+    battlePlans,
+    employees,
+    activityLogs,
+    operationIntelligence,
+    addActivityLog,
+    analyticsTargets,
+    intelligenceReviewState,
+    setIntelligenceReviewState,
+    scheduleResult,
+  } = useAppState()
   const today = new Date().toISOString().slice(0, 10)
-  const [dismissedRecommendationIds, setDismissedRecommendationIds] = useState<Record<string, boolean>>({})
-  const [reviewedRecommendationIds, setReviewedRecommendationIds] = useState<Record<string, boolean>>({})
-  const [acceptedRecommendationIds, setAcceptedRecommendationIds] = useState<Record<string, boolean>>({})
+  const tomorrowDate = new Date()
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const tomorrow = localDateKey(tomorrowDate)
+  const {
+    dismissedRecommendationIds,
+    reviewedRecommendationIds,
+    acceptedRecommendationIds,
+  } = intelligenceReviewState
   const [intelligenceConfig, setIntelligenceConfig] = useState({
     dueSoonDays: 2,
     stageAgeThresholdDays: 2,
@@ -116,32 +133,14 @@ const DashboardPage = () => {
         battlePlans,
         employees,
         activityLogs,
-        targets: loadProductionAnalyticsTargets(),
+        targets: analyticsTargets,
       }),
-    [productionJobs, battlePlans, employees, activityLogs],
-  )
-
-  const productionForecastService = useMemo(
-    () =>
-      new ProductionForecastService({
-        productionJobs,
-        threeDFilePreparations,
-        battlePlans,
-        employees,
-        activityLogs,
-        config: loadProductionForecastSettings(),
-      }),
-    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs],
+    [productionJobs, battlePlans, employees, activityLogs, analyticsTargets],
   )
 
   const weeklyAnalytics = useMemo(
     () => analyticsService.getWeeklyAnalytics('PREVIOUS_WEEK'),
     [analyticsService],
-  )
-
-  const predictiveForecast = useMemo(
-    () => productionForecastService.getForecast(),
-    [productionForecastService],
   )
 
   const weeklyMetricMap = useMemo(() => {
@@ -159,7 +158,6 @@ const DashboardPage = () => {
   const weeklyStandardMinutes = weeklyMetricMap.get('STANDARD_MINUTES_EARNED')
   const weeklyCarryForwardRate = weeklyMetricMap.get('CARRY_FORWARD_RATE')
   const weeklyLeadTime = weeklyMetricMap.get('MEDIAN_LEAD_TIME')
-  const predictiveSnapshot = predictiveForecast.dashboardSnapshot
 
   const intelligenceForecast = useMemo(() => intelligenceService.getForecast(), [intelligenceService])
   const topRecommendations = useMemo(
@@ -347,6 +345,39 @@ const DashboardPage = () => {
     { label: 'Generate Reports', to: '/reports' },
   ]
 
+  const scheduledDate = (value: string): string => localDateKey(new Date(value))
+  const todaySchedule = scheduleResult.entries.filter((entry) => scheduledDate(entry.plannedStart) === today && entry.status !== 'COMPLETE')
+  const tomorrowSchedule = scheduleResult.entries.filter((entry) => scheduledDate(entry.plannedStart) === tomorrow && entry.status !== 'COMPLETE')
+  const totalDailyCapacity = employees.filter((employee) => employee.active).reduce((sum, employee) => sum + employee.defaultAvailableMinutes, 0)
+  const todayScheduledMinutes = todaySchedule.reduce((sum, entry) => sum + entry.estimatedMinutes, 0)
+  const tomorrowScheduledMinutes = tomorrowSchedule.reduce((sum, entry) => sum + entry.estimatedMinutes, 0)
+  const lateScheduledOperations = scheduleResult.entries.filter((entry) =>
+    entry.status !== 'COMPLETE' && new Date(entry.plannedFinish) > new Date(`${entry.dueDate}T23:59:59`),
+  )
+  const overloadedEmployees = new Set(scheduleResult.conflicts
+    .filter((conflict) => conflict.type === 'EMPLOYEE_OVERLOAD' && conflict.employeeId)
+    .map((conflict) => conflict.employeeId))
+  const workCenterMinutes = todaySchedule.reduce<Record<string, number>>((totals, entry) => ({
+    ...totals,
+    [entry.assignedWorkCenter]: (totals[entry.assignedWorkCenter] ?? 0) + entry.estimatedMinutes,
+  }), {})
+  const largestScheduleBottleneck = Object.entries(workCenterMinutes).sort((left, right) => right[1] - left[1])[0]
+  const tomorrowWorkCenterMinutes = tomorrowSchedule.reduce<Record<string, number>>((totals, entry) => ({
+    ...totals,
+    [entry.assignedWorkCenter]: (totals[entry.assignedWorkCenter] ?? 0) + entry.estimatedMinutes,
+  }), {})
+  const tomorrowBottleneck = Object.entries(tomorrowWorkCenterMinutes).sort((left, right) => right[1] - left[1])[0]
+  const scheduledEmployeeRows = employees.filter((employee) => employee.active).map((employee) => {
+    const entries = scheduleResult.entries
+      .filter((entry) => entry.assignedEmployee === employee.id && entry.status !== 'COMPLETE')
+      .sort((left, right) => left.plannedFinish.localeCompare(right.plannedFinish))
+    return {
+      employee,
+      finish: entries.at(-1)?.plannedFinish,
+      capacity: scheduleResult.employeeCapacity.find((capacity) => capacity.employeeId === employee.id),
+    }
+  })
+
   const openRecommendationTarget = (recommendation: IntelligenceRecommendation): void => {
     if (recommendation.actionTarget.kind === 'BATTLE_PLAN') {
       navigate('/battle-plans')
@@ -357,10 +388,10 @@ const DashboardPage = () => {
   }
 
   const dismissRecommendation = (recommendation: IntelligenceRecommendation): void => {
-    setDismissedRecommendationIds((current) => ({
-      ...current,
-      [recommendation.id]: true,
-    }))
+    setIntelligenceReviewState({
+      ...intelligenceReviewState,
+      dismissedRecommendationIds: { ...dismissedRecommendationIds, [recommendation.id]: true },
+    })
 
     addActivityLog({
       entityType: 'BattlePlan',
@@ -374,10 +405,10 @@ const DashboardPage = () => {
   }
 
   const markRecommendationReviewed = (recommendation: IntelligenceRecommendation): void => {
-    setReviewedRecommendationIds((current) => ({
-      ...current,
-      [recommendation.id]: true,
-    }))
+    setIntelligenceReviewState({
+      ...intelligenceReviewState,
+      reviewedRecommendationIds: { ...reviewedRecommendationIds, [recommendation.id]: true },
+    })
 
     addActivityLog({
       entityType: 'BattlePlan',
@@ -391,10 +422,10 @@ const DashboardPage = () => {
   }
 
   const acceptRecommendation = (recommendation: IntelligenceRecommendation): void => {
-    setAcceptedRecommendationIds((current) => ({
-      ...current,
-      [recommendation.id]: true,
-    }))
+    setIntelligenceReviewState({
+      ...intelligenceReviewState,
+      acceptedRecommendationIds: { ...acceptedRecommendationIds, [recommendation.id]: true },
+    })
 
     addActivityLog({
       entityType: 'BattlePlan',
@@ -498,6 +529,24 @@ const DashboardPage = () => {
         </article>
       </section>
 
+      <section className="panel">
+        <div className="work-item-section-header">
+          <div>
+            <h3>Scheduling Summary</h3>
+            <p className="subtle">Capacity and risk calculated from the production calendar.</p>
+          </div>
+          <span className="badge">{scheduleResult.entries.length} operations scheduled</span>
+        </div>
+        <div className="summary-grid dashboard-kpi-grid">
+          <article className="summary-card"><p>Today's Utilization</p><h3>{formatPercent(totalDailyCapacity > 0 ? (todayScheduledMinutes / totalDailyCapacity) * 100 : 0)}</h3></article>
+          <article className="summary-card"><p>Tomorrow's Utilization</p><h3>{formatPercent(totalDailyCapacity > 0 ? (tomorrowScheduledMinutes / totalDailyCapacity) * 100 : 0)}</h3></article>
+          <article className="summary-card"><p>Late Operations</p><h3>{lateScheduledOperations.length}</h3></article>
+          <article className="summary-card"><p>Overloaded Employees</p><h3>{overloadedEmployees.size}</h3></article>
+          <article className="summary-card"><p>Available Capacity</p><h3>{Math.max(0, totalDailyCapacity - todayScheduledMinutes)} min</h3></article>
+          <article className="summary-card"><p>Largest Bottleneck</p><h3>{largestScheduleBottleneck ? `${largestScheduleBottleneck[0]} · ${largestScheduleBottleneck[1]} min` : '--'}</h3></article>
+        </div>
+      </section>
+
       <section className="summary-grid dashboard-kpi-grid dashboard-weekly-kpi-grid">
         <article className="summary-card summary-card-weekly">
           <p>Weekly On-Time Completion</p>
@@ -586,22 +635,22 @@ const DashboardPage = () => {
 
       <section className="panel dashboard-predictive-panel">
         <div className="work-item-section-header">
-          <h3>Predictive Intelligence</h3>
-          <span className="subtle">Generated {new Date(predictiveForecast.generatedAt).toLocaleString()}</span>
+          <h3>Schedule Forecast</h3>
+          <span className="subtle">Generated {new Date(scheduleResult.generatedAt).toLocaleString()}</span>
         </div>
 
         <div className="dashboard-predictive-grid">
           <article>
             <h4>Jobs Likely To Become Late</h4>
             <ul className="plain-list">
-              {predictiveSnapshot.likelyLateJobs.length > 0 ? (
-                predictiveSnapshot.likelyLateJobs.slice(0, 5).map((job) => (
-                  <li key={job.workItemId}>
+              {lateScheduledOperations.length > 0 ? (
+                lateScheduledOperations.slice(0, 5).map((entry) => (
+                  <li key={entry.operationId}>
                     <div>
-                      <strong>{job.orderNumber}</strong>
-                      <p>{job.riskLevel} • Expected {job.expectedDate} • Due {job.dueDate}</p>
+                      <strong>{entry.orderNumber} • {entry.operation}</strong>
+                      <p>Expected {new Date(entry.plannedFinish).toLocaleDateString()} • Due {new Date(entry.dueDate).toLocaleDateString()}</p>
                     </div>
-                    <span className="subtle">{job.remainingEstimatedMinutes} min</span>
+                    <span className="subtle">{entry.estimatedMinutes} min</span>
                   </li>
                 ))
               ) : (
@@ -618,14 +667,14 @@ const DashboardPage = () => {
           <article>
             <h4>Likely Carry-Forward Operations</h4>
             <ul className="plain-list">
-              {predictiveSnapshot.likelyCarryForwardOperations.length > 0 ? (
-                predictiveSnapshot.likelyCarryForwardOperations.slice(0, 5).map((item) => (
-                  <li key={item.taskId}>
+              {tomorrowSchedule.length > 0 ? (
+                tomorrowSchedule.slice(0, 5).map((entry) => (
+                  <li key={entry.operationId}>
                     <div>
-                      <strong>{item.orderNumber} • {item.stage}</strong>
-                      <p>{item.probabilityBand} probability • {item.recommendedAction}</p>
+                      <strong>{entry.orderNumber} • {entry.operation}</strong>
+                      <p>{entry.confidence} confidence • scheduled {new Date(entry.plannedStart).toLocaleTimeString()}</p>
                     </div>
-                    <span className="subtle">{item.likelyCarryForwardMinutes} min</span>
+                    <span className="subtle">{entry.estimatedMinutes} min</span>
                   </li>
                 ))
               ) : (
@@ -641,19 +690,11 @@ const DashboardPage = () => {
 
           <article>
             <h4>Projected Bottleneck</h4>
-            {predictiveSnapshot.probableBottleneckTomorrow ? (
+            {tomorrowBottleneck ? (
               <div className="dashboard-predictive-callout">
-                <strong>{predictiveSnapshot.probableBottleneckTomorrow.stage}</strong>
-                <p>
-                  {Math.max(
-                    0,
-                    predictiveSnapshot.probableBottleneckTomorrow.predictedActualMinutes -
-                      predictiveSnapshot.probableBottleneckTomorrow.availableSkilledCapacityMinutes,
-                  )} min above skilled capacity tomorrow
-                </p>
-                <span className="subtle">
-                  {predictiveSnapshot.probableBottleneckTomorrow.confidence} confidence
-                </span>
+                <strong>{tomorrowBottleneck[0]}</strong>
+                <p>{tomorrowBottleneck[1]} scheduled minutes tomorrow</p>
+                <span className="subtle">Derived from production calendar entries</span>
               </div>
             ) : (
               <p className="subtle">No strong bottleneck projection for tomorrow.</p>
@@ -663,17 +704,17 @@ const DashboardPage = () => {
           <article>
             <h4>Projected Worker Finish Times</h4>
             <ul className="plain-list">
-              {predictiveForecast.workerFinishProjections.length > 0 ? (
-                predictiveForecast.workerFinishProjections.slice(0, 6).map((worker) => (
-                  <li key={worker.employeeId}>
+              {scheduledEmployeeRows.length > 0 ? (
+                scheduledEmployeeRows.slice(0, 6).map(({ employee, finish, capacity }) => (
+                  <li key={employee.id}>
                     <div>
-                      <strong>{worker.employeeName}</strong>
-                      <p>Projected finish {worker.predictedFinishTime}</p>
+                      <strong>{employee.name}</strong>
+                      <p>Projected finish {finish ? new Date(finish).toLocaleString() : '--'}</p>
                     </div>
                     <span className="subtle">
-                      {worker.projectedOverloadMinutes > 0
-                        ? `${worker.projectedOverloadMinutes} min over`
-                        : `${worker.projectedIdleMinutes} min available`}
+                      {capacity?.overtimeMinutes
+                        ? `${capacity.overtimeMinutes} min overtime`
+                        : `${capacity?.remainingMinutes ?? employee.defaultAvailableMinutes} min available`}
                     </span>
                   </li>
                 ))
@@ -725,6 +766,23 @@ const DashboardPage = () => {
         </div>
 
         <div className="dashboard-intelligence-grid">
+          <article className="dashboard-intelligence-block">
+            <h4>Operation Intelligence</h4>
+            <ul className="plain-list">
+              {operationIntelligence.slice(0, 3).map((signal) => (
+                <li key={signal.operation}>
+                  <div>
+                    <strong>{signal.operation}</strong>
+                    <p>{signal.recommendation}</p>
+                  </div>
+                  <span className={`badge ${signal.blocked > 0 ? riskBadgeClass.HIGH : riskBadgeClass.INFO}`}>
+                    {signal.queued} queued
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
           <article className="dashboard-intelligence-block">
             <h4>Current Bottleneck</h4>
             {intelligenceFoundation.bottleneck ? (

@@ -7,6 +7,7 @@ import WorkshopListPage from './pages/WorkshopListPage'
 import BattlePlansPage from './pages/BattlePlansPage'
 import OrdersPage from './pages/OrdersPage'
 import TagsPage from './pages/TagsPage'
+import TimelinePage from './pages/TimelinePage'
 import InventoryPage from './pages/InventoryPage'
 import ShippingPage from './pages/ShippingPage'
 import ReportsPage from './pages/ReportsPage'
@@ -37,6 +38,7 @@ function App() {
             <Route path="loading" element={<LoadingPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="tags" element={<TagsPage />} />
+            <Route path="timeline" element={<TimelinePage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="shipping" element={<ShippingPage />} />
             <Route path="reports" element={<ReportsPage />} />

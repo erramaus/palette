@@ -1,6 +1,10 @@
 import { mockEmployees } from '../data/mockEmployees'
 import { mockProductionJobs } from '../data/mockProductionJobs'
 import type { ProductType, ProductionJob } from '../types/production'
+import {
+  ProductionPipelineService,
+  type ProductionPipelineResult,
+} from './ProductionPipelineService'
 import { WorkItemService, type WorkflowContext } from './WorkItemService'
 import { WorkflowService } from './WorkflowService'
 import {
@@ -23,8 +27,12 @@ export interface WorkshopListUiEnvironment {
   products: Array<NamedEntity & { code: string; type: ProductType }>
   departments: NamedEntity[]
   employees: NamedEntity[]
-  ingestProductionJob: (job: ProductionJob) => { workItemId: string; artworkId: string }
+  productionPipelineService: ProductionPipelineService
+  ingestProductionJob: (job: ProductionJob) => ProductionPipelineResult & { artworkId: string }
   getWorkItemIdForOrderNumber: (orderNumber: string) => string | undefined
+  listArtworks: () => NamedEntity[]
+  replaceArtworks: (artworks: NamedEntity[]) => void
+  replaceWorkflowContexts: (contexts: Record<string, WorkflowContext>) => void
 }
 
 const createId = (prefix: string, value: string): string =>
@@ -203,47 +211,76 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
   const departments = new Map<string, NamedEntity>()
   const employees = new Map<string, NamedEntity>()
   const workItemIdByOrderNumber = new Map<string, string>()
+  const workItemIdByPieceKey = new Map<string, string>()
 
   for (const employee of mockEmployees) {
     employees.set(employee.id, { id: employee.id, name: employee.name })
   }
 
-  const ingestProductionJob = (job: ProductionJob): { workItemId: string; artworkId: string } => {
-    const existingWorkItemId = workItemIdByOrderNumber.get(job.orderNumber)
+  const productionPipelineService = new ProductionPipelineService({
+    createWorkItem: (input) => {
+      const customerId = createId('customer', input.customerName)
+      const artworkId = createId('artwork', `${input.customerName}-${input.artworkName}`)
+      const productId = createId('product', `${input.productType}-${input.artworkName}-${input.width}x${input.height}`)
+      const departmentName = input.departmentName ?? 'Production'
+      const departmentId = createId('department', departmentName)
+
+      customers.set(customerId, { id: customerId, name: input.customerName })
+      artworks.set(artworkId, { id: artworkId, name: input.artworkName })
+      products.set(productId, {
+        id: productId,
+        name: input.productName ?? `${input.productType.replaceAll('_', ' ')} Product`,
+        code: inferProductCode(input.productType),
+        type: input.productType,
+      })
+      departments.set(departmentId, { id: departmentId, name: departmentName })
+
+      const workflowContext = workflowForProductType(input.productType, workflowContexts)
+      return workItemService.createWorkItem({
+        workItemNumber: `WI-${input.orderNumber}-${workItemIdByOrderNumber.size + 1}`,
+        type: input.productType,
+        workflowContext,
+        customerId,
+        orderId: input.orderNumber,
+        artworkId,
+        productId,
+        priority: input.priority,
+        dueDate: input.dueDate,
+        assignedDepartmentId: departmentId,
+        assignedEmployeeId: input.assignedEmployeeId,
+        notes: input.notes,
+        tags: input.operationNames,
+        customFields: {
+          ...input.customFields,
+          orientation: input.orientation,
+        },
+      })
+    },
+  })
+
+  const ingestProductionJob = (job: ProductionJob): ProductionPipelineResult & { artworkId: string } => {
+    const pieceKey = `${job.orderNumber}:${job.artworkTitle}:${job.productType}:${job.width}x${job.height}`
+    const existingWorkItemId = workItemIdByPieceKey.get(pieceKey)
     if (existingWorkItemId) {
+      const workItem = workItemService.getWorkItemById(existingWorkItemId)
+      if (!workItem) throw new Error(`WorkItem not found for order ${job.orderNumber}`)
       return {
-        workItemId: existingWorkItemId,
-        artworkId: createId('artwork', `${job.customerName}-${job.artworkTitle}`),
+        workItem,
+        operations: productionPipelineService.getOperations(workItem),
+        tags: productionPipelineService.buildTags(workItem),
+        artworkId: workItem.artworkId ?? createId('artwork', `${job.customerName}-${job.artworkTitle}`),
       }
     }
-
-    const customerId = createId('customer', job.customerName)
     const artworkId = createId('artwork', `${job.customerName}-${job.artworkTitle}`)
-    const productId = createId('product', `${job.productType}-${job.artworkTitle}`)
-
     const departmentName = inferDepartment(job)
-    const departmentId = createId('department', departmentName)
-
-    customers.set(customerId, { id: customerId, name: job.customerName })
-    artworks.set(artworkId, { id: artworkId, name: job.artworkTitle })
-    products.set(productId, {
-      id: productId,
-      name: `${job.productType.replaceAll('_', ' ')} Product`,
-      code: inferProductCode(job.productType),
-      type: job.productType,
-    })
-    departments.set(departmentId, { id: departmentId, name: departmentName })
-
-    const workflowContext = workflowForProductType(job.productType, workflowContexts)
-
-    const created = workItemService.createWorkItem({
-      workItemNumber: `WI-${job.orderNumber}`,
-      type: job.productType,
-      workflowContext,
-      customerId,
-      orderId: job.orderNumber,
-      artworkId,
-      productId,
+    const result = productionPipelineService.importOrder({
+      orderNumber: job.orderNumber,
+      customerName: job.customerName,
+      artworkName: job.artworkTitle,
+      productType: job.productType,
+      width: job.width,
+      height: job.height,
+      orientation: job.width === job.height ? 'SQUARE' : job.width > job.height ? 'HORIZ' : 'VERT',
       priority:
         job.priority === 'ORIGINALS'
           ? 100
@@ -251,30 +288,31 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
             ? 80
             : 60,
       dueDate: job.dueDate,
-      assignedDepartmentId: departmentId,
       assignedEmployeeId: job.assignedWorkerId,
       notes: [job.notes],
-      tags: [job.productType, normalize(departmentName).replaceAll(' ', '_').toUpperCase()],
+      departmentName,
       customFields: {
-        orderNumber: job.orderNumber,
         frameStyle: job.frameInfo,
-        alignment: job.width === job.height ? 'SQUARE' : job.width > job.height ? 'HORIZ' : 'VERT',
+        departmentTag: normalize(departmentName).replaceAll(' ', '_').toUpperCase(),
         packagingMethod: job.orderNumber.startsWith('GAL-') ? 'GALLERY' : 'STANDARD_BOX',
       },
     })
 
-    workItemIdByOrderNumber.set(job.orderNumber, created.id)
+    workItemIdByPieceKey.set(pieceKey, result.workItem.id)
+    if (!workItemIdByOrderNumber.has(job.orderNumber)) {
+      workItemIdByOrderNumber.set(job.orderNumber, result.workItem.id)
+    }
 
     if (job.onHold) {
-      workItemService.updateWorkItem(created.id, { status: 'BLOCKED' })
+      workItemService.updateWorkItem(result.workItem.id, { status: 'BLOCKED' })
     }
 
     if (job.steps.SHIPPED === 'COMPLETE') {
-      workItemService.updateWorkItem(created.id, { status: 'COMPLETE' })
+      workItemService.updateWorkItem(result.workItem.id, { status: 'COMPLETE' })
     }
 
     return {
-      workItemId: created.id,
+      ...result,
       artworkId,
     }
   }
@@ -313,8 +351,22 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     products: [...products.values()].sort((a, b) => a.name.localeCompare(b.name)),
     departments: [...departments.values()].sort((a, b) => a.name.localeCompare(b.name)),
     employees: [...employees.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    productionPipelineService,
     ingestProductionJob,
     getWorkItemIdForOrderNumber: (orderNumber: string) => workItemIdByOrderNumber.get(orderNumber),
+    listArtworks: () => [...artworks.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    replaceArtworks: (nextArtworks) => {
+      artworks.clear()
+      nextArtworks.forEach((artwork) => artworks.set(artwork.id, artwork))
+    },
+    replaceWorkflowContexts: (nextContexts) => {
+      Object.keys(workflowContexts).forEach((id) => delete workflowContexts[id])
+      workflowContextById.clear()
+      Object.entries(nextContexts).forEach(([id, context]) => {
+        workflowContexts[id] = context
+        workflowContextById.set(id, context)
+      })
+    },
   }
 }
 

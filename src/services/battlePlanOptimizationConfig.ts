@@ -28,96 +28,21 @@ export const DEFAULT_OPTIMIZATION_CONSTRAINTS: OptimizationConstraint = {
   scenarioMode: 'NONE',
 }
 
-const STORAGE_KEY = 'palette.battlePlanOptimization.v1'
-
-const hasWindow = (): boolean => typeof window !== 'undefined'
+let currentWeights: OptimizationWeights = DEFAULT_OPTIMIZATION_WEIGHTS
+let currentConstraints: OptimizationConstraint = DEFAULT_OPTIMIZATION_CONSTRAINTS
 
 export const loadOptimizationWeights = (): OptimizationWeights => {
-  if (!hasWindow()) {
-    return DEFAULT_OPTIMIZATION_WEIGHTS
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
-      return DEFAULT_OPTIMIZATION_WEIGHTS
-    }
-
-    const parsed = JSON.parse(raw) as { weights?: Partial<OptimizationWeights> }
-    return {
-      ...DEFAULT_OPTIMIZATION_WEIGHTS,
-      ...(parsed.weights ?? {}),
-    }
-  } catch {
-    return DEFAULT_OPTIMIZATION_WEIGHTS
-  }
+  return currentWeights
 }
 
 export const saveOptimizationWeights = (weights: OptimizationWeights): void => {
-  if (!hasWindow()) {
-    return
-  }
-
-  const existing = hasWindow() ? window.localStorage.getItem(STORAGE_KEY) : null
-  let parsed: { constraints?: Partial<OptimizationConstraint>; weights?: Partial<OptimizationWeights> } = {}
-  if (existing) {
-    try {
-      parsed = JSON.parse(existing) as typeof parsed
-    } catch {
-      parsed = {}
-    }
-  }
-
-  window.localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      ...parsed,
-      weights,
-    }),
-  )
+  currentWeights = weights
 }
 
 export const loadDefaultOptimizationConstraints = (): OptimizationConstraint => {
-  if (!hasWindow()) {
-    return DEFAULT_OPTIMIZATION_CONSTRAINTS
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
-      return DEFAULT_OPTIMIZATION_CONSTRAINTS
-    }
-
-    const parsed = JSON.parse(raw) as { constraints?: Partial<OptimizationConstraint> }
-    return {
-      ...DEFAULT_OPTIMIZATION_CONSTRAINTS,
-      ...(parsed.constraints ?? {}),
-    }
-  } catch {
-    return DEFAULT_OPTIMIZATION_CONSTRAINTS
-  }
+  return currentConstraints
 }
 
 export const saveDefaultOptimizationConstraints = (constraints: OptimizationConstraint): void => {
-  if (!hasWindow()) {
-    return
-  }
-
-  const existing = hasWindow() ? window.localStorage.getItem(STORAGE_KEY) : null
-  let parsed: { constraints?: Partial<OptimizationConstraint>; weights?: Partial<OptimizationWeights> } = {}
-  if (existing) {
-    try {
-      parsed = JSON.parse(existing) as typeof parsed
-    } catch {
-      parsed = {}
-    }
-  }
-
-  window.localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      ...parsed,
-      constraints,
-    }),
-  )
+  currentConstraints = constraints
 }

@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BattlePlanOptimizationService } from '../services/BattlePlanOptimizationService'
-import { ProductionForecastService } from '../services/ProductionForecastService'
+import { generateBattlePlansFromOperations } from '../services/ProductionPipelineService'
 import {
   DEFAULT_OPTIMIZATION_CONSTRAINTS,
   DEFAULT_OPTIMIZATION_WEIGHTS,
-  loadDefaultOptimizationConstraints,
-  loadOptimizationWeights,
-  saveDefaultOptimizationConstraints,
-  saveOptimizationWeights,
 } from '../services/battlePlanOptimizationConfig'
-import { loadProductionForecastSettings } from '../services/productionForecastSettings'
 import StatusBadge from '../components/common/StatusBadge'
+import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
 import { useAppState } from '../state/AppStateContext'
 import type { BattlePlan, BattlePlanTask } from '../types/battlePlans'
 import type {
@@ -32,7 +28,6 @@ import type {
 } from '../types/battlePlanWorkflow'
 import {
   canApprovePlan,
-  generateDailyBattlePlans,
   regenerateBattlePlans,
   type BacklogReason,
   type GenerationSummary,
@@ -123,7 +118,6 @@ const BattlePlansPage = () => {
   const {
     employees,
     productionJobs,
-    threeDFilePreparations,
     battlePlans,
     createBattlePlan,
     replaceBattlePlansForDate,
@@ -131,6 +125,12 @@ const BattlePlansPage = () => {
     completeProductionStep,
     addActivityLog,
     activityLogs,
+    operationBattlePlanItems,
+    productionOperations,
+    scheduleResult,
+    optimizationWeights: savedOptimizationWeights,
+    optimizationConstraints: savedOptimizationConstraints,
+    saveOptimizationSettings: persistOptimizationSettings,
   } = useAppState()
 
   const today = formatLocalDate(new Date())
@@ -140,28 +140,29 @@ const BattlePlansPage = () => {
     [employees],
   )
 
-  const forecastService = useMemo(
-    () =>
-      new ProductionForecastService({
-        productionJobs,
-        threeDFilePreparations,
-        battlePlans,
-        employees,
-        activityLogs,
-        config: loadProductionForecastSettings(),
-      }),
-    [productionJobs, threeDFilePreparations, battlePlans, employees, activityLogs],
+  const scheduleEntryByOperationId = useMemo(
+    () => new Map(scheduleResult.entries.map((entry) => [entry.operationId, entry])),
+    [scheduleResult.entries],
   )
-
-  const predictiveForecast = useMemo(() => forecastService.getForecast(), [forecastService])
-  const carryForwardByTaskId = useMemo(
-    () => new Map(predictiveForecast.carryForwardPredictions.map((item) => [item.taskId, item])),
-    [predictiveForecast.carryForwardPredictions],
+  const scheduleEntryByTaskId = useMemo(
+    () => new Map(battlePlans.flatMap((plan) => plan.tasks.map((task) => [
+      task.id,
+      task.productionOperationId ? scheduleEntryByOperationId.get(task.productionOperationId) : undefined,
+    ] as const))),
+    [battlePlans, scheduleEntryByOperationId],
   )
-  const workerProjectionByEmployeeId = useMemo(
-    () => new Map(predictiveForecast.workerFinishProjections.map((item) => [item.employeeId, item])),
-    [predictiveForecast.workerFinishProjections],
+  const capacityByEmployeeId = useMemo(
+    () => new Map(scheduleResult.employeeCapacity.map((capacity) => [capacity.employeeId, capacity])),
+    [scheduleResult.employeeCapacity],
   )
+  const formatLatestScheduledFinish = (taskIds: string[]): string => {
+    const latestFinish = taskIds
+      .map((taskId) => scheduleEntryByTaskId.get(taskId)?.plannedFinish)
+      .filter((finish): finish is string => Boolean(finish))
+      .sort()
+      .at(-1)
+    return latestFinish ? new Date(latestFinish).toLocaleString() : '--'
+  }
 
   const [generationDate, setGenerationDate] = useState(today)
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
@@ -190,13 +191,13 @@ const BattlePlansPage = () => {
   const [proposalSelectedEmployeeId, setProposalSelectedEmployeeId] = useState('')
   const [proposalSelectedOperationIds, setProposalSelectedOperationIds] = useState<Record<string, boolean>>({})
   const [proposalEditMode, setProposalEditMode] = useState(false)
-  const [optimizationWeights, setOptimizationWeights] = useState<OptimizationWeights>(() => loadOptimizationWeights())
-  const [optimizationConstraints, setOptimizationConstraints] = useState<OptimizationConstraint>(() => loadDefaultOptimizationConstraints())
+  const [optimizationWeights, setOptimizationWeights] = useState<OptimizationWeights>(savedOptimizationWeights)
+  const [optimizationConstraints, setOptimizationConstraints] = useState<OptimizationConstraint>(savedOptimizationConstraints)
   const [excludedEmployeeDraft, setExcludedEmployeeDraft] = useState(
-    () => loadDefaultOptimizationConstraints().excludedEmployeeIds.join(', '),
+    () => savedOptimizationConstraints.excludedEmployeeIds.join(', '),
   )
   const [protectedWorkItemsDraft, setProtectedWorkItemsDraft] = useState(
-    () => loadDefaultOptimizationConstraints().protectedWorkItemIds.join(', '),
+    () => savedOptimizationConstraints.protectedWorkItemIds.join(', '),
   )
   const [optimizationSettingsStatus, setOptimizationSettingsStatus] = useState('')
   const [addGroupDraft, setAddGroupDraft] = useState<AddTaskGroupDraft>({
@@ -323,6 +324,12 @@ const BattlePlansPage = () => {
   const selectedProposalOperationCount = Object.values(proposalSelectedOperationIds).filter(Boolean).length
   const isDirectorView = selectedTab?.kind === 'DIRECTOR'
   const isWorkerView = selectedTab?.kind === 'WORKER'
+  const selectedLifecycleOperations = useMemo(() => {
+    if (isDirectorView) return productionOperations
+    if (!isWorkerView || !selectedPlan) return []
+    const operationIds = new Set(selectedPlan.tasks.map((task) => task.productionOperationId).filter(Boolean))
+    return productionOperations.filter((operation) => operationIds.has(operation.id))
+  }, [isDirectorView, isWorkerView, productionOperations, selectedPlan])
   const plannedMinutes = selectedPlan ? calculatePlannedMinutes(selectedPlan.tasks) : 0
   const completedMinutes = selectedPlan ? calculateCompletedMinutes(selectedPlan.tasks) : 0
   const remainingMinutes = selectedPlan
@@ -474,13 +481,12 @@ const BattlePlansPage = () => {
       }
     }
 
-    const generated = generateDailyBattlePlans({
+    const generated = generateBattlePlansFromOperations({
       date: generationDate,
-      jobs: productionJobs,
+      operations: operationBattlePlanItems,
       employees,
       workerConfigs,
-      existingPlans: battlePlans,
-      threeDFilePreparations,
+      directorId: director.id,
     })
 
     const finalResult = isRegenerate
@@ -923,8 +929,7 @@ const BattlePlansPage = () => {
   }
 
   const saveOptimizationSettings = (): void => {
-    saveDefaultOptimizationConstraints(optimizationConstraints)
-    saveOptimizationWeights(optimizationWeights)
+    persistOptimizationSettings(optimizationWeights, optimizationConstraints)
     setOptimizationSettingsStatus('Optimization settings saved.')
   }
 
@@ -933,8 +938,7 @@ const BattlePlansPage = () => {
     setOptimizationWeights(DEFAULT_OPTIMIZATION_WEIGHTS)
     setExcludedEmployeeDraft('')
     setProtectedWorkItemsDraft('')
-    saveDefaultOptimizationConstraints(DEFAULT_OPTIMIZATION_CONSTRAINTS)
-    saveOptimizationWeights(DEFAULT_OPTIMIZATION_WEIGHTS)
+    persistOptimizationSettings(DEFAULT_OPTIMIZATION_WEIGHTS, DEFAULT_OPTIMIZATION_CONSTRAINTS)
     setOptimizationSettingsStatus('Optimization settings reset to defaults.')
   }
 
@@ -1326,6 +1330,30 @@ const BattlePlansPage = () => {
         </div>
       </div>
 
+      <section className="panel">
+        <div className="work-item-section-header">
+          <div>
+            <h3>Production Operation Queue</h3>
+            <p className="subtle">Automatic Battle Plan intake generated from WorkItem operations.</p>
+          </div>
+          <span className="badge">Newest 20 of {operationBattlePlanItems.length}</span>
+        </div>
+        <div className="table-wrap">
+          <table className="workshop-table">
+            <thead><tr><th>Assigned</th><th>Operation</th><th>Order</th><th>Piece</th><th>Estimate</th><th>Due</th><th>Status</th></tr></thead>
+            <tbody>
+              {operationBattlePlanItems.slice(-20).reverse().map((item) => (
+                <tr key={item.operationId}>
+                  <td>{item.assignedEmployee !== 'UNASSIGNED' ? getEmployeeName(employees, item.assignedEmployee) : 'Unassigned'}</td>
+                  <td><strong>{item.operation}</strong></td><td>{item.orderNumber}</td><td>{item.pieceLabel}</td>
+                  <td>{item.estimatedMinutes} min</td><td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '--'}</td><td>{item.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <div className="panel battle-plan-tabs-panel">
         <div className="bp-tab-row" role="tablist" aria-label="Employee tabs">
           {tabs.map((tab) => (
@@ -1446,6 +1474,31 @@ const BattlePlansPage = () => {
             <span>Capacity used: {capacityUsed}%</span>
             <span>Carry-forward count: {carryForwardCount}</span>
           </div>
+
+          <section className="bp-operation-lifecycle" aria-label={`${isDirectorView ? 'Director' : 'Worker'} operation lifecycle controls`}>
+            <div className="work-item-section-header">
+              <div>
+                <h4>{isDirectorView ? 'Director Operation Controls' : 'Worker Operation Execution'}</h4>
+                <p className="subtle">Actions update every production projection from the operation source record.</p>
+              </div>
+              <span className="badge">{selectedLifecycleOperations.length} operations</span>
+            </div>
+            <div className="bp-operation-lifecycle-list">
+              {selectedLifecycleOperations.map((operation) => (
+                <article key={operation.id} className="bp-operation-lifecycle-row">
+                  <div><strong>{operation.name}</strong><p className="subtle">{operation.status} · {operation.estimatedMinutes} min</p></div>
+                  <OperationLifecycleActions
+                    operation={operation}
+                    role={isDirectorView ? 'DIRECTOR' : 'WORKER'}
+                    actorEmployeeId={selectedEmployeeId}
+                    battlePlanDate={generationDate}
+                    compact
+                  />
+                </article>
+              ))}
+              {selectedLifecycleOperations.length === 0 && <p className="subtle">No pipeline operations are attached to this plan.</p>}
+            </div>
+          </section>
 
           <section className="bp-note-panel">
             <p>{BP_STANDING_NOTE}</p>
@@ -1860,7 +1913,7 @@ const BattlePlansPage = () => {
               ) : null}
 
               <article className="panel">
-                <h4>Predictive Director View</h4>
+                <h4>Schedule Director View</h4>
                 <div className="table-wrap">
                   <table className="workshop-table">
                     <thead>
@@ -1874,14 +1927,20 @@ const BattlePlansPage = () => {
                     </thead>
                     <tbody>
                       {workers.map((worker) => {
-                        const projection = workerProjectionByEmployeeId.get(worker.id)
+                        const capacity = capacityByEmployeeId.get(worker.id)
+                        const scheduledEntries = scheduleResult.entries
+                          .filter((entry) => entry.assignedEmployee === worker.id && entry.status !== 'COMPLETE')
+                          .sort((left, right) => left.plannedFinish.localeCompare(right.plannedFinish))
+                        const carryForwardCount = scheduledEntries.filter(
+                          (entry) => entry.plannedStart.slice(0, 10) > generationDate,
+                        ).length
                         return (
                           <tr key={worker.id}>
                             <td>{worker.name}</td>
-                            <td>{projection?.predictedFinishTime ?? '--'}</td>
-                            <td>{projection?.likelyCarryForwardTaskIds.length ?? 0}</td>
-                            <td>{projection?.unassignedCapacityMinutes ?? worker.defaultAvailableMinutes}</td>
-                            <td>{projection?.projectedOverloadMinutes ?? 0}</td>
+                            <td>{scheduledEntries.length ? new Date(scheduledEntries.at(-1)!.plannedFinish).toLocaleString() : '--'}</td>
+                            <td>{carryForwardCount}</td>
+                            <td>{capacity?.remainingMinutes ?? worker.defaultAvailableMinutes}</td>
+                            <td>{capacity?.overtimeMinutes ?? 0}</td>
                           </tr>
                         )
                       })}
@@ -1891,22 +1950,22 @@ const BattlePlansPage = () => {
 
                 <h4>Suggested Reassignments</h4>
                 <ul className="plain-list">
-                  {predictiveForecast.capacityRecommendations.length > 0 ? (
-                    predictiveForecast.capacityRecommendations.slice(0, 5).map((item) => (
-                      <li key={item.id}>
+                  {scheduleResult.conflicts.length > 0 ? (
+                    scheduleResult.conflicts.slice(0, 5).map((conflict) => (
+                      <li key={conflict.id}>
                         <div>
-                          <strong>{item.summary}</strong>
-                          <p>{item.productionImpact}</p>
-                          <p className="subtle">Confidence: {item.confidence}</p>
+                          <strong>{conflict.type.replaceAll('_', ' ')}</strong>
+                          <p>{conflict.message}</p>
+                          <p className="subtle">Severity: {conflict.severity}</p>
                         </div>
-                        <span className="subtle">{item.estimatedMinutesAffected} min</span>
+                        <span className="subtle">{conflict.minutes ? `${conflict.minutes} min` : ''}</span>
                       </li>
                     ))
                   ) : (
                     <li>
                       <div>
                         <strong>No reassignment recommendations</strong>
-                        <p>Current projected load is balanced within configured thresholds.</p>
+                        <p>The production schedule has no active conflicts.</p>
                       </div>
                     </li>
                   )}
@@ -1984,7 +2043,7 @@ const BattlePlansPage = () => {
                     <p>Status: {formatGroupUiStatus(getGroupUiStatus(selectedPlan.id, currentOperation))}</p>
                     <p>
                       Likely Completion Time:{' '}
-                      {workerProjectionByEmployeeId.get(selectedPlan.assignedWorkerId)?.predictedFinishTime ?? '--'}
+                      {formatLatestScheduledFinish(currentOperation.workItems.map((item) => item.taskId))}
                     </p>
                   </div>
                   <button
@@ -2011,18 +2070,23 @@ const BattlePlansPage = () => {
                   {selectedPlan.tasks
                     .filter((task) => !task.completed)
                     .map((task) => {
-                      const prediction = carryForwardByTaskId.get(task.id)
+                      const scheduledEntry = scheduleEntryByTaskId.get(task.id)
+                      const carriesForward = Boolean(
+                        scheduledEntry && scheduledEntry.plannedStart.slice(0, 10) > selectedPlan.date,
+                      )
                       return (
                         <li key={task.id}>
                           <div>
                             <strong>{task.description}</strong>
                             <p>
-                              {prediction
-                                ? `${prediction.probabilityBand} probability • likely ${prediction.likelyCarryForwardMinutes} min`
-                                : 'INSUFFICIENT_DATA'}
+                              {scheduledEntry
+                                ? carriesForward
+                                  ? `Scheduled ${new Date(scheduledEntry.plannedStart).toLocaleString()} • ${scheduledEntry.estimatedMinutes} min`
+                                  : 'Scheduled within this plan date'
+                                : 'Not currently scheduled'}
                             </p>
                           </div>
-                          <span className="subtle">{prediction?.recommendedAction ?? 'Collect more actual completion history.'}</span>
+                          <span className="subtle">{scheduledEntry?.scheduleReason ?? 'Review scheduling conflicts.'}</span>
                         </li>
                       )
                     })}

@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
 	ProductionAnalyticsService,
-	loadProductionAnalyticsTargets,
-	saveProductionAnalyticsTargets,
 } from '../services'
 import { useAppState } from '../state/AppStateContext'
 import type {
@@ -54,13 +52,13 @@ const weekOffsetOptions = [
 ]
 
 const ReportsPage = () => {
-	const { productionJobs, battlePlans, employees, activityLogs, addActivityLog } = useAppState()
+	const { productionJobs, battlePlans, employees, activityLogs, analyticsTargets, saveAnalyticsTargets, addActivityLog } = useAppState()
 
 	const [weekOffset, setWeekOffset] = useState(0)
 	const [comparisonMode, setComparisonMode] = useState<'PREVIOUS_WEEK' | 'ROLLING_4_WEEK' | 'BASELINE_8_WEEK'>('PREVIOUS_WEEK')
 	const [excludedMetricKeys, setExcludedMetricKeys] = useState<Record<string, boolean>>({})
 	const [acknowledgedQualityKeys, setAcknowledgedQualityKeys] = useState<Record<string, boolean>>({})
-	const [targetsDraft, setTargetsDraft] = useState<ProductionAnalyticsTargets>(() => loadProductionAnalyticsTargets())
+	const [targetsDraft, setTargetsDraft] = useState<ProductionAnalyticsTargets>(analyticsTargets)
 
 	const anchorDate = useMemo(() => {
 		const date = new Date()
@@ -115,17 +113,7 @@ const ReportsPage = () => {
 	}, [battlePlans, currentWeek.weekStartDate, currentWeek.weekEndDate])
 
 	const saveTargets = (): void => {
-		saveProductionAnalyticsTargets(targetsDraft)
-		addActivityLog({
-			entityType: 'BattlePlan',
-			entityId: 'WEEKLY_ANALYTICS_TARGETS',
-			action: 'TARGET_CHANGED',
-			metadata: {
-				onTimeCompletionRateTarget: targetsDraft.onTimeCompletionRateTarget,
-				scheduleAttainmentTarget: targetsDraft.scheduleAttainmentTarget,
-				firstPassQualityTarget: targetsDraft.firstPassQualityTarget,
-			},
-		})
+		saveAnalyticsTargets(targetsDraft)
 	}
 
 	const generateSnapshotLog = (): void => {

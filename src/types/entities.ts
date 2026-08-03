@@ -415,6 +415,15 @@ export type ActivityAction =
   | 'THREE_D_FILE_PREPARATION_CREATED'
   | 'THREE_D_FILE_PREPARATION_UPDATED'
   | 'THREE_D_FILE_PREPARATION_VALIDATED'
+  | 'OPERATION_ASSIGNED'
+  | 'OPERATION_UNASSIGNED'
+  | 'OPERATION_STARTED'
+  | 'OPERATION_BLOCKED'
+  | 'OPERATION_UNBLOCKED'
+  | 'OPERATION_COMPLETED'
+  | 'OPERATION_REOPENED'
+  | 'OPERATION_CARRIED_FORWARD'
+  | 'OPERATION_DEPENDENCY_OVERRIDDEN'
 
 export type ActivityEntityType =
   | 'Customer'
@@ -430,6 +439,7 @@ export type ActivityEntityType =
   | 'WorkflowTransition'
   | 'WorkflowRule'
   | 'ProductionStep'
+  | 'ProductionOperation'
   | 'Employee'
   | 'Department'
   | 'Shipment'
