@@ -13,6 +13,7 @@ const pageTitles: Record<string, string> = {
   '/shipping': 'Shipping',
   '/reports': 'Reports',
   '/settings': 'Settings',
+  '/import-center': 'Import Center',
   '/tools': 'Tools',
   '/tools/print-table-optimizer': 'Print Table Optimizer',
 }

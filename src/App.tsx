@@ -15,6 +15,7 @@ import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import LoadingPage from './pages/LoadingPage'
 import WorkItemDetailPage from './pages/WorkItemDetailPage'
+import ImportCenterPage from './pages/ImportCenterPage'
 import ToolsPage from './pages/tools/ToolsPage'
 import PrintTableOptimizerPage from './pages/tools/PrintTableOptimizerPage'
 import { branding } from './theme/branding'
@@ -43,6 +44,7 @@ function App() {
             <Route path="shipping" element={<ShippingPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="import-center" element={<ImportCenterPage />} />
             <Route path="tools" element={<ToolsPage />} />
             <Route path="tools/print-table-optimizer" element={<PrintTableOptimizerPage />} />
           </Route>

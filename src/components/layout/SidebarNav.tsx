@@ -21,6 +21,7 @@ const navSections = [
     heading: 'Operations',
     items: [
       { to: '/inventory', label: 'Inventory', icon: 'I' },
+      { to: '/import-center', label: 'Import Center', icon: 'C' },
       { to: '/shipping', label: 'Shipping', icon: 'H' },
       { to: '/tools', label: 'Tools', icon: 'U' },
       { to: '/reports', label: 'Reports', icon: 'R' },

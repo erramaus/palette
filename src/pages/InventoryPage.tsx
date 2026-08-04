@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import InventorySummaryCard from '../components/inventory/InventorySummaryCard'
 import { useAppState } from '../state/AppStateContext'
 import { WarehouseInventoryImportService } from '../services/WarehouseInventoryImportService'
@@ -116,6 +116,7 @@ const InventoryPage = () => {
 
   const countWorkspaceRef = useRef<HTMLElement | null>(null)
   const purchaseWorkspaceRef = useRef<HTMLElement | null>(null)
+	const drawerRef = useRef<HTMLElement | null>(null)
 
 	const [state, setState] = useState<InventoryFoundationState>(() => {
 		const loaded = inventoryService.load()
@@ -139,6 +140,33 @@ const InventoryPage = () => {
 	const [countValues, setCountValues] = useState<Record<string, string>>({})
 	const [countStatuses, setCountStatuses] = useState<Record<string, InventoryCountEntryStatus>>({})
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+	useEffect(() => {
+		if (!selectedItemId) return
+
+		const handleKeyDown = (event: KeyboardEvent): void => {
+			if (event.key === 'Escape') {
+				setSelectedItemId(null)
+			}
+		}
+
+		const handlePointerDown = (event: PointerEvent): void => {
+			if (window.innerWidth <= 1180) return
+			const target = event.target as HTMLElement | null
+			if (!target) return
+			if (target.closest('.inventory-row')) return
+			if (drawerRef.current?.contains(target)) return
+			setSelectedItemId(null)
+		}
+
+		document.addEventListener('keydown', handleKeyDown)
+		document.addEventListener('pointerdown', handlePointerDown)
+
+		return () => {
+			document.removeEventListener('keydown', handleKeyDown)
+			document.removeEventListener('pointerdown', handlePointerDown)
+		}
+	}, [selectedItemId])
 
 	const activeItems = useMemo(() => state.items.filter((item) => item.active), [state.items])
 	const recommendationByItemId = useMemo(
@@ -402,6 +430,10 @@ const InventoryPage = () => {
 		}
 	}
 
+	const closeSelectedItem = (): void => {
+		setSelectedItemId(null)
+	}
+
 	const exportVisibleItems = (): void => {
 		const header = ['Item', 'Category', 'Location', 'On Hand', 'Reserved', 'Available', 'Unit', 'Supplier', 'Status', 'Last Counted']
 		const rows = sortedItems.map((item) => [
@@ -569,7 +601,7 @@ const InventoryPage = () => {
 				</button>
 			</section>
 
-			<section className="inventory-workspace-layout">
+			<section className={selectedItem ? 'inventory-workspace-layout inventory-workspace-layout-with-drawer' : 'inventory-workspace-layout'}>
 				<div className="inventory-workspace-main">
 					<section className="inventory-grid-card" aria-label="Inventory grid">
 						<div className="inventory-grid-card-header">
@@ -818,17 +850,8 @@ const InventoryPage = () => {
 					</div>
 				</div>
 
-				<aside className={`inventory-detail-drawer ${selectedItem ? '' : 'inventory-detail-drawer-empty'}`}>
-					{!selectedItem ? (
-						<div className="inventory-detail-placeholder">
-							<span className="inventory-v2-eyebrow">Right Detail Drawer</span>
-							<h3>Select an inventory item</h3>
-							<p>
-								Open an item to view general information, inventory history, reservations, material forecast,
-								affected production orders, purchase history, and workbook traceability.
-							</p>
-						</div>
-					) : (
+				{selectedItem ? (
+					<aside ref={drawerRef} className="inventory-detail-drawer" aria-label="Inventory detail drawer">
 						<div className="inventory-detail-stack">
 							<header className="inventory-detail-header">
 								<div>
@@ -836,9 +859,14 @@ const InventoryPage = () => {
 									<h3>{selectedItem.name}</h3>
 									<p>{selectedItem.locationName} · {selectedItem.categoryName}</p>
 								</div>
-								<span className={`inventory-pill inventory-pill-${getInventoryStatusTone(selectedItem)}`}>
-									{selectedItem.status === 'ACTIVE' && isLowStock(selectedItem) ? 'LOW STOCK' : selectedItem.status}
-								</span>
+								<div className="inventory-detail-header-actions">
+									<span className={`inventory-pill inventory-pill-${getInventoryStatusTone(selectedItem)}`}>
+										{selectedItem.status === 'ACTIVE' && isLowStock(selectedItem) ? 'LOW STOCK' : selectedItem.status}
+									</span>
+									<button type="button" className="inventory-detail-close" onClick={closeSelectedItem} aria-label="Close inventory detail drawer">
+										×
+									</button>
+								</div>
 							</header>
 
 							<section className="inventory-detail-card">
@@ -931,8 +959,8 @@ const InventoryPage = () => {
 								<p className="inventory-trace-summary">{Object.keys(selectedItem.sourceTrace.sourceFormulas).length} source formulas · {Object.keys(selectedItem.sourceTrace.styleRefs).length} source cell references</p>
 							</section>
 						</div>
-					)}
-				</aside>
+					</aside>
+				) : null}
 			</section>
 		</section>
 	)
