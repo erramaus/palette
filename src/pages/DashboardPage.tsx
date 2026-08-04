@@ -88,14 +88,20 @@ const DashboardPage = () => {
     () => employees.filter((employee) => employee.role === 'WORKER' && employee.active),
     [employees],
   )
+  const activeDirectorCount = useMemo(
+    () => employees.filter((employee) => employee.role === 'PRODUCTION_DIRECTOR' && employee.active).length,
+    [employees],
+  )
+  const activeOperatorCount = workers.length
+  const activeWorkerIds = useMemo(() => new Set(workers.map((worker) => worker.id)), [workers])
 
   const workerPlans = useMemo(() => {
     const map = new Map<string, (typeof battlePlans)[number]>()
     battlePlans
-      .filter((plan) => plan.date === today)
+      .filter((plan) => plan.date === today && activeWorkerIds.has(plan.assignedWorkerId))
       .forEach((plan) => map.set(plan.assignedWorkerId, plan))
     return map
-  }, [battlePlans, today])
+  }, [battlePlans, today, activeWorkerIds])
 
   const intelligenceService = useMemo(
     () =>
@@ -346,9 +352,17 @@ const DashboardPage = () => {
   ]
 
   const scheduledDate = (value: string): string => localDateKey(new Date(value))
-  const todaySchedule = scheduleResult.entries.filter((entry) => scheduledDate(entry.plannedStart) === today && entry.status !== 'COMPLETE')
-  const tomorrowSchedule = scheduleResult.entries.filter((entry) => scheduledDate(entry.plannedStart) === tomorrow && entry.status !== 'COMPLETE')
-  const totalDailyCapacity = employees.filter((employee) => employee.active).reduce((sum, employee) => sum + employee.defaultAvailableMinutes, 0)
+  const todaySchedule = scheduleResult.entries.filter((entry) =>
+    scheduledDate(entry.plannedStart) === today
+    && entry.status !== 'COMPLETE'
+    && activeWorkerIds.has(entry.assignedEmployee),
+  )
+  const tomorrowSchedule = scheduleResult.entries.filter((entry) =>
+    scheduledDate(entry.plannedStart) === tomorrow
+    && entry.status !== 'COMPLETE'
+    && activeWorkerIds.has(entry.assignedEmployee),
+  )
+  const totalDailyCapacity = workers.reduce((sum, worker) => sum + worker.defaultAvailableMinutes, 0)
   const todayScheduledMinutes = todaySchedule.reduce((sum, entry) => sum + entry.estimatedMinutes, 0)
   const tomorrowScheduledMinutes = tomorrowSchedule.reduce((sum, entry) => sum + entry.estimatedMinutes, 0)
   const lateScheduledOperations = scheduleResult.entries.filter((entry) =>
@@ -367,7 +381,7 @@ const DashboardPage = () => {
     [entry.assignedWorkCenter]: (totals[entry.assignedWorkCenter] ?? 0) + entry.estimatedMinutes,
   }), {})
   const tomorrowBottleneck = Object.entries(tomorrowWorkCenterMinutes).sort((left, right) => right[1] - left[1])[0]
-  const scheduledEmployeeRows = employees.filter((employee) => employee.active).map((employee) => {
+  const scheduledEmployeeRows = workers.map((employee) => {
     const entries = scheduleResult.entries
       .filter((entry) => entry.assignedEmployee === employee.id && entry.status !== 'COMPLETE')
       .sort((left, right) => left.plannedFinish.localeCompare(right.plannedFinish))
@@ -526,6 +540,10 @@ const DashboardPage = () => {
         <article className="summary-card">
           <p>Timeline</p>
           <h3>{carryForwardMinutes}</h3>
+        </article>
+        <article className="summary-card">
+          <p>Active Team</p>
+          <h3>{activeDirectorCount} Director / {activeOperatorCount} Operator</h3>
         </article>
       </section>
 

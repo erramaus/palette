@@ -90,7 +90,7 @@ const createPlanId = (): string =>
 
 const roleLabel: Record<Employee['role'], string> = {
   PRODUCTION_DIRECTOR: 'Production Director',
-  WORKER: 'Worker',
+  WORKER: 'Workshop Operator',
   ADMIN: 'Admin',
 }
 
@@ -243,7 +243,10 @@ const BattlePlansPage = () => {
   const workerPlans = useMemo(
     () =>
       plansForDate
-        .filter((plan) => employees.find((employee) => employee.id === plan.assignedWorkerId)?.role === 'WORKER')
+        .filter((plan) => {
+          const employee = employees.find((candidate) => candidate.id === plan.assignedWorkerId)
+          return employee?.role === 'WORKER' && employee.active
+        })
         .sort((a, b) =>
           getEmployeeName(employees, a.assignedWorkerId).localeCompare(
             getEmployeeName(employees, b.assignedWorkerId),

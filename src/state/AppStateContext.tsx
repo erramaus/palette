@@ -426,7 +426,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
           materialNotes: job?.notes ?? '',
         }))
       }),
-      employees: mockEmployees.filter((employee) => employee.active).map((employee) => ({
+      employees: mockEmployees.filter((employee) => employee.active && employee.role === 'WORKER').map((employee) => ({
         employeeId: employee.id,
         employeeName: employee.name,
         skills: employee.skills,
@@ -772,7 +772,14 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const importProductionOrder = useCallback(
     (input: ImportProductionOrderInput) => {
       const productType = mapImportClassificationToProductType(input.classification)
-      const assignedWorkerId = input.assignedWorkerId ?? mockEmployees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id ?? mockEmployees[0].id
+      const defaultWorkerId = mockEmployees.find(
+        (employee) => employee.role === 'WORKER' && employee.active,
+      )?.id
+      const assignedWorkerId =
+        input.assignedWorkerId
+        ?? defaultWorkerId
+        ?? mockEmployees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id
+        ?? mockEmployees[0].id
       const jobId = createEntityId('job')
       const job: ProductionJob = {
         id: jobId,
