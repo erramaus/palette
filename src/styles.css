@@ -2303,23 +2303,136 @@ button:focus {
   gap: 14px;
 }
 
-.bp-operation-flow-item {
+.bp-worker-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 16px;
+  align-items: start;
+}
+
+.bp-worker-main {
+  display: grid;
+  gap: 14px;
+}
+
+.bp-worker-sidebar {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.bp-worker-queue-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.bp-worker-queue-list {
+  display: grid;
+  gap: 12px;
+}
+
+.bp-worker-queue-card {
+  border: 1px solid #cfd9e8;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ffffff;
+  display: grid;
+  gap: 10px;
+}
+
+.bp-worker-queue-card-current {
+  border-color: #8db7ef;
+  box-shadow: 0 0 0 2px #dbeaff;
+}
+
+.bp-worker-queue-card-complete {
+  background: #f7fbf8;
+  border-color: #cce5d3;
+}
+
+.bp-worker-queue-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.bp-worker-queue-header h4 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.bp-worker-queue-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  font-size: 0.88rem;
+  color: #2a3d5a;
+}
+
+.bp-worker-queue-meta p {
+  margin: 0;
+}
+
+.bp-worker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bp-worker-empty-state {
+  border: 1px dashed #b7c7dd;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbff;
+  display: grid;
+  gap: 6px;
+}
+
+.bp-worker-empty-state h4,
+.bp-worker-empty-state p {
+  margin: 0;
+}
+
+.bp-worker-summary {
   display: grid;
   gap: 8px;
 }
 
-.bp-flow-arrow {
-  justify-self: center;
-  color: #4f6687;
-  font-size: 1.2rem;
+.bp-worker-help {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-worker-help summary {
+  cursor: pointer;
   font-weight: 700;
 }
 
-.bp-current-operation-card {
-  border: 1px solid #9ec3ff;
-  background: linear-gradient(180deg, #f3f8ff 0%, #ffffff 100%);
+.bp-worker-help ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.bp-worker-completed {
   display: grid;
   gap: 10px;
+}
+
+.bp-worker-completed summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+@media (max-width: 1080px) {
+  .bp-worker-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bp-worker-queue-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .bp-current-operation-eyebrow {
@@ -2328,17 +2441,6 @@ button:focus {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 700;
-}
-
-.bp-current-operation-card h4 {
-  font-size: 1.45rem;
-  letter-spacing: 0.01em;
-}
-
-.bp-current-operation-meta {
-  display: grid;
-  gap: 4px;
-  color: #263b5b;
 }
 
 .bp-operation-card {

@@ -4,6 +4,7 @@ import { BattlePlanOptimizationService } from '../services/BattlePlanOptimizatio
 import { WarehouseInventoryImportService } from '../services/WarehouseInventoryImportService'
 import { buildMaterialInventoryBalancesFromWorkbookItems } from '../services/MaterialForecastService'
 import { generateBattlePlansFromOperations } from '../services/ProductionPipelineService'
+import type { ProductionOperation } from '../services/ProductionPipelineService'
 import {
   DEFAULT_OPTIMIZATION_CONSTRAINTS,
   DEFAULT_OPTIMIZATION_WEIGHTS,
@@ -19,7 +20,7 @@ import type {
   OptimizationAcceptMode,
 } from '../types/battlePlanOptimization'
 import type { Employee } from '../types/employees'
-import type { ProductionStepName } from '../types/production'
+import type { ProductionJob, ProductionStepName } from '../types/production'
 import type {
   AddTaskGroupDraft,
   BattlePlanChecklistItem,
@@ -78,6 +79,15 @@ interface CompletionAudit {
 }
 
 type OperationUiStatus = 'READY' | 'IN_PROGRESS' | 'COMPLETE' | 'BLOCKED'
+
+interface WorkerQueueEntry {
+  group: BattlePlanTaskGroup
+  status: OperationUiStatus
+  canComplete: boolean
+  primaryItem?: BattlePlanWorkItemEntry
+  job?: ProductionJob
+  operation?: ProductionOperation
+}
 
 const formatLocalDate = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -426,13 +436,120 @@ const BattlePlansPage = () => {
     }
   }
 
-  const currentOperation = useMemo(() => {
+  const workerQueue = useMemo<WorkerQueueEntry[]>(() => {
     if (!selectedPlan || !isWorkerView) {
-      return undefined
+      return []
     }
 
-    return selectedGroups.find((group) => getGroupUiStatus(selectedPlan.id, group) !== 'COMPLETE')
-  }, [selectedGroups, selectedPlan, isWorkerView, startedGroupsByPlan])
+    return selectedGroups.map((group) => {
+      const primaryItem = group.workItems[0]
+      const primaryTask = primaryItem
+        ? selectedPlan.tasks.find((task) => task.id === primaryItem.taskId)
+        : undefined
+      const operation = primaryTask?.productionOperationId
+        ? productionOperations.find((candidate) => candidate.id === primaryTask.productionOperationId)
+        : undefined
+
+      return {
+        group,
+        status: getGroupUiStatus(selectedPlan.id, group),
+        canComplete: canCompleteGroup(group),
+        primaryItem,
+        job: primaryItem
+          ? productionJobs.find((candidate) => candidate.id === primaryItem.workItemId)
+          : undefined,
+        operation,
+      }
+    })
+  }, [selectedPlan, isWorkerView, selectedGroups, productionJobs, productionOperations, startedGroupsByPlan])
+
+  const activeWorkerQueue = useMemo(
+    () => workerQueue.filter((entry) => entry.status !== 'COMPLETE'),
+    [workerQueue],
+  )
+  const completedWorkerQueue = useMemo(
+    () => workerQueue.filter((entry) => entry.status === 'COMPLETE'),
+    [workerQueue],
+  )
+  const currentWorkerQueueEntryId = activeWorkerQueue[0]?.group.id
+
+  const workerSummary = useMemo(() => {
+    const blocked = workerQueue.filter((entry) => entry.status === 'BLOCKED').length
+    const inProgress = workerQueue.filter((entry) => entry.status === 'IN_PROGRESS').length
+    const remainingMinutes = activeWorkerQueue.reduce(
+      (total, entry) => total + entry.group.totalEstimatedMinutes,
+      0,
+    )
+    return {
+      blocked,
+      inProgress,
+      completed: completedWorkerQueue.length,
+      remainingMinutes,
+    }
+  }, [workerQueue, activeWorkerQueue, completedWorkerQueue])
+
+  const markQueueStarted = (
+    planId: string,
+    groupId: string,
+    event: 'startOperation' | 'resumeOperation',
+  ): void => {
+    setStartedGroupsByPlan((current) => ({
+      ...current,
+      [planId]: {
+        ...(current[planId] ?? {}),
+        [groupId]: true,
+      },
+    }))
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: planId,
+      action: 'STATUS_CHANGED',
+      actorEmployeeId: selectedEmployee?.id,
+      metadata: { groupId, event },
+    })
+  }
+
+  const markQueuePaused = (planId: string, groupId: string): void => {
+    setStartedGroupsByPlan((current) => ({
+      ...current,
+      [planId]: {
+        ...(current[planId] ?? {}),
+        [groupId]: false,
+      },
+    }))
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: planId,
+      action: 'STATUS_CHANGED',
+      actorEmployeeId: selectedEmployee?.id,
+      metadata: { groupId, event: 'pauseOperation' },
+    })
+  }
+
+  const markQueueBlocked = (planId: string, groupId: string): void => {
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: planId,
+      action: 'STATUS_CHANGED',
+      actorEmployeeId: selectedEmployee?.id,
+      metadata: { groupId, event: 'blockedOperation' },
+    })
+  }
+
+  const addQueueNote = (planId: string, groupId: string): void => {
+    const note = window.prompt('Add a workshop note for this operation:')
+    if (!note || !note.trim()) {
+      return
+    }
+
+    addActivityLog({
+      entityType: 'BattlePlan',
+      entityId: planId,
+      action: 'UPDATED',
+      actorEmployeeId: selectedEmployee?.id,
+      metadata: { groupId, event: 'workerNote', note: note.trim() },
+    })
+  }
 
   const createManualPlan = (workerId: string): BattlePlan => {
     const employee = employees.find((candidate) => candidate.id === workerId)
@@ -1493,39 +1610,43 @@ const BattlePlansPage = () => {
             <span>Carry-forward count: {carryForwardCount}</span>
           </div>
 
-          <section className="bp-operation-lifecycle" aria-label={`${isDirectorView ? 'Director' : 'Worker'} operation lifecycle controls`}>
-            <div className="work-item-section-header">
-              <div>
-                <h4>{isDirectorView ? 'Director Operation Controls' : 'Worker Operation Execution'}</h4>
-                <p className="subtle">Actions update every production projection from the operation source record.</p>
-              </div>
-              <span className="badge">{selectedLifecycleOperations.length} operations</span>
-            </div>
-            <div className="bp-operation-lifecycle-list">
-              {selectedLifecycleOperations.map((operation) => (
-                <article key={operation.id} className="bp-operation-lifecycle-row">
-                  <div><strong>{operation.name}</strong><p className="subtle">{operation.status} · {operation.estimatedMinutes} min</p></div>
-                  <OperationLifecycleActions
-                    operation={operation}
-                    role={isDirectorView ? 'DIRECTOR' : 'WORKER'}
-                    actorEmployeeId={selectedEmployeeId}
-                    battlePlanDate={generationDate}
-                    compact
-                  />
-                </article>
-              ))}
-              {selectedLifecycleOperations.length === 0 && <p className="subtle">No pipeline operations are attached to this plan.</p>}
-            </div>
-          </section>
+          {isDirectorView ? (
+            <>
+              <section className="bp-operation-lifecycle" aria-label="Director operation lifecycle controls">
+                <div className="work-item-section-header">
+                  <div>
+                    <h4>Director Operation Controls</h4>
+                    <p className="subtle">Actions update every production projection from the operation source record.</p>
+                  </div>
+                  <span className="badge">{selectedLifecycleOperations.length} operations</span>
+                </div>
+                <div className="bp-operation-lifecycle-list">
+                  {selectedLifecycleOperations.map((operation) => (
+                    <article key={operation.id} className="bp-operation-lifecycle-row">
+                      <div><strong>{operation.name}</strong><p className="subtle">{operation.status} · {operation.estimatedMinutes} min</p></div>
+                      <OperationLifecycleActions
+                        operation={operation}
+                        role="DIRECTOR"
+                        actorEmployeeId={selectedEmployeeId}
+                        battlePlanDate={generationDate}
+                        compact
+                      />
+                    </article>
+                  ))}
+                  {selectedLifecycleOperations.length === 0 && <p className="subtle">No pipeline operations are attached to this plan.</p>}
+                </div>
+              </section>
 
-          <section className="bp-note-panel">
-            <p>{BP_STANDING_NOTE}</p>
-            <ul>
-              {BP_PRIORITY_ORDER.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
+              <section className="bp-note-panel">
+                <p>{BP_STANDING_NOTE}</p>
+                <ul>
+                  {BP_PRIORITY_ORDER.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            </>
+          ) : null}
 
           {selectedTab?.kind === 'DIRECTOR' ? (
             <section className="director-sections">
@@ -2084,179 +2205,306 @@ const BattlePlansPage = () => {
               </article>
             </section>
           ) : (
-            <>
-              {currentOperation ? (
-                <section className="panel bp-current-operation-card">
-                  <p className="bp-current-operation-eyebrow">Current Operation</p>
-                  <h4>{currentOperation.operationName}</h4>
-                  <div className="bp-current-operation-meta">
-                    <p>Assigned Work Items: {currentOperation.workItems.length}</p>
-                    <p>Estimated Time: {currentOperation.totalEstimatedMinutes} min</p>
-                    <p>Expected Duration: {Math.round(currentOperation.totalEstimatedMinutes * 1.05)} min</p>
-                    <p>Status: {formatGroupUiStatus(getGroupUiStatus(selectedPlan.id, currentOperation))}</p>
-                    <p>
-                      Likely Completion Time:{' '}
-                      {formatLatestScheduledFinish(currentOperation.workItems.map((item) => item.taskId))}
-                    </p>
+            <section className="bp-worker-layout" aria-label="Worker battle plan queue">
+              <div className="bp-worker-main">
+                <section className="panel bp-worker-queue-panel">
+                  <div className="work-item-section-header">
+                    <div>
+                      <h4>Today's Queue</h4>
+                      <p className="subtle">
+                        {getEmployeeName(employees, selectedPlan.assignedWorkerId)} / Workshop Operator / Today&apos;s Battle Plan
+                      </p>
+                    </div>
+                    <span className="badge">{activeWorkerQueue.length} active</span>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() =>
-                      setStartedGroupsByPlan((current) => ({
-                        ...current,
-                        [selectedPlan.id]: {
-                          ...(current[selectedPlan.id] ?? {}),
-                          [currentOperation.id]: true,
-                        },
-                      }))
-                    }
-                  >
-                    Start Operation
-                  </button>
-                </section>
-              ) : null}
+                  <p className="subtle">{new Date(generationDate).toLocaleDateString()}</p>
 
-              <section className="panel bp-section-card">
-                <h4>Likely Carry-Forward Operations</h4>
-                <ul className="plain-list">
-                  {selectedPlan.tasks
-                    .filter((task) => !task.completed)
-                    .map((task) => {
-                      const scheduledEntry = scheduleEntryByTaskId.get(task.id)
-                      const carriesForward = Boolean(
-                        scheduledEntry && scheduledEntry.plannedStart.slice(0, 10) > selectedPlan.date,
-                      )
-                      return (
-                        <li key={task.id}>
-                          <div>
-                            <strong>{task.description}</strong>
-                            <p>
-                              {scheduledEntry
-                                ? carriesForward
-                                  ? `Scheduled ${new Date(scheduledEntry.plannedStart).toLocaleString()} • ${scheduledEntry.estimatedMinutes} min`
-                                  : 'Scheduled within this plan date'
-                                : 'Not currently scheduled'}
-                            </p>
+                  {workerQueue.length === 0 ? (
+                    <div className="bp-worker-empty-state">
+                      <h4>No work assigned today.</h4>
+                      <p>Check with the Production Director if additional work is expected.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bp-worker-queue-list">
+                        {activeWorkerQueue.map((entry) => {
+                          const dueDate = entry.job?.dueDate ?? entry.operation?.dueDate
+                          const dimensions = entry.job ? `${entry.job.width} x ${entry.job.height}` : '--'
+                          return (
+                            <article
+                              key={entry.group.id}
+                              className={entry.group.id === currentWorkerQueueEntryId ? 'bp-worker-queue-card bp-worker-queue-card-current' : 'bp-worker-queue-card'}
+                            >
+                              <header className="bp-worker-queue-header">
+                                <div>
+                                  <p className="bp-current-operation-eyebrow">
+                                    {entry.group.id === currentWorkerQueueEntryId ? 'Current Operation' : 'Queued Operation'}
+                                  </p>
+                                  <h4>{entry.primaryItem?.artworkTitle ?? entry.group.operationName}</h4>
+                                  <p className="subtle">{entry.primaryItem?.customerOrDestination ?? entry.job?.customerName ?? '--'} • Order #{entry.primaryItem?.workItemNumber ?? '--'}</p>
+                                </div>
+                                <span className={`bp-operation-status bp-operation-status-${entry.status.toLowerCase()}`}>
+                                  {formatGroupUiStatus(entry.status)}
+                                </span>
+                              </header>
+
+                              <div className="bp-worker-queue-meta">
+                                <p><strong>Operation</strong> {entry.group.operationName}</p>
+                                <p><strong>Dimensions</strong> {dimensions}</p>
+                                <p><strong>Frame</strong> {entry.job?.frameInfo ?? '--'}</p>
+                                <p><strong>Due date</strong> {dueDate ? new Date(dueDate).toLocaleDateString() : '--'}</p>
+                                <p><strong>Estimated duration</strong> {entry.group.totalEstimatedMinutes} min</p>
+                                <p><strong>Likely finish</strong> {formatLatestScheduledFinish(entry.group.workItems.map((item) => item.taskId))}</p>
+                              </div>
+
+                              <div className="bp-work-item-badges">
+                                {entry.job ? <StatusBadge priority={entry.job.priority} /> : null}
+                                {entry.primaryItem ? <StatusBadge dueStatus={entry.primaryItem.dueStatus} /> : null}
+                              </div>
+
+                              <div className="bp-worker-actions">
+                                <button
+                                  type="button"
+                                  className="btn btn-primary"
+                                  onClick={() => markQueueStarted(selectedPlan.id, entry.group.id, 'startOperation')}
+                                  disabled={entry.status === 'COMPLETE' || entry.status === 'BLOCKED'}
+                                >
+                                  Start
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => markQueueStarted(selectedPlan.id, entry.group.id, 'resumeOperation')}
+                                  disabled={entry.status !== 'IN_PROGRESS'}
+                                >
+                                  Resume
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => completeGroup(selectedPlan, entry.group)}
+                                  disabled={!entry.canComplete}
+                                  title={entry.canComplete ? '' : 'Complete earlier operations first.'}
+                                >
+                                  Complete
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => markQueueBlocked(selectedPlan.id, entry.group.id)}
+                                  disabled={entry.status === 'COMPLETE'}
+                                >
+                                  Blocked
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => markQueuePaused(selectedPlan.id, entry.group.id)}
+                                  disabled={entry.status !== 'IN_PROGRESS'}
+                                >
+                                  Pause
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => addQueueNote(selectedPlan.id, entry.group.id)}
+                                >
+                                  Add Note
+                                </button>
+                              </div>
+
+                              {entry.operation ? (
+                                <OperationLifecycleActions
+                                  operation={entry.operation}
+                                  role="WORKER"
+                                  actorEmployeeId={selectedEmployeeId}
+                                  battlePlanDate={generationDate}
+                                  overflowSecondary
+                                />
+                              ) : null}
+                            </article>
+                          )
+                        })}
+                      </div>
+
+                      {completedWorkerQueue.length > 0 ? (
+                        <details className="bp-worker-completed" open={false}>
+                          <summary>Completed operations ({completedWorkerQueue.length})</summary>
+                          <div className="bp-worker-queue-list">
+                            {completedWorkerQueue.map((entry) => (
+                              <article key={entry.group.id} className="bp-worker-queue-card bp-worker-queue-card-complete">
+                                <header className="bp-worker-queue-header">
+                                  <div>
+                                    <h4>{entry.primaryItem?.artworkTitle ?? entry.group.operationName}</h4>
+                                    <p className="subtle">{entry.primaryItem?.customerOrDestination ?? '--'} • Order #{entry.primaryItem?.workItemNumber ?? '--'}</p>
+                                  </div>
+                                  <span className="bp-operation-status bp-operation-status-complete">Complete</span>
+                                </header>
+                              </article>
+                            ))}
                           </div>
-                          <span className="subtle">{scheduledEntry?.scheduleReason ?? 'Review scheduling conflicts.'}</span>
-                        </li>
-                      )
-                    })}
-                </ul>
-              </section>
+                        </details>
+                      ) : null}
+                    </>
+                  )}
+                </section>
 
-              <section className="panel bp-section-card">
-                <h4>1. Start of Day Workshop Tasks</h4>
-                <p className="subtle">Estimated section time: {startChecklist.length * 6} mins</p>
-                {renderChecklist(startChecklistKey, startChecklist)}
-              </section>
+                <section className="panel bp-section-card">
+                  <h4>Likely Carry-Forward Operations</h4>
+                  <ul className="plain-list">
+                    {selectedPlan.tasks
+                      .filter((task) => !task.completed)
+                      .map((task) => {
+                        const scheduledEntry = scheduleEntryByTaskId.get(task.id)
+                        const carriesForward = Boolean(
+                          scheduledEntry && scheduledEntry.plannedStart.slice(0, 10) > selectedPlan.date,
+                        )
+                        return (
+                          <li key={task.id}>
+                            <div>
+                              <strong>{task.description}</strong>
+                              <p>
+                                {scheduledEntry
+                                  ? carriesForward
+                                    ? `Scheduled ${new Date(scheduledEntry.plannedStart).toLocaleString()} • ${scheduledEntry.estimatedMinutes} min`
+                                    : 'Scheduled within this plan date'
+                                  : 'Not currently scheduled'}
+                              </p>
+                            </div>
+                            <span className="subtle">{scheduledEntry?.scheduleReason ?? 'Review scheduling conflicts.'}</span>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                </section>
+              </div>
 
-              <section className="bp-production-groups">
-                {selectedGroups.map((group, index) => (
-                  <div key={group.id} className="bp-operation-flow-item">
-                    {index > 0 ? <div className="bp-flow-arrow" aria-hidden="true">↓</div> : null}
-                    {renderGroup(group, selectedPlan)}
+              <aside className="bp-worker-sidebar" aria-label="Worker summary and help">
+                <section className="panel bp-worker-summary">
+                  <h4>Shift Summary</h4>
+                  <div className="summary-line-list" role="list" aria-label="Worker queue summary">
+                    <span>Active operations: {activeWorkerQueue.length}</span>
+                    <span>In progress: {workerSummary.inProgress}</span>
+                    <span>Blocked: {workerSummary.blocked}</span>
+                    <span>Completed: {workerSummary.completed}</span>
+                    <span>Minutes remaining: {workerSummary.remainingMinutes}</span>
+                    <span>Capacity used: {capacityUsed}%</span>
                   </div>
-                ))}
-              </section>
+                </section>
 
-              <section className="panel bp-section-card">
-                <h4>Cleaning</h4>
-                <p className="warning">These cleaning tasks are only to be done after the BP has been completed.</p>
-                {renderChecklist(cleaningChecklistKey, cleaningChecklist)}
-              </section>
+                <details className="panel bp-worker-help" open={false}>
+                  <summary>Workshop Rules</summary>
+                  <p>{BP_STANDING_NOTE}</p>
+                  <ul>
+                    {BP_PRIORITY_ORDER.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </details>
 
-              <section className="panel bp-section-card">
-                <h4>End of Day Workshop Tasks</h4>
-                {renderChecklist(endChecklistKey, endChecklist)}
+                <details className="panel bp-worker-help" open={false}>
+                  <summary>Start of Day Tasks</summary>
+                  <p className="subtle">Estimated section time: {startChecklist.length * 6} mins</p>
+                  {renderChecklist(startChecklistKey, startChecklist)}
+                </details>
 
-                <div className="battle-plan-task-editor-grid">
-                  <label>
-                    End-of-day notes
-                    <textarea
-                      value={endOfDayReportsByPlan[selectedPlan.id]?.notes ?? ''}
-                      onChange={(event) =>
-                        setEndOfDayReportsByPlan((current) => ({
-                          ...current,
-                          [selectedPlan.id]: {
-                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
-                            notes: event.target.value,
-                          },
-                        }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Reason not completed
-                    <textarea
-                      value={endOfDayReportsByPlan[selectedPlan.id]?.incompleteReason ?? ''}
-                      onChange={(event) =>
-                        setEndOfDayReportsByPlan((current) => ({
-                          ...current,
-                          [selectedPlan.id]: {
-                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
-                            incompleteReason: event.target.value,
-                          },
-                        }))
-                      }
-                    />
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={endOfDayReportsByPlan[selectedPlan.id]?.carryForward ?? false}
-                      onChange={(event) =>
-                        setEndOfDayReportsByPlan((current) => ({
-                          ...current,
-                          [selectedPlan.id]: {
-                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
-                            carryForward: event.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    Carry forward
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={endOfDayReportsByPlan[selectedPlan.id]?.reportSent ?? false}
-                      onChange={(event) =>
-                        setEndOfDayReportsByPlan((current) => ({
-                          ...current,
-                          [selectedPlan.id]: {
-                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
-                            reportSent: event.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    Report sent
-                  </label>
-                  <label>
-                    Departure time
-                    <input
-                      type="time"
-                      value={endOfDayReportsByPlan[selectedPlan.id]?.departureTime ?? ''}
-                      onChange={(event) =>
-                        setEndOfDayReportsByPlan((current) => ({
-                          ...current,
-                          [selectedPlan.id]: {
-                            ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
-                            departureTime: event.target.value,
-                          },
-                        }))
-                      }
-                    />
-                  </label>
-                </div>
+                <details className="panel bp-worker-help" open={false}>
+                  <summary>Cleaning</summary>
+                  <p className="warning">These cleaning tasks are only to be done after the BP has been completed.</p>
+                  {renderChecklist(cleaningChecklistKey, cleaningChecklist)}
+                </details>
 
-                <button type="button" className="btn btn-primary" onClick={() => submitEndOfDay(selectedPlan)}>
-                  Submit End-of-Day Report
-                </button>
-              </section>
-            </>
+                <details className="panel bp-worker-help" open={false}>
+                  <summary>End of Day Tasks</summary>
+                  {renderChecklist(endChecklistKey, endChecklist)}
+
+                  <div className="battle-plan-task-editor-grid">
+                    <label>
+                      End-of-day notes
+                      <textarea
+                        value={endOfDayReportsByPlan[selectedPlan.id]?.notes ?? ''}
+                        onChange={(event) =>
+                          setEndOfDayReportsByPlan((current) => ({
+                            ...current,
+                            [selectedPlan.id]: {
+                              ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                              notes: event.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Reason not completed
+                      <textarea
+                        value={endOfDayReportsByPlan[selectedPlan.id]?.incompleteReason ?? ''}
+                        onChange={(event) =>
+                          setEndOfDayReportsByPlan((current) => ({
+                            ...current,
+                            [selectedPlan.id]: {
+                              ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                              incompleteReason: event.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={endOfDayReportsByPlan[selectedPlan.id]?.carryForward ?? false}
+                        onChange={(event) =>
+                          setEndOfDayReportsByPlan((current) => ({
+                            ...current,
+                            [selectedPlan.id]: {
+                              ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                              carryForward: event.target.checked,
+                            },
+                          }))
+                        }
+                      />
+                      Carry forward
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={endOfDayReportsByPlan[selectedPlan.id]?.reportSent ?? false}
+                        onChange={(event) =>
+                          setEndOfDayReportsByPlan((current) => ({
+                            ...current,
+                            [selectedPlan.id]: {
+                              ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                              reportSent: event.target.checked,
+                            },
+                          }))
+                        }
+                      />
+                      Report sent
+                    </label>
+                    <label>
+                      Departure time
+                      <input
+                        type="time"
+                        value={endOfDayReportsByPlan[selectedPlan.id]?.departureTime ?? ''}
+                        onChange={(event) =>
+                          setEndOfDayReportsByPlan((current) => ({
+                            ...current,
+                            [selectedPlan.id]: {
+                              ...(current[selectedPlan.id] ?? createDefaultEndOfDayReport()),
+                              departureTime: event.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <button type="button" className="btn btn-primary" onClick={() => submitEndOfDay(selectedPlan)}>
+                    Submit End-of-Day Report
+                  </button>
+                </details>
+              </aside>
+            </section>
           )}
         </article>
       ) : null}
