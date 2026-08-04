@@ -234,6 +234,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
   const departments = new Map<string, NamedEntity>()
   const employees = new Map<string, NamedEntity>()
   const workItemIdByOrderNumber = new Map<string, string>()
+  const workItemIdBySourceRecordId = new Map<string, string>()
   const workItemIdByPieceKey = new Map<string, string>()
   const orderImportService = new OrderImportService()
 
@@ -261,6 +262,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
 
       const workflowContext = workflowForProductType(input.productType, workflowContexts)
       return workItemService.createWorkItem({
+        id: input.id,
         workItemNumber: `WI-${input.orderNumber}-${workItemIdByOrderNumber.size + 1}`,
         type: input.productType,
         workflowContext,
@@ -320,7 +322,53 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     const frameSelection = requireNormalized('frame selection', canonicalImport.frameSelection)
     const dueDate = requireNormalized('due date', canonicalImport.dueDate)
     const priority = requireNormalized('priority', canonicalImport.priority)
+    const departmentName = inferDepartment(job)
+    const packagingMethod = canonicalImport.shippingOrPickupMethod.normalized
+      ?? (productType === 'GALLERY_INVENTORY' ? 'GALLERY' : 'STANDARD_BOX')
     const pieceKey = productionPiece.key
+    const sourceRecordId = typeof job.originalImport?.sourceRecordId === 'string' ? job.originalImport.sourceRecordId : job.id
+    const existingSourceRecordWorkItemId = workItemIdBySourceRecordId.get(sourceRecordId)
+    if (existingSourceRecordWorkItemId) {
+      const workItem = workItemService.getWorkItemById(existingSourceRecordWorkItemId)
+      if (!workItem) throw new Error(`WorkItem not found for source record ${sourceRecordId}`)
+
+      const rebuilt = productionPipelineService.rebuildOrder(workItem, {
+        workItemId: sourceRecordId,
+        orderNumber,
+        customerName,
+        artworkName: artworkTitle,
+        productType,
+        width: size.width,
+        height: size.height,
+        orientation: pipelineOrientation(orientation),
+        priority:
+          priority === 'ORIGINALS'
+            ? 100
+            : priority === 'CUSTOMER_PURCHASED'
+              ? 80
+              : 60,
+        dueDate,
+        assignedEmployeeId: job.assignedWorkerId,
+        notes: [job.notes, canonicalImport.redNotes.normalized].filter((note): note is string => Boolean(note)),
+        departmentName,
+        customFields: {
+          canonicalOrderImport: canonicalImport,
+          frameStyle: frameSelection,
+          departmentTag: normalize(departmentName).replaceAll(' ', '_').toUpperCase(),
+          packagingMethod,
+        },
+      })
+
+      workItemIdByPieceKey.set(pieceKey, rebuilt.workItem.id)
+      workItemIdByOrderNumber.set(orderNumber, rebuilt.workItem.id)
+      return {
+        workItem: rebuilt.workItem,
+        operations: rebuilt.operations,
+        tags: rebuilt.tags,
+        cutCalculations: rebuilt.cutCalculations,
+        artworkId: workItem.artworkId ?? createId('artwork', `${customerName}-${artworkTitle}`),
+      }
+    }
     const existingWorkItemId = workItemIdByPieceKey.get(pieceKey)
     if (existingWorkItemId) {
       const workItem = workItemService.getWorkItemById(existingWorkItemId)
@@ -334,9 +382,6 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
       }
     }
     const artworkId = createId('artwork', `${customerName}-${artworkTitle}`)
-    const departmentName = inferDepartment(job)
-    const packagingMethod = canonicalImport.shippingOrPickupMethod.normalized
-      ?? (productType === 'GALLERY_INVENTORY' ? 'GALLERY' : 'STANDARD_BOX')
     const result = productionPipelineService.importOrder({
       orderNumber,
       customerName,
@@ -364,6 +409,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     })
 
     workItemIdByPieceKey.set(pieceKey, result.workItem.id)
+    workItemIdBySourceRecordId.set(sourceRecordId, result.workItem.id)
     if (!workItemIdByOrderNumber.has(orderNumber)) {
       workItemIdByOrderNumber.set(orderNumber, result.workItem.id)
     }

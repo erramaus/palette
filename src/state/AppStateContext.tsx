@@ -47,6 +47,10 @@ import { DEFAULT_PRODUCTION_ANALYTICS_TARGETS, type ProductionAnalyticsTargets }
 import type { OptimizationConstraint, OptimizationWeights } from '../types/battlePlanOptimization'
 import { DEFAULT_OPTIMIZATION_CONSTRAINTS, DEFAULT_OPTIMIZATION_WEIGHTS } from '../services/battlePlanOptimizationConfig'
 import { getWorkItemDetailService } from '../services/WorkItemDetailService'
+import {
+  WebsiteOrderExcelImportService,
+  type WebsiteOrderImportPreview,
+} from '../services/WebsiteOrderExcelImportService'
 import { ensureRecurringInventoryBattlePlanTasks } from '../services/inventoryBattlePlanTasks'
 import {
   LocalStoragePersistenceAdapter,
@@ -124,6 +128,18 @@ export interface ImportProductionOrderInput {
   originalImport?: Record<string, unknown>
 }
 
+export interface ImportWarehouseExcelInput {
+  preview: WebsiteOrderImportPreview
+  selectedSourceRecordIds: string[]
+  importedByEmployeeId: string
+}
+
+export interface ImportWarehouseExcelResult {
+  importedSourceRecordIds: string[]
+  reusedSourceRecordIds: string[]
+  skippedSourceRecordIds: string[]
+}
+
 interface AppStateContextValue {
   employees: Employee[]
   productionJobs: ProductionJob[]
@@ -161,6 +177,7 @@ interface AppStateContextValue {
   updateProductionStep: (jobId: string, stepName: ProductionStepName) => void
   completeProductionStep: (input: CompleteProductionStepInput) => void
   importProductionOrder: (input: ImportProductionOrderInput) => { job: ProductionJob; preparation?: ThreeDFilePreparation }
+  importWarehouseExcelOrders: (input: ImportWarehouseExcelInput) => ImportWarehouseExcelResult
   saveThreeDFilePreparation: (preparation: ThreeDFilePreparation, actorEmployeeId?: string) => void
   validateThreeDFilePreparation: (preparationId: string, actorEmployeeId?: string) => void
   createBattlePlan: (battlePlan: BattlePlan) => void
@@ -337,6 +354,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     service.refreshLookupMaps(productionJobs)
     return service
   }, [environment, productionJobs])
+  const websiteOrderExcelImportService = useMemo(() => new WebsiteOrderExcelImportService(), [])
   useEffect(() => {
     if (initialPersistence.snapshot) {
       workItemDetailService.replaceGeneratedTags(initialPersistence.snapshot.data.productionTags)
@@ -850,6 +868,76 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     [environment, setProductionJobs, setThreeDFilePreparations, setActivityLogs],
   )
 
+  const importWarehouseExcelOrders = useCallback(
+    ({ preview, selectedSourceRecordIds, importedByEmployeeId }: ImportWarehouseExcelInput): ImportWarehouseExcelResult => {
+      const selectedRows = preview.rows.filter((row) => selectedSourceRecordIds.includes(row.sourceRecordId))
+      const importedSourceRecordIds: string[] = []
+      const reusedSourceRecordIds: string[] = []
+      const skippedSourceRecordIds: string[] = []
+
+      setProductionJobs((currentJobs) => {
+        const nextJobs = [...currentJobs]
+
+        for (const row of selectedRows) {
+          if (!row.normalized || row.bucket === 'SKIPPED_ROWS' || row.bucket === 'ERRORS') {
+            skippedSourceRecordIds.push(row.sourceRecordId)
+            continue
+          }
+
+          const importInput = websiteOrderExcelImportService.toProductionInput(row, importedByEmployeeId)
+          const existingIndex = nextJobs.findIndex((job) => job.id === row.sourceRecordId)
+          const job: ProductionJob = {
+            id: row.sourceRecordId,
+            orderNumber: importInput.orderNumber,
+            customerName: importInput.customerName,
+            artworkTitle: importInput.artworkName,
+            productType: importInput.productType,
+            width: importInput.width,
+            height: importInput.height,
+            frameInfo: row.normalized.frameSelection.normalized ?? row.normalized.frameSelection.original,
+            dueDate: importInput.dueDate,
+            dueStatus: calculateDueStatus(importInput.dueDate, false),
+            priority: importInput.priority,
+            assignedWorkerId: mockEmployees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id ?? mockEmployees[0].id,
+            notes: importInput.notes.join('\n'),
+            steps: defaultStepsForProductType(importInput.productType),
+            estimatedMinutes: defaultEstimatedMinutesForProductType(importInput.productType),
+            orderSource: 'WAREHOUSE_EXCEL_EXPORT',
+            requestedDeliveryOrPickupDate: undefined,
+            redNotes: undefined,
+            shippingOrPickupMethod: importInput.originalImport.shippingOrPickupMethod as ProductionJob['shippingOrPickupMethod'],
+            originalImport: importInput.originalImport,
+          }
+
+          if (existingIndex >= 0) {
+            nextJobs.splice(existingIndex, 1, job)
+            reusedSourceRecordIds.push(row.sourceRecordId)
+          } else {
+            nextJobs.unshift(job)
+            importedSourceRecordIds.push(row.sourceRecordId)
+          }
+
+          const result = environment.ingestProductionJob(job)
+          workItemDetailService.refreshLookupMaps(nextJobs)
+          if (workItemDetailService.getGeneratedTagsForWorkItem(result.workItem.id).length === 0) {
+            workItemDetailService.generateTags(result.workItem.id, importedByEmployeeId)
+          }
+        }
+
+        return nextJobs
+      })
+
+      setOperationRevision((current) => current + 1)
+
+      return {
+        importedSourceRecordIds,
+        reusedSourceRecordIds,
+        skippedSourceRecordIds,
+      }
+    },
+    [environment, setProductionJobs, workItemDetailService, websiteOrderExcelImportService],
+  )
+
   const createBattlePlan = useCallback(
     (battlePlan: BattlePlan) => {
       setBattlePlans((currentPlans) =>
@@ -1072,6 +1160,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       updateProductionStep,
       completeProductionStep,
       importProductionOrder,
+      importWarehouseExcelOrders,
       saveThreeDFilePreparation,
       validateThreeDFilePreparation,
       createBattlePlan,
@@ -1123,6 +1212,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       updateProductionStep,
       completeProductionStep,
       importProductionOrder,
+      importWarehouseExcelOrders,
       saveThreeDFilePreparation,
       validateThreeDFilePreparation,
       createBattlePlan,

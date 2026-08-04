@@ -108,6 +108,7 @@ export interface ProductionOperationHistoryEntry {
 }
 
 export interface PipelineOrderInput {
+  workItemId?: string
   orderNumber: string
   customerName: string
   artworkName: string
@@ -124,7 +125,12 @@ export interface PipelineOrderInput {
   customFields?: Record<string, unknown>
 }
 
+export interface PipelineImportResult extends ProductionPipelineResult {
+  reusedWorkItem: boolean
+}
+
 export interface PipelineWorkItemInput extends PipelineOrderInput {
+  id?: string
   operationNames: ProductionOperationName[]
 }
 
@@ -271,7 +277,7 @@ export class ProductionPipelineService {
   importOrder(input: PipelineOrderInput): ProductionPipelineResult {
     const cutCalculations = this.calculateCuts(input)
     const operationNames = this.buildOperationRoute(input.productType, cutCalculations)
-    const workItem = this.createWorkItem({ ...input, operationNames })
+    const workItem = this.createWorkItem({ ...input, id: input.workItemId, operationNames })
     const operations = this.createOperations(workItem, operationNames, cutCalculations)
 
     workItem.customFields = {
@@ -296,6 +302,42 @@ export class ProductionPipelineService {
       operations,
       tags: this.buildTags(workItem),
       cutCalculations,
+    }
+  }
+
+  rebuildOrder(workItem: WorkItem, input: PipelineOrderInput): PipelineImportResult {
+    const cutCalculations = this.calculateCuts(input)
+    const operationNames = this.buildOperationRoute(input.productType, cutCalculations)
+    const operations = this.createOperations(workItem, operationNames, cutCalculations)
+
+    workItem.type = input.productType
+    workItem.priority = input.priority
+    workItem.dueDate = input.dueDate
+    workItem.assignedEmployeeId = input.assignedEmployeeId
+    workItem.notes = [...input.notes]
+    workItem.customFields = {
+      ...workItem.customFields,
+      pipeline: {
+        orderNumber: input.orderNumber,
+        customerName: input.customerName,
+        artworkName: input.artworkName,
+        width: input.width,
+        height: input.height,
+        orientation: input.orientation,
+        cutCalculations,
+        operations,
+      },
+    }
+    workItem.tags = [...operationNames]
+    workItem.tagLabels = [...operationNames]
+    workItem.touch()
+
+    return {
+      workItem,
+      operations,
+      tags: this.buildTags(workItem),
+      cutCalculations,
+      reusedWorkItem: true,
     }
   }
 

@@ -12,6 +12,7 @@ export interface WorkflowContext {
 }
 
 export interface CreateWorkItemInput {
+  id?: string
   workItemNumber?: string
   type: string
   status?: WorkItemStatus
@@ -33,9 +34,16 @@ export interface CreateWorkItemInput {
 }
 
 export interface UpdateWorkItemInput {
+  workItemNumber?: string
   type?: string
   status?: WorkItemStatus
   priority?: number
+  customerId?: string
+  orderId?: string
+  productId?: string
+  artworkId?: string
+  workflowId?: string
+  currentStageId?: string
   assignedDepartmentId?: string
   assignedEmployeeId?: string
   dueDate?: string
@@ -93,6 +101,7 @@ export class WorkItemService {
     const initialStage = this.resolveInitialStage(input.workflowContext)
 
     const workItem = new WorkItem({
+      id: input.id,
       workItemNumber: input.workItemNumber ?? this.generateWorkItemNumber(),
       type: input.type,
       customerId: input.customerId,
@@ -150,6 +159,10 @@ export class WorkItemService {
   updateWorkItem(workItemId: string, updates: UpdateWorkItemInput): WorkItem {
     const workItem = this.getRequired(workItemId)
 
+    if (updates.workItemNumber !== undefined) {
+      workItem.workItemNumber = updates.workItemNumber
+    }
+
     if (updates.type !== undefined) {
       workItem.type = updates.type
     }
@@ -160,6 +173,31 @@ export class WorkItemService {
 
     if (updates.priority !== undefined) {
       workItem.priority = updates.priority
+    }
+
+    if (updates.customerId !== undefined) {
+      workItem.customerId = updates.customerId
+    }
+
+    if (updates.orderId !== undefined) {
+      workItem.orderId = updates.orderId
+    }
+
+    if (updates.productId !== undefined) {
+      workItem.productId = updates.productId
+    }
+
+    if (updates.artworkId !== undefined) {
+      workItem.artworkId = updates.artworkId
+    }
+
+    if (updates.workflowId !== undefined) {
+      workItem.workflowId = updates.workflowId
+    }
+
+    if (updates.currentStageId !== undefined) {
+      workItem.currentStageId = updates.currentStageId
+      workItem.currentWorkflowStageId = updates.currentStageId
     }
 
     if (updates.assignedDepartmentId !== undefined) {
