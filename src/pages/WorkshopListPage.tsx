@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
+import PriorityBadge from '../components/common/PriorityBadge'
 import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
 import type {
   WorkshopArtworkNode,
@@ -18,6 +19,7 @@ import {
   getWorkshopListUiEnvironment,
   type WorkshopListUiEnvironment,
 } from '../services/workshopListUiBootstrap'
+import { getPriorityPresentation } from '../utils/priorityPresentation'
 
 type SortableColumn =
   | 'priority'
@@ -316,7 +318,10 @@ const WorkshopListPage = () => {
     filterType ? { label: `Type: ${filterType}`, clear: () => setFilterType('') } : null,
     filterStatus ? { label: `Status: ${filterStatus}`, clear: () => setFilterStatus('') } : null,
     filterPriority
-      ? { label: `Priority: ${filterPriority}`, clear: () => setFilterPriority('') }
+      ? {
+          label: `Priority: ${getPriorityPresentation(Number(filterPriority)).label}`,
+          clear: () => setFilterPriority(''),
+        }
       : null,
     filterStage ? { label: `Stage: ${filterStage}`, clear: () => setFilterStage('') } : null,
     filterDepartment
@@ -911,7 +916,7 @@ const WorkshopListPage = () => {
                     <span className="workshop-tree-cell-muted">--</span>
                     <span>{orderLeadRow?.assignedEmployee ?? 'Unassigned'}</span>
                     <span>{formatDate(order.dueDate)}</span>
-                    <span className="priority-pill">P{order.priority}</span>
+                    <PriorityBadge priority={order.priority} />
                     <span className={`workshop-status-badge workshop-status-${statusBadgeTone(order.status)}`}>
                       {statusBadgeLabel(order.status)}
                     </span>
@@ -969,7 +974,7 @@ const WorkshopListPage = () => {
                           <span className="workshop-tree-cell-muted">--</span>
                           <span>{artworkLeadRow?.assignedEmployee ?? 'Unassigned'}</span>
                           <span>{formatDate(artwork.dueDate)}</span>
-                          <span className="priority-pill">P{artwork.priority}</span>
+                          <PriorityBadge priority={artwork.priority} />
                           <span className={`workshop-status-badge workshop-status-${statusBadgeTone(artwork.status)}`}>
                             {statusBadgeLabel(artwork.status)}
                           </span>
@@ -1027,7 +1032,7 @@ const WorkshopListPage = () => {
                                 <span className="workshop-tree-cell-muted">--</span>
                                 <span>{row?.assignedEmployee ?? 'Unassigned'}</span>
                                 <span>{formatDate(piece.dueDate)}</span>
-                                <span className="priority-pill">P{piece.priority}</span>
+                                <PriorityBadge priority={piece.priority} />
                                 <span className={`workshop-status-badge workshop-status-${statusBadgeTone(piece.status)}`}>
                                   {statusBadgeLabel(piece.status)}
                                 </span>
@@ -1083,7 +1088,7 @@ const WorkshopListPage = () => {
                                     <span className="workshop-tree-operation-name">{calculation.kind} Calculation</span>
                                     <span>{row?.assignedEmployee ?? 'Unassigned'}</span>
                                     <span>{formatDate(piece.dueDate)}</span>
-                                    <span className="priority-pill">P{piece.priority}</span>
+                                    <PriorityBadge priority={piece.priority} />
                                     <span className={`workshop-status-badge workshop-status-${statusBadgeTone(calculation.status)}`}>
                                       {statusBadgeLabel(calculation.status)}
                                     </span>
@@ -1145,7 +1150,7 @@ const WorkshopListPage = () => {
                                         : row?.assignedEmployee ?? 'Unassigned'}
                                     </span>
                                     <span>{formatDate(operation.dueDate)}</span>
-                                    <span className="priority-pill">P{operation.priority}</span>
+                                    <PriorityBadge priority={operation.priority} />
                                     <span className={`workshop-status-badge workshop-status-${statusBadgeTone(operation.status)}`}>
                                       {statusBadgeLabel(operation.status)}
                                     </span>
@@ -1216,7 +1221,9 @@ const WorkshopListPage = () => {
                     {statusBadgeLabel(selectedDrawer.status)}
                   </span>
                   <span>Due {formatDate(selectedDrawer.dueDate)}</span>
-                  <span>Priority P{selectedDrawer.priority}</span>
+                  <span title={getPriorityPresentation(selectedDrawer.priority).tooltip}>
+                    Priority {getPriorityPresentation(selectedDrawer.priority).label}
+                  </span>
                   <span>Assigned {selectedDrawer.assigned}</span>
                 </div>
 
@@ -1237,7 +1244,9 @@ const WorkshopListPage = () => {
                     </div>
                     <div>
                       <dt>Priority</dt>
-                      <dd>P{selectedDrawer.priority}</dd>
+                      <dd>
+                        <PriorityBadge priority={selectedDrawer.priority} />
+                      </dd>
                     </div>
                     <div>
                       <dt>Progress</dt>

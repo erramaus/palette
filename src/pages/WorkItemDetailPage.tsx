@@ -7,6 +7,7 @@ import {
 import { ProductionForecastService } from '../services/ProductionForecastService'
 import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
 import { useAppState } from '../state/AppStateContext'
+import PriorityBadge from '../components/common/PriorityBadge'
 import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
 import type { ThreeDFilePreparation, ThreeDSignatureStatus } from '../types/threeDFilePreparation'
 import type { ProductionCutCalculationResult } from '../types/productionCut'
@@ -335,7 +336,7 @@ const WorkItemDetailPage = () => {
             <strong>Status:</strong> {snapshot.workItem.status}
           </p>
           <p>
-            <strong>Priority:</strong> {snapshot.workItem.priority}
+            <strong>Priority:</strong> <PriorityBadge priority={snapshot.workItem.priority} />
           </p>
           <p>
             <strong>Due:</strong> {formatDate(snapshot.workItem.dueDate)}
@@ -667,7 +668,7 @@ const WorkItemDetailPage = () => {
               <article key={operation.id} className="work-item-operation-card">
                 <div className="work-item-section-header">
                   <div><strong>{operation.name}</strong><p className="subtle">{operation.estimatedMinutes} min · {operation.status}</p></div>
-                  <span className="priority-pill">P{operation.priority}</span>
+                  <PriorityBadge priority={operation.priority} />
                 </div>
                 <OperationLifecycleActions operation={operation} role="DIRECTOR" actorEmployeeId={directorId} />
                 {history.length > 0 && (

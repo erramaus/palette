@@ -1379,13 +1379,48 @@ button:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 42px;
+  min-width: 78px;
   border-radius: 999px;
   padding: 4px 8px;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #10243f;
-  background: #c9e7ff;
+  border: 1px solid transparent;
+}
+
+.priority-pill-critical {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.priority-pill-rush {
+  color: #9a3412;
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+
+.priority-pill-high {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.priority-pill-normal {
+  color: #1e40af;
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+.priority-pill-low {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+.priority-pill-backlog {
+  color: #374151;
+  background: #e5e7eb;
+  border-color: #d1d5db;
 }
 
 .inline-indicator {
