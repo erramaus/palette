@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BattlePlanOptimizationService } from '../services/BattlePlanOptimizationService'
+import { WarehouseInventoryImportService } from '../services/WarehouseInventoryImportService'
+import { buildMaterialInventoryBalancesFromWorkbookItems } from '../services/MaterialForecastService'
 import { generateBattlePlansFromOperations } from '../services/ProductionPipelineService'
 import {
   DEFAULT_OPTIMIZATION_CONSTRAINTS,
@@ -115,6 +117,7 @@ const toCsvIds = (value: string): string[] =>
 
 const BattlePlansPage = () => {
   const navigate = useNavigate()
+  const inventoryImportService = useMemo(() => new WarehouseInventoryImportService(), [])
   const {
     employees,
     productionJobs,
@@ -902,6 +905,9 @@ const BattlePlansPage = () => {
       battlePlans,
       employees,
       activityLogs,
+      inventoryBalances: buildMaterialInventoryBalancesFromWorkbookItems(
+        inventoryImportService.load()?.items ?? [],
+      ),
       constraints: scenarioConstraints,
       weights: optimizationWeights,
     })

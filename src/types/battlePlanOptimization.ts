@@ -99,7 +99,7 @@ export interface OptimizedOperationGroup {
   switchingCostMinutes: number
   expectedInterruptionMinutes: number
   estimateSource: 'HISTORICAL_MEDIAN' | 'PRODUCT_OPERATION_PROFILE' | 'EMPLOYEE_ADJUSTED' | 'STANDARD_FALLBACK'
-  materialStatus: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE' | 'UNKNOWN'
+  materialStatus: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE' | 'UNKNOWN' | 'NEEDS_REVIEW'
   deadlineImpact: string
   confidence: ForecastConfidence
   reasons: OptimizationReason[]
@@ -177,7 +177,7 @@ export interface OptimizedBattlePlanProposal {
 export interface MaterialReadinessStatus {
   workItemId: string
   operation: ProductionStepName
-  status: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE' | 'UNKNOWN'
+  status: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE' | 'UNKNOWN' | 'NEEDS_REVIEW'
   reason: string
   inventorySignals: string[]
 }

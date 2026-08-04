@@ -32,6 +32,10 @@ interface BattlePlanOptimizationInput {
   battlePlans: BattlePlan[]
   employees: Employee[]
   activityLogs: AppActivityLog[]
+  inventoryBalances?: Partial<Record<'FRAME' | 'BASE' | 'STRETCHER' | 'DIBOND', {
+    reservedLinearInches: number
+    availableLinearInches: number
+  }>>
   constraints?: Partial<OptimizationConstraint>
   weights?: Partial<OptimizationWeights>
 }
@@ -94,12 +98,16 @@ const toProjectedFinishTime = (minutes: number): string => {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
+const hasInventorySignal = (signals: string[], fragment: string): boolean =>
+  signals.some((signal) => signal.includes(fragment))
+
 export class BattlePlanOptimizationService {
   private readonly planDate: string
   private readonly productionJobs: ProductionJob[]
   private readonly battlePlans: BattlePlan[]
   private readonly employees: Employee[]
   private readonly activityLogs: AppActivityLog[]
+  private readonly inventoryBalances: BattlePlanOptimizationInput['inventoryBalances']
   private readonly constraints: OptimizationConstraint
   private readonly weights: OptimizationWeights
 
@@ -109,6 +117,7 @@ export class BattlePlanOptimizationService {
     this.battlePlans = input.battlePlans
     this.employees = input.employees
     this.activityLogs = input.activityLogs
+    this.inventoryBalances = input.inventoryBalances
     this.constraints = {
       ...DEFAULT_OPTIMIZATION_CONSTRAINTS,
       ...(input.constraints ?? {}),
@@ -126,6 +135,7 @@ export class BattlePlanOptimizationService {
     const materialForecast = new MaterialForecastService({
       productionJobs: this.productionJobs,
       battlePlans: this.battlePlans,
+      inventoryBalances: this.inventoryBalances,
     })
 
     const historicalPerformance = new HistoricalPerformanceService({
@@ -230,6 +240,25 @@ export class BattlePlanOptimizationService {
           carryForwardHistory,
           scoreBreakdown,
           reasons,
+        }
+
+        const materialSignals = baseCandidate.material.inventorySignals
+        if (hasInventorySignal(materialSignals, '_inventory_shortage:')) {
+          warnings.push({
+            level: 'WARNING',
+            code: 'MATERIAL_SHORTAGE',
+            message: `${job.orderNumber} has a confirmed workbook inventory shortage for ${operation}. ${baseCandidate.material.reason}`,
+            affectedWorkItemIds: [job.id],
+          })
+        }
+
+        if (baseCandidate.material.status === 'NEEDS_REVIEW') {
+          warnings.push({
+            level: 'WARNING',
+            code: 'MATERIAL_NEEDS_REVIEW',
+            message: `${job.orderNumber} could not be matched confidently to persisted workbook inventory for ${operation}. ${baseCandidate.material.reason}`,
+            affectedWorkItemIds: [job.id],
+          })
         }
 
         return this.applyCandidatePriorities(baseCandidate, job)
@@ -664,7 +693,7 @@ export class BattlePlanOptimizationService {
     job: ProductionJob,
     operation: ProductionStepName,
     setupFamily: SetupFamily,
-    materialStatus: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE' | 'UNKNOWN',
+    materialStatus: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE' | 'UNKNOWN' | 'NEEDS_REVIEW',
     carryForwardHistory: number,
     riskLevel: string,
   ): OptimizationScoreBreakdown {
@@ -690,6 +719,8 @@ export class BattlePlanOptimizationService {
         ? 1 * this.weights.materialReadiness
         : materialStatus === 'LIMITED'
           ? 0.45 * this.weights.materialReadiness
+          : materialStatus === 'NEEDS_REVIEW'
+            ? 0.25 * this.weights.materialReadiness
           : materialStatus === 'UNKNOWN'
             ? 0.3 * this.weights.materialReadiness
             : 0
@@ -769,7 +800,7 @@ export class BattlePlanOptimizationService {
     const cleanupMinutes = Math.max(4, Math.round(candidate.estimatedMinutes * 0.08))
     const expectedInterruptionMinutes = Math.round(candidate.carryForwardHistory * 4)
 
-    const estimateSource = candidate.material.status === 'UNKNOWN'
+    const estimateSource = candidate.material.status === 'UNKNOWN' || candidate.material.status === 'NEEDS_REVIEW'
       ? 'STANDARD_FALLBACK'
       : 'HISTORICAL_MEDIAN'
 

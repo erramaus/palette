@@ -2,6 +2,7 @@ import type { BattlePlan } from '../types/battlePlans'
 import type { ProductionJob, ProductionStepName } from '../types/production'
 import type { MaterialReadinessStatus } from '../types/battlePlanOptimization'
 import type { CalculationTrace, ProductionCutCalculationStatus, ProductionCutKind, ProductionCutMember } from '../types/productionCut'
+import type { InventoryItem as WorkbookInventoryItem } from '../types/inventory'
 import { BaseCalculationService } from './BaseCalculationService'
 import { FrameCalculationService } from './FrameCalculationService'
 import { StretcherCalculationService } from './StretcherCalculationService'
@@ -35,6 +36,52 @@ export interface AggregatedMaterialDemand {
   workItemIds: string[]
 }
 
+type InventoryCoverageStatus = 'AVAILABLE' | 'LIMITED' | 'NEEDS_REVIEW'
+
+export const buildMaterialInventoryBalancesFromWorkbookItems = (
+  inventoryItems: WorkbookInventoryItem[],
+): Partial<Record<MaterialDemand['kind'], {
+  reservedLinearInches: number
+  availableLinearInches: number
+}>> => {
+  const balances: Partial<Record<MaterialDemand['kind'], {
+    reservedLinearInches: number
+    availableLinearInches: number
+  }>> = {}
+
+  const add = (kind: MaterialDemand['kind'], reserved: number, available: number): void => {
+    const current = balances[kind] ?? { reservedLinearInches: 0, availableLinearInches: 0 }
+    balances[kind] = {
+      reservedLinearInches: current.reservedLinearInches + reserved,
+      availableLinearInches: current.availableLinearInches + available,
+    }
+  }
+
+  for (const item of inventoryItems) {
+    if (!item.active) continue
+
+    const searchText = `${item.categoryName} ${item.name} ${item.description ?? ''}`.toLowerCase()
+    const reserved = Math.max(0, item.quantityReserved)
+    const available = Math.max(0, item.quantityAvailable)
+
+    // Workbook-grounded mapping only: explicit stretcher/strainer rows, moulding references, and dibond references.
+    if (searchText.includes('stretcher') || searchText.includes('strainer')) {
+      add('STRETCHER', reserved, available)
+      continue
+    }
+    if (searchText.includes('mould')) {
+      add('FRAME', reserved, available)
+      continue
+    }
+    if (searchText.includes('dibond')) {
+      add('DIBOND', reserved, available)
+      continue
+    }
+  }
+
+  return balances
+}
+
 const inferInventorySignals = (job: ProductionJob): string[] => {
   const notes = job.notes.toLowerCase()
   const signals: string[] = []
@@ -58,6 +105,8 @@ const inferInventorySignals = (job: ProductionJob): string[] => {
   return signals
 }
 
+const formatLinearInches = (value: number): string => Number(value.toFixed(2)).toString()
+
 export class MaterialForecastService {
   private readonly productionJobs: ProductionJob[]
   private readonly battlePlans: BattlePlan[]
@@ -72,6 +121,51 @@ export class MaterialForecastService {
     this.inventoryBalances = input.inventoryBalances
   }
 
+  private evaluateInventoryCoverage(demands: MaterialDemand[]): {
+    status: InventoryCoverageStatus
+    reason: string | null
+    signals: string[]
+  } {
+    let status: InventoryCoverageStatus = 'AVAILABLE'
+    const reasons: string[] = []
+    const signals: string[] = []
+
+    for (const demand of demands) {
+      if (demand.status === 'NEEDS_REVIEW' || demand.totalLinearInches === null) {
+        status = 'NEEDS_REVIEW'
+        reasons.push(`${demand.kind} demand requires review before workbook inventory can be matched confidently.`)
+        signals.push(`${demand.kind.toLowerCase()}_inventory_match_needs_review`)
+        continue
+      }
+
+      const balance = this.inventoryBalances?.[demand.kind]
+      if (!balance) {
+        status = 'NEEDS_REVIEW'
+        reasons.push(`${demand.kind} inventory mapping is not confirmed in persisted workbook balances.`)
+        signals.push(`${demand.kind.toLowerCase()}_inventory_match_needs_review`)
+        continue
+      }
+
+      if (balance.availableLinearInches < demand.totalLinearInches) {
+        if (status !== 'NEEDS_REVIEW') {
+          status = 'LIMITED'
+        }
+        const shortage = demand.totalLinearInches - balance.availableLinearInches
+        reasons.push(`${demand.kind} shortage of ${formatLinearInches(shortage)} linear inches against persisted workbook balances.`)
+        signals.push(`${demand.kind.toLowerCase()}_inventory_shortage:${formatLinearInches(shortage)}`)
+        continue
+      }
+
+      signals.push(`${demand.kind.toLowerCase()}_inventory_confirmed:${formatLinearInches(balance.availableLinearInches)}`)
+    }
+
+    return {
+      status,
+      reason: reasons.length > 0 ? reasons.join(' ') : null,
+      signals,
+    }
+  }
+
   getMaterialStatus(workItemId: string, operation: ProductionStepName): MaterialReadinessStatus {
     const job = this.productionJobs.find((item) => item.id === workItemId)
 
@@ -84,13 +178,14 @@ export class MaterialForecastService {
         inventorySignals: ['missing_workitem_mapping'],
       }
     }
-
     const demands = this.getMaterialDemand(workItemId)
+    const inventoryCoverage = this.evaluateInventoryCoverage(demands)
     const signals = [
       ...inferInventorySignals(job),
       ...demands.map((demand) => demand.status === 'CONFIRMED'
         ? `${demand.kind.toLowerCase()}_linear_inches:${demand.totalLinearInches}`
         : `${demand.kind.toLowerCase()}_cut_needs_review`),
+      ...inventoryCoverage.signals,
     ]
 
     if (job.onHold) {
@@ -107,8 +202,8 @@ export class MaterialForecastService {
       return {
         workItemId,
         operation,
-        status: 'LIMITED',
-        reason: 'Material dependency noted in production notes.',
+        status: inventoryCoverage.status === 'NEEDS_REVIEW' ? 'NEEDS_REVIEW' : 'LIMITED',
+        reason: inventoryCoverage.reason ?? 'Material dependency noted in production notes.',
         inventorySignals: signals,
       }
     }
@@ -117,8 +212,8 @@ export class MaterialForecastService {
       return {
         workItemId,
         operation,
-        status: 'LIMITED',
-        reason: 'Approval dependency may delay material release.',
+        status: inventoryCoverage.status === 'NEEDS_REVIEW' ? 'NEEDS_REVIEW' : 'LIMITED',
+        reason: inventoryCoverage.reason ?? 'Approval dependency may delay material release.',
         inventorySignals: signals,
       }
     }
@@ -136,9 +231,19 @@ export class MaterialForecastService {
       return {
         workItemId,
         operation,
-        status: 'LIMITED',
-        reason: 'Battle plan notes include material/supply waiting signals.',
+        status: inventoryCoverage.status === 'NEEDS_REVIEW' ? 'NEEDS_REVIEW' : 'LIMITED',
+        reason: inventoryCoverage.reason ?? 'Battle plan notes include material/supply waiting signals.',
         inventorySignals: [...signals, 'battle_plan_supply_risk'],
+      }
+    }
+
+    if (inventoryCoverage.reason) {
+      return {
+        workItemId,
+        operation,
+        status: inventoryCoverage.status,
+        reason: inventoryCoverage.reason,
+        inventorySignals: signals,
       }
     }
 
