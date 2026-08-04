@@ -198,7 +198,7 @@ export type ProductionStepStatus = 'PENDING' | 'READY' | 'IN_PROGRESS' | 'DONE' 
 
 export type ShipmentStatus = 'PENDING' | 'PACKED' | 'IN_TRANSIT' | 'DELIVERED' | 'RETURNED' | 'CANCELLED'
 
-export type InventoryCategory = 'RAW_MATERIAL' | 'FRAME' | 'PACKAGING' | 'FINISHED_GOOD' | 'OTHER'
+export type InventoryCategory = string
 
 export type WorkflowRuleOperator =
   | 'EQUALS'
@@ -394,6 +394,21 @@ export interface InventoryItem extends AuditedEntity {
   reorderPoint: number
   locationCode?: string
   lastCountedAt?: IsoDateTime
+  workbookSourceId?: string
+  subcategory?: string
+  description?: string
+  packageSize?: string
+  supplierName?: string
+  unitCost?: number
+  desiredStock?: number
+  quantityToPurchase?: number
+  active?: boolean
+  countingInstructions?: string
+  sourceWorksheet?: string
+  sourceRowNumber?: number
+  sourceRef?: string
+  sourceValues?: Record<string, string>
+  sourceFormulas?: Record<string, string>
 }
 
 export type ActivityAction =

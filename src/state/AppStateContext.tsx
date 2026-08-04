@@ -47,6 +47,7 @@ import { DEFAULT_PRODUCTION_ANALYTICS_TARGETS, type ProductionAnalyticsTargets }
 import type { OptimizationConstraint, OptimizationWeights } from '../types/battlePlanOptimization'
 import { DEFAULT_OPTIMIZATION_CONSTRAINTS, DEFAULT_OPTIMIZATION_WEIGHTS } from '../services/battlePlanOptimizationConfig'
 import { getWorkItemDetailService } from '../services/WorkItemDetailService'
+import { ensureRecurringInventoryBattlePlanTasks } from '../services/inventoryBattlePlanTasks'
 import {
   LocalStoragePersistenceAdapter,
   PersistenceService,
@@ -301,7 +302,9 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const [threeDFilePreparations, setThreeDFilePreparations] = useState<ThreeDFilePreparation[]>(
     initialPersistence.snapshot?.data.productionPieces ?? buildInitialThreeDPreparations(),
   )
-  const [battlePlans, setBattlePlans] = useState<BattlePlan[]>(initialPersistence.snapshot?.data.battlePlans ?? mockBattlePlans)
+  const [battlePlans, setBattlePlans] = useState<BattlePlan[]>(
+    ensureRecurringInventoryBattlePlanTasks(initialPersistence.snapshot?.data.battlePlans ?? mockBattlePlans),
+  )
   const [activityLogs, setActivityLogs] = useState<AppActivityLog[]>(initialPersistence.snapshot?.data.activityLogs ?? [])
   const [forecastSettings, setForecastSettings] = useState<ForecastConfig>(() => ({
     ...DEFAULT_FORECAST_CONFIG,
@@ -520,7 +523,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
 
   const synchronizeOperation = useCallback((updated: ProductionOperation): void => {
     setOperationRevision((current) => current + 1)
-    setBattlePlans((currentPlans) => currentPlans.map((plan) => ({
+    setBattlePlans((currentPlans) => ensureRecurringInventoryBattlePlanTasks(currentPlans.map((plan) => ({
       ...plan,
       tasks: plan.tasks.map((task) => task.productionOperationId === updated.id ? {
         ...task,
@@ -531,7 +534,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
         operationDueDate: updated.dueDate,
         operationPriority: updated.priority,
       } : task),
-    })))
+    }))))
   }, [])
 
   const assignOperation = useCallback((operationId: string, employeeId: string, assignedBy: string) =>
@@ -849,17 +852,21 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
 
   const createBattlePlan = useCallback(
     (battlePlan: BattlePlan) => {
-      setBattlePlans((currentPlans) => [battlePlan, ...currentPlans])
+      setBattlePlans((currentPlans) =>
+        ensureRecurringInventoryBattlePlanTasks([battlePlan, ...currentPlans]),
+      )
     },
     [setBattlePlans],
   )
 
   const replaceBattlePlansForDate = useCallback(
     (date: string, nextPlans: BattlePlan[]) => {
-      setBattlePlans((currentPlans) => [
-        ...nextPlans,
-        ...currentPlans.filter((plan) => plan.date !== date),
-      ])
+      setBattlePlans((currentPlans) =>
+        ensureRecurringInventoryBattlePlanTasks([
+          ...nextPlans,
+          ...currentPlans.filter((plan) => plan.date !== date),
+        ]),
+      )
     },
     [setBattlePlans],
   )
@@ -867,7 +874,9 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const saveBattlePlan = useCallback(
     (updatedPlan: BattlePlan) => {
       setBattlePlans((currentPlans) =>
-        currentPlans.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)),
+        ensureRecurringInventoryBattlePlanTasks(
+          currentPlans.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)),
+        ),
       )
     },
     [setBattlePlans],
@@ -960,7 +969,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     workItemDetailService.refreshLookupMaps(snapshot.data.orders)
     setProductionJobs(snapshot.data.orders)
     setThreeDFilePreparations(snapshot.data.productionPieces)
-    setBattlePlans(snapshot.data.battlePlans)
+    setBattlePlans(ensureRecurringInventoryBattlePlanTasks(snapshot.data.battlePlans))
     setActivityLogs(snapshot.data.activityLogs)
     setForecastSettings({
       ...DEFAULT_FORECAST_CONFIG,
@@ -1006,7 +1015,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     environment.workItemService.replaceAllWorkItems(baselineWorkItems)
     setProductionJobs(mockProductionJobs)
     setThreeDFilePreparations(buildInitialThreeDPreparations())
-    setBattlePlans(mockBattlePlans)
+    setBattlePlans(ensureRecurringInventoryBattlePlanTasks(mockBattlePlans))
     setForecastSettings(DEFAULT_FORECAST_CONFIG)
     setAnalyticsTargets(DEFAULT_PRODUCTION_ANALYTICS_TARGETS)
     setOptimizationWeights(DEFAULT_OPTIMIZATION_WEIGHTS)

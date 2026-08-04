@@ -1,0 +1,4467 @@
+{
+  "workbook": "Warehouse Inventory 2026-07-08.xlsx",
+  "sheetCount": 7,
+  "worksheetsAnalyzed": [
+    {
+      "worksheet": "Unit A",
+      "visibility": "VISIBLE",
+      "headerRow": 2,
+      "rowCount": 89,
+      "formulaCount": 354,
+      "mergedRanges": [
+        "C1:K1",
+        "A3:A26",
+        "A27:A31",
+        "A32:A44",
+        "A45:A59",
+        "A60:A78",
+        "A79:A85",
+        "A86:A90"
+      ],
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "12-WEEKS [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]"
+      ]
+    },
+    {
+      "worksheet": "Unit B",
+      "visibility": "VISIBLE",
+      "headerRow": 3,
+      "rowCount": 114,
+      "formulaCount": 435,
+      "mergedRanges": [
+        "C1:K1",
+        "G2:K2",
+        "A4:A11",
+        "A12:A42",
+        "A43:A86",
+        "A87:A103",
+        "A104:A107",
+        "A108:A116"
+      ],
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "MAX QTY [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]"
+      ]
+    },
+    {
+      "worksheet": "Unit C",
+      "visibility": "VISIBLE",
+      "headerRow": 2,
+      "rowCount": 33,
+      "formulaCount": 125,
+      "mergedRanges": [
+        "C1:K1",
+        "A3:A9",
+        "A10:A24",
+        "A25:A31",
+        "A32:A34"
+      ],
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "MAX QTY [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]"
+      ]
+    },
+    {
+      "worksheet": "Erins Studio",
+      "visibility": "VISIBLE",
+      "headerRow": 2,
+      "rowCount": 84,
+      "formulaCount": 415,
+      "mergedRanges": [
+        "C1:K1",
+        "A3:A8",
+        "A9:A18",
+        "A19:A41",
+        "A42:A62",
+        "A63:A85"
+      ],
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "MAX QTY [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]",
+        "COLUMN_Q [Q]",
+        "COLUMN_R [R]",
+        "COLUMN_S [S]",
+        "COLUMN_T [T]",
+        "COLUMN_U [U]",
+        "COLUMN_V [V]",
+        "COLUMN_W [W]",
+        "COLUMN_X [X]",
+        "COLUMN_Y [Y]",
+        "COLUMN_Z [Z]",
+        "COLUMN_AA [AA]"
+      ]
+    },
+    {
+      "worksheet": "Total PO Values",
+      "visibility": "HIDDEN",
+      "headerRow": 1,
+      "rowCount": 5,
+      "formulaCount": 20,
+      "mergedRanges": [],
+      "headers": [
+        "Unit A: [A]",
+        "$6,235.00 [B]",
+        "COLUMN_C [C]",
+        "ACCOUNT [D]",
+        "TOTAL [E]",
+        "UNIT A [F]",
+        "UNIT B [G]",
+        "UNIT C [H]",
+        "COLUMN_I [I]",
+        "COLUMN_J [J]",
+        "COLUMN_K [K]",
+        "COLUMN_L [L]",
+        "COLUMN_M [M]",
+        "COLUMN_N [N]",
+        "COLUMN_O [O]",
+        "COLUMN_P [P]",
+        "COLUMN_Q [Q]",
+        "COLUMN_R [R]",
+        "COLUMN_S [S]",
+        "COLUMN_T [T]",
+        "COLUMN_U [U]",
+        "COLUMN_V [V]",
+        "COLUMN_W [W]",
+        "COLUMN_X [X]",
+        "COLUMN_Y [Y]",
+        "COLUMN_Z [Z]"
+      ]
+    },
+    {
+      "worksheet": "2021-10-21 POs",
+      "visibility": "HIDDEN",
+      "headerRow": 1,
+      "rowCount": 25,
+      "formulaCount": 1,
+      "mergedRanges": [],
+      "headers": [
+        "ORDER QTY. [A]",
+        "Item [B]",
+        "Size [C]",
+        "Item#2 [D]",
+        "Description [E]",
+        "Purchase from [F]",
+        "Account [G]",
+        "Price Ea. [H]",
+        "Subtotal [I]",
+        "COLUMN_J [J]",
+        "COLUMN_K [K]"
+      ]
+    },
+    {
+      "worksheet": "2021-10-14 POs",
+      "visibility": "HIDDEN",
+      "headerRow": 1,
+      "rowCount": 24,
+      "formulaCount": 6,
+      "mergedRanges": [],
+      "headers": [
+        "ORDER QTY. [A]",
+        "Item [B]",
+        "Size [C]",
+        "Item#2 [D]",
+        "Description [E]",
+        "Purchase from [F]",
+        "Account [G]",
+        "Price Ea. [H]",
+        "Subtotal [I]",
+        "COLUMN_J [J]",
+        "COLUMN_K [K]"
+      ]
+    }
+  ],
+  "inventorySheets": [
+    {
+      "worksheet": "Unit A",
+      "visibility": "VISIBLE",
+      "headerRow": 2,
+      "rowCount": 89,
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "12-WEEKS [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]"
+      ],
+      "formulaCount": 354
+    },
+    {
+      "worksheet": "Unit B",
+      "visibility": "VISIBLE",
+      "headerRow": 3,
+      "rowCount": 114,
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "MAX QTY [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]"
+      ],
+      "formulaCount": 435
+    },
+    {
+      "worksheet": "Unit C",
+      "visibility": "VISIBLE",
+      "headerRow": 2,
+      "rowCount": 33,
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "MAX QTY [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]"
+      ],
+      "formulaCount": 125
+    },
+    {
+      "worksheet": "Erins Studio",
+      "visibility": "VISIBLE",
+      "headerRow": 2,
+      "rowCount": 84,
+      "headers": [
+        "COLUMN_A [A]",
+        "ORDER [B]",
+        "MAX QTY [C]",
+        "RE-ORDER QTY [D]",
+        "WEEKS ON HAND [E]",
+        "ORDER QTY. [F]",
+        "STOCK [G]",
+        "Item [H]",
+        "Size [I]",
+        "Item#2 [J]",
+        "Description [K]",
+        "Purchase from [L]",
+        "Account [M]",
+        "Price Ea. [N]",
+        "Subtotal [O]",
+        "Notes [P]",
+        "COLUMN_Q [Q]",
+        "COLUMN_R [R]",
+        "COLUMN_S [S]",
+        "COLUMN_T [T]",
+        "COLUMN_U [U]",
+        "COLUMN_V [V]",
+        "COLUMN_W [W]",
+        "COLUMN_X [X]",
+        "COLUMN_Y [Y]",
+        "COLUMN_Z [Z]",
+        "COLUMN_AA [AA]"
+      ],
+      "formulaCount": 415
+    }
+  ],
+  "inventoryStats": {
+    "inventoryItemsFound": 316,
+    "categoriesFound": [
+      "3D Printer Supplies",
+      "Brushes",
+      "Canvas Cutting Table",
+      "Canvas Printer",
+      "Canvases",
+      "Computer",
+      "Crate",
+      "Engraver",
+      "Framing Cart",
+      "Framing Table",
+      "Material Bays",
+      "Misc",
+      "Office",
+      "OIl Paints",
+      "Originals/Print Tables",
+      "Pallets/Racks",
+      "Paper Prints",
+      "Powder Coater",
+      "Prints",
+      "Racks",
+      "Shipping Table",
+      "Varnish Room"
+    ],
+    "locationsFound": [
+      "Erins Studio",
+      "Unit A",
+      "Unit B",
+      "Unit C"
+    ],
+    "suppliersFound": [
+      "Amazon",
+      "AMS (Email)",
+      "B & H",
+      "Berkshire",
+      "Blick",
+      "BreathingColor",
+      "ClearBags",
+      "Colex",
+      "DickBlick",
+      "Eastwood",
+      "FedEx",
+      "Frame Destination",
+      "Framer's Inventory (Email)",
+      "Harbor Freight",
+      "Jackson's",
+      "LexJet",
+      "Lowe's",
+      "Lowes",
+      "Monroe Speciality",
+      "N/A",
+      "swissQprints",
+      "Tools Today",
+      "Uline",
+      "Walmart",
+      "Warehouse"
+    ],
+    "ambiguousRowCount": 7
+  },
+  "formulaRulesFound": [
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C3*G3",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 3,
+      "sourceRef": "Erins Studio!E3"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G3=\"\",\"\",IF(G3>D3,\"\",C3-G3))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 3,
+      "sourceRef": "Erins Studio!A3"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F3=\"\",\"\",N3*F3)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 3,
+      "sourceRef": "Erins Studio!A3"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B3+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 4,
+      "sourceRef": "Unit A!B4"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C4*G4",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 4,
+      "sourceRef": "Erins Studio!E4"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G4=\"\",\"\",IF(G4>D4,\"\",C4-G4))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 4,
+      "sourceRef": "Erins Studio!A4"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "51.2+34.8",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 4,
+      "sourceRef": "Unit A!N4"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F4=\"\",\"\",N4*F4)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 4,
+      "sourceRef": "Erins Studio!A4"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B4+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 5,
+      "sourceRef": "Unit A!B5"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C5*G5",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 5,
+      "sourceRef": "Erins Studio!E5"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G5=\"\",\"\",IF(G5>D5,\"\",C5-G5))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 5,
+      "sourceRef": "Erins Studio!A5"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F5=\"\",\"\",N5*F5)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 5,
+      "sourceRef": "Erins Studio!A5"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B5+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 6,
+      "sourceRef": "Unit A!B6"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C6*G6",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 6,
+      "sourceRef": "Erins Studio!E6"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G6=\"\",\"\",IF(G6>D6,\"\",C6-G6))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 6,
+      "sourceRef": "Erins Studio!A6"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F6=\"\",\"\",N6*F6)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 6,
+      "sourceRef": "Erins Studio!A6"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B6+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 7,
+      "sourceRef": "Unit A!B7"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C7*G7",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 7,
+      "sourceRef": "Erins Studio!E7"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G7=\"\",\"\",IF(G7>D7,\"\",C7-G7))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 7,
+      "sourceRef": "Erins Studio!A7"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F7=\"\",\"\",N7*F7)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 7,
+      "sourceRef": "Erins Studio!A7"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B7+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 8,
+      "sourceRef": "Unit A!B8"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C8*G8",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 8,
+      "sourceRef": "Erins Studio!E8"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G8=\"\",\"\",IF(G8>D8,\"\",C8-G8))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 8,
+      "sourceRef": "Erins Studio!A8"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "45.7+34.3",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 8,
+      "sourceRef": "Unit A!N8"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F8=\"\",\"\",N8*F8)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 8,
+      "sourceRef": "Erins Studio!A8"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B8+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 9,
+      "sourceRef": "Unit A!B9"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C9*G9",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 9,
+      "sourceRef": "Erins Studio!E9"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G9=\"\",\"\",IF(G9>D9,\"\",C9-G9))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 9,
+      "sourceRef": "Erins Studio!A9"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "29.9+34.1",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 9,
+      "sourceRef": "Unit A!N9"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F9=\"\",\"\",N9*F9)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 9,
+      "sourceRef": "Erins Studio!A9"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B9+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 10,
+      "sourceRef": "Unit A!B10"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C10*G10",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 10,
+      "sourceRef": "Erins Studio!E10"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G10=\"\",\"\",IF(G10>D10,\"\",C10-G10))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 10,
+      "sourceRef": "Erins Studio!A10"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F10=\"\",\"\",N10*F10)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 10,
+      "sourceRef": "Erins Studio!A10"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B10+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 11,
+      "sourceRef": "Unit A!B11"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C11*G11",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 11,
+      "sourceRef": "Erins Studio!E11"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G11=\"\",\"\",IF(G11>D11,\"\",C11-G11))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 11,
+      "sourceRef": "Erins Studio!A11"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F11=\"\",\"\",N11*F11)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 11,
+      "sourceRef": "Erins Studio!A11"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B11+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 12,
+      "sourceRef": "Unit A!B12"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C12*G12",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 12,
+      "sourceRef": "Erins Studio!E12"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G12=\"\",\"\",IF(G12>D12,\"\",C12-G12))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 12,
+      "sourceRef": "Erins Studio!A12"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F12=\"\",\"\",N12*F12)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 12,
+      "sourceRef": "Erins Studio!A12"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B12+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 13,
+      "sourceRef": "Unit A!B13"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C13*G13",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 13,
+      "sourceRef": "Erins Studio!E13"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G13=\"\",\"\",IF(G13>D13,\"\",C13-G13))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 13,
+      "sourceRef": "Erins Studio!A13"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F13=\"\",\"\",N13*F13)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 13,
+      "sourceRef": "Erins Studio!A13"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B13+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 14,
+      "sourceRef": "Unit A!B14"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C14*G14",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 14,
+      "sourceRef": "Erins Studio!E14"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G14=\"\",\"\",IF(G14>D14,\"\",C14-G14))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 14,
+      "sourceRef": "Erins Studio!A14"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F14=\"\",\"\",N14*F14)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 14,
+      "sourceRef": "Erins Studio!A14"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B14+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 15,
+      "sourceRef": "Unit A!B15"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C15*G15",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 15,
+      "sourceRef": "Erins Studio!E15"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G15=\"\",\"\",IF(G15>D15,\"\",C15-G15))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 15,
+      "sourceRef": "Erins Studio!A15"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F15=\"\",\"\",N15*F15)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 15,
+      "sourceRef": "Erins Studio!A15"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B15+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 16,
+      "sourceRef": "Unit A!B16"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C16*G16",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 16,
+      "sourceRef": "Erins Studio!E16"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G16=\"\",\"\",IF(G16>D16,\"\",C16-G16))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 16,
+      "sourceRef": "Erins Studio!A16"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F16=\"\",\"\",N16*F16)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 16,
+      "sourceRef": "Erins Studio!A16"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B16+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 17,
+      "sourceRef": "Unit A!B17"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C17*G17",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 17,
+      "sourceRef": "Erins Studio!E17"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G17=\"\",\"\",IF(G17>D17,\"\",C17-G17))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 17,
+      "sourceRef": "Erins Studio!A17"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F17=\"\",\"\",N17*F17)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 17,
+      "sourceRef": "Erins Studio!A17"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B17+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 18,
+      "sourceRef": "Unit A!B18"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C18*G18",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 18,
+      "sourceRef": "Erins Studio!E18"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G18=\"\",\"\",IF(G18>D18,\"\",C18-G18))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 18,
+      "sourceRef": "Erins Studio!A18"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F18=\"\",\"\",N18*F18)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 18,
+      "sourceRef": "Erins Studio!A18"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B18+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 19,
+      "sourceRef": "Unit A!B19"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C19*G19",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 19,
+      "sourceRef": "Erins Studio!E19"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G19=\"\",\"\",IF(G19>D19,\"\",C19-G19))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 19,
+      "sourceRef": "Erins Studio!A19"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F19=\"\",\"\",N19*F19)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 19,
+      "sourceRef": "Erins Studio!A19"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B19+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 20,
+      "sourceRef": "Unit A!B20"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C20*G20",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 20,
+      "sourceRef": "Erins Studio!E20"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G20=\"\",\"\",IF(G20>D20,\"\",C20-G20))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 20,
+      "sourceRef": "Erins Studio!A20"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F20=\"\",\"\",N20*F20)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 20,
+      "sourceRef": "Erins Studio!A20"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B20+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 21,
+      "sourceRef": "Unit A!B21"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C21*G21",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 21,
+      "sourceRef": "Erins Studio!E21"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G21=\"\",\"\",IF(G21>D21,\"\",C21-G21))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 21,
+      "sourceRef": "Erins Studio!A21"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F21=\"\",\"\",N21*F21)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 21,
+      "sourceRef": "Erins Studio!A21"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B21+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 22,
+      "sourceRef": "Unit A!B22"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C22*G22",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 22,
+      "sourceRef": "Erins Studio!E22"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G22=\"\",\"\",IF(G22>D22,\"\",C22-G22))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 22,
+      "sourceRef": "Erins Studio!A22"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F22=\"\",\"\",N22*F22)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 22,
+      "sourceRef": "Erins Studio!A22"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B22+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 23,
+      "sourceRef": "Unit A!B23"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C23*G23",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 23,
+      "sourceRef": "Erins Studio!E23"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G23=\"\",\"\",IF(G23>D23,\"\",C23-G23))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 23,
+      "sourceRef": "Erins Studio!A23"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F23=\"\",\"\",N23*F23)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 23,
+      "sourceRef": "Erins Studio!A23"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B23+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 24,
+      "sourceRef": "Unit A!B24"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C24*G24",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 24,
+      "sourceRef": "Erins Studio!E24"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G24=\"\",\"\",IF(G24>D24,\"\",C24-G24))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 24,
+      "sourceRef": "Erins Studio!A24"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F24=\"\",\"\",N24*F24)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 24,
+      "sourceRef": "Erins Studio!A24"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B24+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 25,
+      "sourceRef": "Unit A!B25"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G25=\"\",\"\",IF(G25>D25,\"\",C25-G25))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 25,
+      "sourceRef": "Erins Studio!A25"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "77.5+(45/4)+0.25",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 25,
+      "sourceRef": "Unit A!N25"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F25=\"\",\"\",N25*F25)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 25,
+      "sourceRef": "Erins Studio!A25"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "SUM(B25+1)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 26,
+      "sourceRef": "Unit A!B26"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C26*G26",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 26,
+      "sourceRef": "Erins Studio!E26"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G26=\"\",\"\",IF(G26>D26,\"\",C26-G26))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 26,
+      "sourceRef": "Erins Studio!A26"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F26=\"\",\"\",N26*F26)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 26,
+      "sourceRef": "Erins Studio!A26"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B26+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 27,
+      "sourceRef": "Erins Studio!B27"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G27=\"\",\"\",IF(G27>D27,\"\",C27-G27))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 27,
+      "sourceRef": "Erins Studio!A27"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F27=\"\",\"\",N27*F27)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 27,
+      "sourceRef": "Erins Studio!A27"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B27+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 28,
+      "sourceRef": "Erins Studio!B28"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G28=\"\",\"\",IF(G28>D28,\"\",C28-G28))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 28,
+      "sourceRef": "Erins Studio!A28"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F28=\"\",\"\",N28*F28)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 28,
+      "sourceRef": "Erins Studio!A28"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G29=\"\",\"\",IF(G29>D29,\"\",C29-G29))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 29,
+      "sourceRef": "Erins Studio!A29"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F29=\"\",\"\",N29*F29)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 29,
+      "sourceRef": "Erins Studio!A29"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B29+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 30,
+      "sourceRef": "Erins Studio!B30"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G30=\"\",\"\",IF(G30>D30,\"\",C30-G30))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 30,
+      "sourceRef": "Erins Studio!A30"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F30=\"\",\"\",N30*F30)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 30,
+      "sourceRef": "Erins Studio!A30"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B30+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 31,
+      "sourceRef": "Erins Studio!B31"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G31=\"\",\"\",IF(G31>D31,\"\",C31-G31))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 31,
+      "sourceRef": "Erins Studio!A31"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F31=\"\",\"\",N31*F31)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 31,
+      "sourceRef": "Erins Studio!A31"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B31+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 32,
+      "sourceRef": "Erins Studio!B32"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C32*G32",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 32,
+      "sourceRef": "Erins Studio!E32"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G32=\"\",\"\",IF(G32>D32,\"\",C32-G32))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 32,
+      "sourceRef": "Erins Studio!A32"
+    },
+    {
+      "field": "Item#2 [J]",
+      "formula": "\"31561109176416\"",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 32,
+      "sourceRef": "Unit A!J32"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F32=\"\",\"\",N32*F32)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 32,
+      "sourceRef": "Erins Studio!A32"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B32+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 33,
+      "sourceRef": "Erins Studio!B33"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C33*G33",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 33,
+      "sourceRef": "Erins Studio!E33"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G33=\"\",\"\",IF(G33>D33,\"\",C33-G33))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 33,
+      "sourceRef": "Erins Studio!A33"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F33=\"\",\"\",N33*F33)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 33,
+      "sourceRef": "Erins Studio!A33"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B33+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 34,
+      "sourceRef": "Erins Studio!B34"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C34*G34",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 34,
+      "sourceRef": "Erins Studio!E34"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G34=\"\",\"\",IF(G34>D34,\"\",C34-G34))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 34,
+      "sourceRef": "Erins Studio!A34"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F34=\"\",\"\",N34*F34)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 34,
+      "sourceRef": "Erins Studio!A34"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B34+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 35,
+      "sourceRef": "Erins Studio!B35"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C35*G35",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 35,
+      "sourceRef": "Erins Studio!E35"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G35=\"\",\"\",IF(G35>D35,\"\",C35-G35))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 35,
+      "sourceRef": "Erins Studio!A35"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F35=\"\",\"\",N35*F35)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 35,
+      "sourceRef": "Erins Studio!A35"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B35+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 36,
+      "sourceRef": "Erins Studio!B36"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C36*G36",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 36,
+      "sourceRef": "Erins Studio!E36"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G36=\"\",\"\",IF(G36>D36,\"\",C36-G36))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 36,
+      "sourceRef": "Erins Studio!A36"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F36=\"\",\"\",N36*F36)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 36,
+      "sourceRef": "Erins Studio!A36"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B36+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 37,
+      "sourceRef": "Erins Studio!B37"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C37*G37",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 37,
+      "sourceRef": "Erins Studio!E37"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G37=\"\",\"\",IF(G37>D37,\"\",C37-G37))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 37,
+      "sourceRef": "Erins Studio!A37"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F37=\"\",\"\",N37*F37)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 37,
+      "sourceRef": "Erins Studio!A37"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B37+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 38,
+      "sourceRef": "Erins Studio!B38"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C38*G38",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 38,
+      "sourceRef": "Erins Studio!E38"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G38=\"\",\"\",IF(G38>D38,\"\",C38-G38))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 38,
+      "sourceRef": "Erins Studio!A38"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F38=\"\",\"\",N38*F38)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 38,
+      "sourceRef": "Erins Studio!A38"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B38+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 39,
+      "sourceRef": "Erins Studio!B39"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C39*G39",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 39,
+      "sourceRef": "Erins Studio!E39"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G39=\"\",\"\",IF(G39>D39,\"\",C39-G39))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 39,
+      "sourceRef": "Erins Studio!A39"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F39=\"\",\"\",N39*F39)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 39,
+      "sourceRef": "Erins Studio!A39"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B39+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 40,
+      "sourceRef": "Erins Studio!B40"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C40*G40",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 40,
+      "sourceRef": "Erins Studio!E40"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G40=\"\",\"\",IF(G40>D40,\"\",C40-G40))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 40,
+      "sourceRef": "Erins Studio!A40"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F40=\"\",\"\",N40*F40)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 40,
+      "sourceRef": "Erins Studio!A40"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B40+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 41,
+      "sourceRef": "Erins Studio!B41"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C41*G41",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 41,
+      "sourceRef": "Erins Studio!E41"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G41=\"\",\"\",IF(G41>D41,\"\",C41-G41))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 41,
+      "sourceRef": "Erins Studio!A41"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F41=\"\",\"\",N41*F41)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 41,
+      "sourceRef": "Erins Studio!A41"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B41+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 42,
+      "sourceRef": "Erins Studio!B42"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C42*G42",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 42,
+      "sourceRef": "Erins Studio!E42"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G42=\"\",\"\",IF(G42>D42,\"\",C42-G42))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 42,
+      "sourceRef": "Erins Studio!A42"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F42=\"\",\"\",N42*F42)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 42,
+      "sourceRef": "Erins Studio!A42"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B42+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 43,
+      "sourceRef": "Erins Studio!B43"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C43*G43",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 43,
+      "sourceRef": "Erins Studio!E43"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G43=\"\",\"\",IF(G43>D43,\"\",C43-G43))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 43,
+      "sourceRef": "Erins Studio!A43"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F43=\"\",\"\",N43*F43)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 43,
+      "sourceRef": "Erins Studio!A43"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B43+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 44,
+      "sourceRef": "Erins Studio!B44"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C44*G44",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 44,
+      "sourceRef": "Erins Studio!E44"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G44=\"\",\"\",IF(G44>D44,\"\",C44-G44))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 44,
+      "sourceRef": "Erins Studio!A44"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F44=\"\",\"\",N44*F44)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 44,
+      "sourceRef": "Erins Studio!A44"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B44+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 45,
+      "sourceRef": "Erins Studio!B45"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C45*G45",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 45,
+      "sourceRef": "Erins Studio!E45"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G45=\"\",\"\",IF(G45>D45,\"\",C45-G45))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 45,
+      "sourceRef": "Erins Studio!A45"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F45=\"\",\"\",N45*F45)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 45,
+      "sourceRef": "Erins Studio!A45"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B45+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 46,
+      "sourceRef": "Erins Studio!B46"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C46*G46",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 46,
+      "sourceRef": "Erins Studio!E46"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G46=\"\",\"\",IF(G46>D46,\"\",C46-G46))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 46,
+      "sourceRef": "Erins Studio!A46"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F46=\"\",\"\",N46*F46)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 46,
+      "sourceRef": "Erins Studio!A46"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B46+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 47,
+      "sourceRef": "Erins Studio!B47"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C47*G47",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 47,
+      "sourceRef": "Erins Studio!E47"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G47=\"\",\"\",IF(G47>D47,\"\",C47-G47))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 47,
+      "sourceRef": "Erins Studio!A47"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F47=\"\",\"\",N47*F47)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 47,
+      "sourceRef": "Erins Studio!A47"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B47+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 48,
+      "sourceRef": "Erins Studio!B48"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C48*G48",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 48,
+      "sourceRef": "Erins Studio!E48"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G48=\"\",\"\",IF(G48>D48,\"\",C48-G48))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 48,
+      "sourceRef": "Erins Studio!A48"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F48=\"\",\"\",N48*F48)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 48,
+      "sourceRef": "Erins Studio!A48"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B48+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 49,
+      "sourceRef": "Erins Studio!B49"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C49*G49",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 49,
+      "sourceRef": "Erins Studio!E49"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G49=\"\",\"\",IF(G49>D49,\"\",C49-G49))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 49,
+      "sourceRef": "Erins Studio!A49"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F49=\"\",\"\",N49*F49)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 49,
+      "sourceRef": "Erins Studio!A49"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B49+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 50,
+      "sourceRef": "Erins Studio!B50"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C50*G50",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 50,
+      "sourceRef": "Erins Studio!E50"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G50=\"\",\"\",IF(G50>D50,\"\",C50-G50))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 50,
+      "sourceRef": "Erins Studio!A50"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F50=\"\",\"\",N50*F50)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 50,
+      "sourceRef": "Erins Studio!A50"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B50+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 51,
+      "sourceRef": "Erins Studio!B51"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C51*G51",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 51,
+      "sourceRef": "Erins Studio!E51"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G51=\"\",\"\",IF(G51>D51,\"\",C51-G51))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 51,
+      "sourceRef": "Erins Studio!A51"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F51=\"\",\"\",N51*F51)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 51,
+      "sourceRef": "Erins Studio!A51"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B51+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 52,
+      "sourceRef": "Erins Studio!B52"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C52*G52",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 52,
+      "sourceRef": "Erins Studio!E52"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G52=\"\",\"\",IF(G52>D52,\"\",C52-G52))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 52,
+      "sourceRef": "Erins Studio!A52"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F52=\"\",\"\",N52*F52)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 52,
+      "sourceRef": "Erins Studio!A52"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B52+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 53,
+      "sourceRef": "Erins Studio!B53"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C53*G53",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 53,
+      "sourceRef": "Erins Studio!E53"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G53=\"\",\"\",IF(G53>D53,\"\",C53-G53))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 53,
+      "sourceRef": "Erins Studio!A53"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F53=\"\",\"\",N53*F53)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 53,
+      "sourceRef": "Erins Studio!A53"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B53+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 54,
+      "sourceRef": "Erins Studio!B54"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C54*G54",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 54,
+      "sourceRef": "Erins Studio!E54"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G54=\"\",\"\",IF(G54>D54,\"\",C54-G54))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 54,
+      "sourceRef": "Erins Studio!A54"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F54=\"\",\"\",N54*F54)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 54,
+      "sourceRef": "Erins Studio!A54"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B54+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 55,
+      "sourceRef": "Erins Studio!B55"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C55*G55",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 55,
+      "sourceRef": "Erins Studio!E55"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G55=\"\",\"\",IF(G55>D55,\"\",C55-G55))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 55,
+      "sourceRef": "Erins Studio!A55"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F55=\"\",\"\",N55*F55)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 55,
+      "sourceRef": "Erins Studio!A55"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B55+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 56,
+      "sourceRef": "Erins Studio!B56"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C56*G56",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 56,
+      "sourceRef": "Erins Studio!E56"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G56=\"\",\"\",IF(G56>D56,\"\",C56-G56))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 56,
+      "sourceRef": "Erins Studio!A56"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F56=\"\",\"\",N56*F56)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 56,
+      "sourceRef": "Erins Studio!A56"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B59+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 60,
+      "sourceRef": "Erins Studio!B60"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C57*G57",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 57,
+      "sourceRef": "Erins Studio!E57"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G57=\"\",\"\",IF(G57>D57,\"\",C57-G57))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 57,
+      "sourceRef": "Erins Studio!A57"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F57=\"\",\"\",N57*F57)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 57,
+      "sourceRef": "Erins Studio!A57"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B56+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 57,
+      "sourceRef": "Erins Studio!B57"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C58*G58",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 58,
+      "sourceRef": "Erins Studio!E58"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G58=\"\",\"\",IF(G58>D58,\"\",C58-G58))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 58,
+      "sourceRef": "Erins Studio!A58"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F58=\"\",\"\",N58*F58)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 58,
+      "sourceRef": "Erins Studio!A58"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B58+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 59,
+      "sourceRef": "Erins Studio!B59"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C59*G59",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 59,
+      "sourceRef": "Erins Studio!E59"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G59=\"\",\"\",IF(G59>D59,\"\",C59-G59))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 59,
+      "sourceRef": "Erins Studio!A59"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F59=\"\",\"\",N59*F59)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 59,
+      "sourceRef": "Erins Studio!A59"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B57+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 58,
+      "sourceRef": "Erins Studio!B58"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C60*G60",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 60,
+      "sourceRef": "Erins Studio!E60"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G60=\"\",\"\",IF(G60>D60,\"\",C60-G60))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 60,
+      "sourceRef": "Erins Studio!A60"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "90",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 60,
+      "sourceRef": "Unit A!N60"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F60=\"\",\"\",N60*F60)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 60,
+      "sourceRef": "Erins Studio!A60"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B60+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 61,
+      "sourceRef": "Erins Studio!B61"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C61*G61",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 61,
+      "sourceRef": "Erins Studio!E61"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G61=\"\",\"\",IF(G61>D61,\"\",C61-G61))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 61,
+      "sourceRef": "Erins Studio!A61"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "125",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 61,
+      "sourceRef": "Unit A!N61"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F61=\"\",\"\",N61*F61)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 61,
+      "sourceRef": "Erins Studio!A61"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B61+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 62,
+      "sourceRef": "Erins Studio!B62"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C62*G62",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 62,
+      "sourceRef": "Erins Studio!E62"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G62=\"\",\"\",IF(G62>D62,\"\",C62-G62))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 62,
+      "sourceRef": "Erins Studio!A62"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F62=\"\",\"\",N62*F62)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 62,
+      "sourceRef": "Erins Studio!A62"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B62+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 63,
+      "sourceRef": "Erins Studio!B63"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C63*G63",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 63,
+      "sourceRef": "Erins Studio!E63"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G63=\"\",\"\",IF(G63>D63,\"\",C63-G63))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 63,
+      "sourceRef": "Erins Studio!A63"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F63=\"\",\"\",N63*F63)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 63,
+      "sourceRef": "Erins Studio!A63"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B63+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 64,
+      "sourceRef": "Erins Studio!B64"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C64*G64",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 64,
+      "sourceRef": "Erins Studio!E64"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G64=\"\",\"\",IF(G64>D64,\"\",C64-G64))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 64,
+      "sourceRef": "Erins Studio!A64"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F64=\"\",\"\",N64*F64)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 64,
+      "sourceRef": "Erins Studio!A64"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B64+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 65,
+      "sourceRef": "Erins Studio!B65"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C65*G65",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 65,
+      "sourceRef": "Erins Studio!E65"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G65=\"\",\"\",IF(G65>D65,\"\",C65-G65))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 65,
+      "sourceRef": "Erins Studio!A65"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "89",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 65,
+      "sourceRef": "Unit A!N65"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F65=\"\",\"\",N65*F65)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 65,
+      "sourceRef": "Erins Studio!A65"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B65+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 66,
+      "sourceRef": "Erins Studio!B66"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C66*G66",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 66,
+      "sourceRef": "Erins Studio!E66"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G66=\"\",\"\",IF(G66>D66,\"\",C66-G66))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 66,
+      "sourceRef": "Erins Studio!A66"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "84+5",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 66,
+      "sourceRef": "Unit A!N66"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F66=\"\",\"\",N66*F66)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 66,
+      "sourceRef": "Erins Studio!A66"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B66+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 67,
+      "sourceRef": "Erins Studio!B67"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C67*G67",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 67,
+      "sourceRef": "Erins Studio!E67"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G67=\"\",\"\",IF(G67>D67,\"\",C67-G67))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 67,
+      "sourceRef": "Erins Studio!A67"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "95",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 67,
+      "sourceRef": "Unit A!N67"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F67=\"\",\"\",N67*F67)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 67,
+      "sourceRef": "Erins Studio!A67"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B67+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 68,
+      "sourceRef": "Erins Studio!B68"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C68*G68",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 68,
+      "sourceRef": "Erins Studio!E68"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G68=\"\",\"\",IF(G68>D68,\"\",C68-G68))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 68,
+      "sourceRef": "Erins Studio!A68"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "120",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 68,
+      "sourceRef": "Unit A!N68"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F68=\"\",\"\",N68*F68)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 68,
+      "sourceRef": "Erins Studio!A68"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B68+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 69,
+      "sourceRef": "Erins Studio!B69"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C69*G69",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 69,
+      "sourceRef": "Erins Studio!E69"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G69=\"\",\"\",IF(G69>D69,\"\",C69-G69))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 69,
+      "sourceRef": "Erins Studio!A69"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F69=\"\",\"\",N69*F69)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 69,
+      "sourceRef": "Erins Studio!A69"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B69+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 70,
+      "sourceRef": "Erins Studio!B70"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C70*G70",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 70,
+      "sourceRef": "Erins Studio!E70"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G70=\"\",\"\",IF(G70>D70,\"\",C70-G70))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 70,
+      "sourceRef": "Erins Studio!A70"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F70=\"\",\"\",N70*F70)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 70,
+      "sourceRef": "Erins Studio!A70"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B70+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 71,
+      "sourceRef": "Erins Studio!B71"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C71*G71",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 71,
+      "sourceRef": "Erins Studio!E71"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G71=\"\",\"\",IF(G71>D71,\"\",C71-G71))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 71,
+      "sourceRef": "Erins Studio!A71"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F71=\"\",\"\",N71*F71)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 71,
+      "sourceRef": "Erins Studio!A71"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B71+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 72,
+      "sourceRef": "Erins Studio!B72"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C72*G72",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 72,
+      "sourceRef": "Erins Studio!E72"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G72=\"\",\"\",IF(G72>D72,\"\",C72-G72))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 72,
+      "sourceRef": "Erins Studio!A72"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F72=\"\",\"\",N72*F72)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 72,
+      "sourceRef": "Erins Studio!A72"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B72+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 73,
+      "sourceRef": "Erins Studio!B73"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C73*G73",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 73,
+      "sourceRef": "Erins Studio!E73"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G73=\"\",\"\",IF(G73>D73,\"\",C73-G73))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 73,
+      "sourceRef": "Erins Studio!A73"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F73=\"\",\"\",N73*F73)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 73,
+      "sourceRef": "Erins Studio!A73"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B73+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 74,
+      "sourceRef": "Erins Studio!B74"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C74*G74",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 74,
+      "sourceRef": "Erins Studio!E74"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G74=\"\",\"\",IF(G74>D74,\"\",C74-G74))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 74,
+      "sourceRef": "Erins Studio!A74"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F74=\"\",\"\",N74*F74)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 74,
+      "sourceRef": "Erins Studio!A74"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B74+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 75,
+      "sourceRef": "Erins Studio!B75"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C75*G75",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 75,
+      "sourceRef": "Erins Studio!E75"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G75=\"\",\"\",IF(G75>D75,\"\",C75-G75))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 75,
+      "sourceRef": "Erins Studio!A75"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F75=\"\",\"\",N75*F75)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 75,
+      "sourceRef": "Erins Studio!A75"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B75+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 76,
+      "sourceRef": "Erins Studio!B76"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C76*G76",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 76,
+      "sourceRef": "Erins Studio!E76"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G76=\"\",\"\",IF(G76>D76,\"\",C76-G76))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 76,
+      "sourceRef": "Erins Studio!A76"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F76=\"\",\"\",N76*F76)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 76,
+      "sourceRef": "Erins Studio!A76"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B76+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 77,
+      "sourceRef": "Erins Studio!B77"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C77*G77",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 77,
+      "sourceRef": "Erins Studio!E77"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F77=\"\",\"\",N77*F77)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 77,
+      "sourceRef": "Erins Studio!A77"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B77+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 78,
+      "sourceRef": "Erins Studio!B78"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C78*G78",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 78,
+      "sourceRef": "Erins Studio!E78"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G78=\"\",\"\",IF(G78>D78,\"\",C78-G78))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 78,
+      "sourceRef": "Erins Studio!A78"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F78=\"\",\"\",N78*F78)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 78,
+      "sourceRef": "Erins Studio!A78"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B78+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 79,
+      "sourceRef": "Erins Studio!B79"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C79*G79",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 79,
+      "sourceRef": "Erins Studio!E79"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G79=\"\",\"\",IF(G79>D79,\"\",C79-G79))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 79,
+      "sourceRef": "Erins Studio!A79"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F79=\"\",\"\",N79*F79)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 79,
+      "sourceRef": "Erins Studio!A79"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B79+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 80,
+      "sourceRef": "Erins Studio!B80"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C80*G80",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 80,
+      "sourceRef": "Erins Studio!E80"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G80=\"\",\"\",IF(G80>D80,\"\",C80-G80))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 80,
+      "sourceRef": "Erins Studio!A80"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F80=\"\",\"\",N80*F80)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 80,
+      "sourceRef": "Erins Studio!A80"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B80+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 81,
+      "sourceRef": "Erins Studio!B81"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C81*G81",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 81,
+      "sourceRef": "Erins Studio!E81"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G81=\"\",\"\",IF(G81>D81,\"\",C81-G81))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 81,
+      "sourceRef": "Erins Studio!A81"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F81=\"\",\"\",N81*F81)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 81,
+      "sourceRef": "Erins Studio!A81"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B81+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 82,
+      "sourceRef": "Erins Studio!B82"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C82*G82",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 82,
+      "sourceRef": "Erins Studio!E82"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G82=\"\",\"\",IF(G82>D82,\"\",C82-G82))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 82,
+      "sourceRef": "Erins Studio!A82"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F82=\"\",\"\",N82*F82)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 82,
+      "sourceRef": "Erins Studio!A82"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B82+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 83,
+      "sourceRef": "Erins Studio!B83"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C83*G83",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 83,
+      "sourceRef": "Erins Studio!E83"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G83=\"\",\"\",IF(G83>D83,\"\",C83-G83))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 83,
+      "sourceRef": "Erins Studio!A83"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F83=\"\",\"\",N83*F83)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 83,
+      "sourceRef": "Erins Studio!A83"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B83+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 84,
+      "sourceRef": "Erins Studio!B84"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C84*G84",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 84,
+      "sourceRef": "Erins Studio!E84"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G84=\"\",\"\",IF(G84>D84,\"\",C84-G84))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 84,
+      "sourceRef": "Erins Studio!A84"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F84=\"\",\"\",N84*F84)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 84,
+      "sourceRef": "Erins Studio!A84"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B84+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 85,
+      "sourceRef": "Erins Studio!B85"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C85*G85",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 85,
+      "sourceRef": "Erins Studio!E85"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G85=\"\",\"\",IF(G85>D85,\"\",C85-G85))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 85,
+      "sourceRef": "Erins Studio!A85"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F85=\"\",\"\",N85*F85)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 85,
+      "sourceRef": "Erins Studio!A85"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B85+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 86,
+      "sourceRef": "Unit B!B86"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C86*G86",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 86,
+      "sourceRef": "Unit B!E86"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G86=\"\",\"\",IF(G86>D86,\"\",C86-G86))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 86,
+      "sourceRef": "Unit B!A86"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F86=\"\",\"\",N86*F86)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 86,
+      "sourceRef": "Unit B!A86"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B86+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 87,
+      "sourceRef": "Unit B!B87"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C87*G87",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 87,
+      "sourceRef": "Unit B!E87"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G87=\"\",\"\",IF(G87>D87,\"\",C87-G87))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 87,
+      "sourceRef": "Unit B!A87"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F87=\"\",\"\",N87*F87)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 87,
+      "sourceRef": "Unit B!A87"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B87+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 88,
+      "sourceRef": "Unit B!B88"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C88*G88",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 88,
+      "sourceRef": "Unit B!E88"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F88=\"\",\"\",N88*F88)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 88,
+      "sourceRef": "Unit B!A88"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B88+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 89,
+      "sourceRef": "Unit B!B89"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C89*G89",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 89,
+      "sourceRef": "Unit B!E89"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F89=\"\",\"\",N89*F89)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 89,
+      "sourceRef": "Unit B!A89"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B89+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 90,
+      "sourceRef": "Unit B!B90"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C90*G90",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 90,
+      "sourceRef": "Unit B!E90"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G90=\"\",\"\",IF(G90>D90,\"\",C90-G90))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 90,
+      "sourceRef": "Unit B!A90"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F90=\"\",\"\",N90*F90)",
+      "exampleWorksheet": "Unit A",
+      "exampleRow": 90,
+      "sourceRef": "Unit A!A90"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B4+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 5,
+      "sourceRef": "Erins Studio!B5"
+    },
+    {
+      "field": "Item#2 [J]",
+      "formula": "\"31561521201248\"",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 5,
+      "sourceRef": "Unit B!J5"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B5+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 6,
+      "sourceRef": "Erins Studio!B6"
+    },
+    {
+      "field": "Price Ea. [N]",
+      "formula": "0.91*200",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 6,
+      "sourceRef": "Unit B!N6"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B6+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 7,
+      "sourceRef": "Erins Studio!B7"
+    },
+    {
+      "field": "Item#2 [J]",
+      "formula": "\"31561521266784\"",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 7,
+      "sourceRef": "Unit B!J7"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B7+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 8,
+      "sourceRef": "Erins Studio!B8"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B8+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 9,
+      "sourceRef": "Erins Studio!B9"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B9+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 10,
+      "sourceRef": "Erins Studio!B10"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B10+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 11,
+      "sourceRef": "Erins Studio!B11"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B11+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 12,
+      "sourceRef": "Erins Studio!B12"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B12+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 13,
+      "sourceRef": "Erins Studio!B13"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B13+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 14,
+      "sourceRef": "Erins Studio!B14"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B14+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 15,
+      "sourceRef": "Erins Studio!B15"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B15+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 16,
+      "sourceRef": "Erins Studio!B16"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B16+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 17,
+      "sourceRef": "Erins Studio!B17"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B17+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 18,
+      "sourceRef": "Erins Studio!B18"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B18+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 19,
+      "sourceRef": "Erins Studio!B19"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B19+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 20,
+      "sourceRef": "Erins Studio!B20"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B20+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 21,
+      "sourceRef": "Erins Studio!B21"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B21+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 22,
+      "sourceRef": "Erins Studio!B22"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B22+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 23,
+      "sourceRef": "Erins Studio!B23"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B23+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 24,
+      "sourceRef": "Erins Studio!B24"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B24+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 25,
+      "sourceRef": "Erins Studio!B25"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C25*G25",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 25,
+      "sourceRef": "Erins Studio!E25"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B25+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 26,
+      "sourceRef": "Erins Studio!B26"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C27*G27",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 27,
+      "sourceRef": "Erins Studio!E27"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C28*G28",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 28,
+      "sourceRef": "Erins Studio!E28"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B28+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 29,
+      "sourceRef": "Erins Studio!B29"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C29*G29",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 29,
+      "sourceRef": "Erins Studio!E29"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C30*G30",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 30,
+      "sourceRef": "Erins Studio!E30"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C31*G31",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 31,
+      "sourceRef": "Erins Studio!E31"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G77=\"\",\"\",IF(G77>D77,\"\",C77-G77))",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 77,
+      "sourceRef": "Erins Studio!A77"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G88=\"\",\"\",IF(G88>D88,\"\",C88-G88))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 88,
+      "sourceRef": "Unit B!A88"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G89=\"\",\"\",IF(G89>D89,\"\",C89-G89))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 89,
+      "sourceRef": "Unit B!A89"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B90+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 91,
+      "sourceRef": "Unit B!B91"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C91*G91",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 91,
+      "sourceRef": "Unit B!E91"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G91=\"\",\"\",IF(G91>D91,\"\",C91-G91))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 91,
+      "sourceRef": "Unit B!A91"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B91+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 92,
+      "sourceRef": "Unit B!B92"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C92*G92",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 92,
+      "sourceRef": "Unit B!E92"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G92=\"\",\"\",IF(G92>D92,\"\",C92-G92))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 92,
+      "sourceRef": "Unit B!A92"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B92+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 93,
+      "sourceRef": "Unit B!B93"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C93*G93",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 93,
+      "sourceRef": "Unit B!E93"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G93=\"\",\"\",IF(G93>D93,\"\",C93-G93))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 93,
+      "sourceRef": "Unit B!A93"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B93+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 94,
+      "sourceRef": "Unit B!B94"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C94*G94",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 94,
+      "sourceRef": "Unit B!E94"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G94=\"\",\"\",IF(G94>D94,\"\",C94-G94))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 94,
+      "sourceRef": "Unit B!A94"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B94+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 95,
+      "sourceRef": "Unit B!B95"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C95*G95",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 95,
+      "sourceRef": "Unit B!E95"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G95=\"\",\"\",IF(G95>D95,\"\",C95-G95))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 95,
+      "sourceRef": "Unit B!A95"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B95+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 96,
+      "sourceRef": "Unit B!B96"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C96*G96",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 96,
+      "sourceRef": "Unit B!E96"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G96=\"\",\"\",IF(G96>D96,\"\",C96-G96))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 96,
+      "sourceRef": "Unit B!A96"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B96+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 97,
+      "sourceRef": "Unit B!B97"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C97*G97",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 97,
+      "sourceRef": "Unit B!E97"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G97=\"\",\"\",IF(G97>D97,\"\",C97-G97))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 97,
+      "sourceRef": "Unit B!F97"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F97=\"\",\"\",N97*F97)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 97,
+      "sourceRef": "Unit B!O97"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B97+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 98,
+      "sourceRef": "Unit B!B98"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C98*G98",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 98,
+      "sourceRef": "Unit B!E98"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G98=\"\",\"\",IF(G98>D98,\"\",C98-G98))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 98,
+      "sourceRef": "Unit B!A98"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B98+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 99,
+      "sourceRef": "Unit B!B99"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C99*G99",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 99,
+      "sourceRef": "Unit B!E99"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G99=\"\",\"\",IF(G99>D99,\"\",C99-G99))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 99,
+      "sourceRef": "Unit B!F99"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F99=\"\",\"\",N99*F99)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 99,
+      "sourceRef": "Unit B!O99"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B99+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 100,
+      "sourceRef": "Unit B!B100"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F100=\"\",\"\",N100*F100)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 100,
+      "sourceRef": "Unit B!A100"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B100+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 101,
+      "sourceRef": "Unit B!B101"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C101*G101",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 101,
+      "sourceRef": "Unit B!E101"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G101=\"\",\"\",IF(G101>D101,\"\",C101-G101))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 101,
+      "sourceRef": "Unit B!A101"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F101=\"\",\"\",N101*F101)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 101,
+      "sourceRef": "Unit B!A101"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B101+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 102,
+      "sourceRef": "Unit B!B102"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C102*G102",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 102,
+      "sourceRef": "Unit B!E102"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F102=\"\",\"\",N102*F102)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 102,
+      "sourceRef": "Unit B!A102"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B102+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 103,
+      "sourceRef": "Unit B!B103"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C103*G103",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 103,
+      "sourceRef": "Unit B!E103"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G103=\"\",\"\",IF(G103>D103,\"\",C103-G103))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 103,
+      "sourceRef": "Unit B!A103"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F103=\"\",\"\",N103*F103)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 103,
+      "sourceRef": "Unit B!A103"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B103+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 108,
+      "sourceRef": "Unit B!B108"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C104*G104",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 104,
+      "sourceRef": "Unit B!E104"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G104=\"\",\"\",IF(G104>D104,\"\",C104-G104))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 104,
+      "sourceRef": "Unit B!A104"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F104=\"\",\"\",N104*F104)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 104,
+      "sourceRef": "Unit B!A104"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B104+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 105,
+      "sourceRef": "Unit B!B105"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C105*G105",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 105,
+      "sourceRef": "Unit B!E105"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G105=\"\",\"\",IF(G105>D105,\"\",C105-G105))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 105,
+      "sourceRef": "Unit B!A105"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F105=\"\",\"\",N105*F105)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 105,
+      "sourceRef": "Unit B!A105"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B105+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 106,
+      "sourceRef": "Unit B!B106"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C106*G106",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 106,
+      "sourceRef": "Unit B!E106"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G106=\"\",\"\",IF(G106>D106,\"\",C106-G106))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 106,
+      "sourceRef": "Unit B!A106"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F106=\"\",\"\",N106*F106)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 106,
+      "sourceRef": "Unit B!A106"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B106+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 107,
+      "sourceRef": "Unit B!B107"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C107*G107",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 107,
+      "sourceRef": "Unit B!E107"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G107=\"\",\"\",IF(G107>D107,\"\",C107-G107))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 107,
+      "sourceRef": "Unit B!A107"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F107=\"\",\"\",N107*F107)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 107,
+      "sourceRef": "Unit B!A107"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C108*G108",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 108,
+      "sourceRef": "Unit B!E108"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G108=\"\",\"\",IF(G108>D108,\"\",C108-G108))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 108,
+      "sourceRef": "Unit B!F108"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F108=\"\",\"\",N108*F108)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 108,
+      "sourceRef": "Unit B!O108"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B108+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 109,
+      "sourceRef": "Unit B!B109"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C109*G109",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 109,
+      "sourceRef": "Unit B!E109"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G109=\"\",\"\",IF(G109>D109,\"\",C109-G109))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 109,
+      "sourceRef": "Unit B!A109"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F109=\"\",\"\",N109*F109)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 109,
+      "sourceRef": "Unit B!A109"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B109+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 110,
+      "sourceRef": "Unit B!B110"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C110*G110",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 110,
+      "sourceRef": "Unit B!E110"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G110=\"\",\"\",IF(G110>D110,\"\",C110-G110))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 110,
+      "sourceRef": "Unit B!F110"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F110=\"\",\"\",N110*F110)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 110,
+      "sourceRef": "Unit B!O110"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B110+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 111,
+      "sourceRef": "Unit B!B111"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C111*G111",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 111,
+      "sourceRef": "Unit B!E111"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G111=\"\",\"\",IF(G111>D111,\"\",C111-G111))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 111,
+      "sourceRef": "Unit B!F111"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F111=\"\",\"\",N111*F111)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 111,
+      "sourceRef": "Unit B!O111"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B111+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 112,
+      "sourceRef": "Unit B!B112"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C112*G112",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 112,
+      "sourceRef": "Unit B!E112"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G112=\"\",\"\",IF(G112>D112,\"\",C112-G112))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 112,
+      "sourceRef": "Unit B!F112"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F112=\"\",\"\",N112*F112)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 112,
+      "sourceRef": "Unit B!O112"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B112+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 113,
+      "sourceRef": "Unit B!B113"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C113*G113",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 113,
+      "sourceRef": "Unit B!E113"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G113=\"\",\"\",IF(G113>D113,\"\",C113-G113))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 113,
+      "sourceRef": "Unit B!F113"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F113=\"\",\"\",N113*F113)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 113,
+      "sourceRef": "Unit B!O113"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B113+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 114,
+      "sourceRef": "Unit B!B114"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C114*G114",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 114,
+      "sourceRef": "Unit B!E114"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G114=\"\",\"\",IF(G114>D114,\"\",C114-G114))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 114,
+      "sourceRef": "Unit B!F114"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F114=\"\",\"\",N114*F114)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 114,
+      "sourceRef": "Unit B!O114"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B114+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 115,
+      "sourceRef": "Unit B!B115"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C115*G115",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 115,
+      "sourceRef": "Unit B!E115"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G115=\"\",\"\",IF(G115>D115,\"\",C115-G115))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 115,
+      "sourceRef": "Unit B!F115"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F115=\"\",\"\",N115*F115)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 115,
+      "sourceRef": "Unit B!O115"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B115+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 116,
+      "sourceRef": "Unit B!B116"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C116*G116",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 116,
+      "sourceRef": "Unit B!E116"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G116=\"\",\"\",IF(G116>D116,\"\",C116-G116))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 116,
+      "sourceRef": "Unit B!F116"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F116=\"\",\"\",N116*F116)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 116,
+      "sourceRef": "Unit B!O116"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B3+1",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 4,
+      "sourceRef": "Erins Studio!B4"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G3=\"\",\"\",O3*G3)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 3,
+      "sourceRef": "Erins Studio!A3"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G4=\"\",\"\",O4*G4)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 4,
+      "sourceRef": "Erins Studio!A4"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G5=\"\",\"\",O5*G5)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 5,
+      "sourceRef": "Erins Studio!A5"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G6=\"\",\"\",O6*G6)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 6,
+      "sourceRef": "Erins Studio!A6"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G7=\"\",\"\",O7*G7)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 7,
+      "sourceRef": "Erins Studio!A7"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G8=\"\",\"\",O8*G8)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 8,
+      "sourceRef": "Erins Studio!A8"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G9=\"\",\"\",O9*G9)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 9,
+      "sourceRef": "Erins Studio!A9"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G10=\"\",\"\",O10*G10)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 10,
+      "sourceRef": "Erins Studio!A10"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G11=\"\",\"\",O11*G11)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 11,
+      "sourceRef": "Erins Studio!A11"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G12=\"\",\"\",O12*G12)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 12,
+      "sourceRef": "Erins Studio!A12"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G13=\"\",\"\",O13*G13)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 13,
+      "sourceRef": "Erins Studio!A13"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G14=\"\",\"\",O14*G14)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 14,
+      "sourceRef": "Erins Studio!A14"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G15=\"\",\"\",O15*G15)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 15,
+      "sourceRef": "Erins Studio!A15"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G16=\"\",\"\",O16*G16)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 16,
+      "sourceRef": "Erins Studio!A16"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G17=\"\",\"\",O17*G17)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 17,
+      "sourceRef": "Erins Studio!A17"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G18=\"\",\"\",O18*G18)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 18,
+      "sourceRef": "Erins Studio!A18"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G19=\"\",\"\",O19*G19)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 19,
+      "sourceRef": "Erins Studio!A19"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G20=\"\",\"\",O20*G20)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 20,
+      "sourceRef": "Erins Studio!A20"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G21=\"\",\"\",O21*G21)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 21,
+      "sourceRef": "Erins Studio!A21"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G22=\"\",\"\",O22*G22)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 22,
+      "sourceRef": "Erins Studio!A22"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G23=\"\",\"\",O23*G23)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 23,
+      "sourceRef": "Erins Studio!A23"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G24=\"\",\"\",O24*G24)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 24,
+      "sourceRef": "Erins Studio!A24"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G25=\"\",\"\",O25*G25)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 25,
+      "sourceRef": "Erins Studio!A25"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G26=\"\",\"\",O26*G26)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 26,
+      "sourceRef": "Erins Studio!A26"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G27=\"\",\"\",O27*G27)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 27,
+      "sourceRef": "Erins Studio!A27"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G28=\"\",\"\",O28*G28)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 28,
+      "sourceRef": "Erins Studio!A28"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G29=\"\",\"\",O29*G29)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 29,
+      "sourceRef": "Erins Studio!A29"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G30=\"\",\"\",O30*G30)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 30,
+      "sourceRef": "Erins Studio!A30"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G31=\"\",\"\",O31*G31)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 31,
+      "sourceRef": "Erins Studio!A31"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G32=\"\",\"\",O32*G32)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 32,
+      "sourceRef": "Erins Studio!A32"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G33=\"\",\"\",O33*G33)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 33,
+      "sourceRef": "Erins Studio!A33"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G34=\"\",\"\",O34*G34)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 34,
+      "sourceRef": "Erins Studio!A34"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G35=\"\",\"\",O35*G35)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 35,
+      "sourceRef": "Erins Studio!A35"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G36=\"\",\"\",O36*G36)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 36,
+      "sourceRef": "Erins Studio!A36"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G37=\"\",\"\",O37*G37)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 37,
+      "sourceRef": "Erins Studio!A37"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G38=\"\",\"\",O38*G38)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 38,
+      "sourceRef": "Erins Studio!A38"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G39=\"\",\"\",O39*G39)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 39,
+      "sourceRef": "Erins Studio!A39"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G40=\"\",\"\",O40*G40)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 40,
+      "sourceRef": "Erins Studio!A40"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G41=\"\",\"\",O41*G41)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 41,
+      "sourceRef": "Erins Studio!A41"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G42=\"\",\"\",O42*G42)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 42,
+      "sourceRef": "Erins Studio!A42"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G43=\"\",\"\",O43*G43)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 43,
+      "sourceRef": "Erins Studio!A43"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G44=\"\",\"\",O44*G44)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 44,
+      "sourceRef": "Erins Studio!A44"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G45=\"\",\"\",O45*G45)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 45,
+      "sourceRef": "Erins Studio!A45"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G46=\"\",\"\",O46*G46)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 46,
+      "sourceRef": "Erins Studio!A46"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G47=\"\",\"\",O47*G47)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 47,
+      "sourceRef": "Erins Studio!A47"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G48=\"\",\"\",O48*G48)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 48,
+      "sourceRef": "Erins Studio!A48"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G49=\"\",\"\",O49*G49)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 49,
+      "sourceRef": "Erins Studio!A49"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G50=\"\",\"\",O50*G50)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 50,
+      "sourceRef": "Erins Studio!A50"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G51=\"\",\"\",O51*G51)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 51,
+      "sourceRef": "Erins Studio!A51"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G52=\"\",\"\",O52*G52)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 52,
+      "sourceRef": "Erins Studio!A52"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G53=\"\",\"\",O53*G53)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 53,
+      "sourceRef": "Erins Studio!A53"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G54=\"\",\"\",O54*G54)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 54,
+      "sourceRef": "Erins Studio!A54"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G55=\"\",\"\",O55*G55)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 55,
+      "sourceRef": "Erins Studio!A55"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G56=\"\",\"\",O56*G56)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 56,
+      "sourceRef": "Erins Studio!A56"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G57=\"\",\"\",O57*G57)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 57,
+      "sourceRef": "Erins Studio!A57"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G58=\"\",\"\",O58*G58)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 58,
+      "sourceRef": "Erins Studio!A58"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G59=\"\",\"\",O59*G59)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 59,
+      "sourceRef": "Erins Studio!A59"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G60=\"\",\"\",O60*G60)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 60,
+      "sourceRef": "Erins Studio!A60"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G61=\"\",\"\",O61*G61)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 61,
+      "sourceRef": "Erins Studio!A61"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G62=\"\",\"\",O62*G62)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 62,
+      "sourceRef": "Erins Studio!A62"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G63=\"\",\"\",O63*G63)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 63,
+      "sourceRef": "Erins Studio!A63"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G64=\"\",\"\",O64*G64)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 64,
+      "sourceRef": "Erins Studio!A64"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G65=\"\",\"\",O65*G65)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 65,
+      "sourceRef": "Erins Studio!A65"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G66=\"\",\"\",O66*G66)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 66,
+      "sourceRef": "Erins Studio!A66"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G67=\"\",\"\",O67*G67)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 67,
+      "sourceRef": "Erins Studio!A67"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G68=\"\",\"\",O68*G68)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 68,
+      "sourceRef": "Erins Studio!A68"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G69=\"\",\"\",O69*G69)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 69,
+      "sourceRef": "Erins Studio!A69"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G70=\"\",\"\",O70*G70)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 70,
+      "sourceRef": "Erins Studio!A70"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G71=\"\",\"\",O71*G71)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 71,
+      "sourceRef": "Erins Studio!A71"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G72=\"\",\"\",O72*G72)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 72,
+      "sourceRef": "Erins Studio!A72"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G73=\"\",\"\",O73*G73)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 73,
+      "sourceRef": "Erins Studio!A73"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G74=\"\",\"\",O74*G74)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 74,
+      "sourceRef": "Erins Studio!A74"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G75=\"\",\"\",O75*G75)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 75,
+      "sourceRef": "Erins Studio!A75"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G76=\"\",\"\",O76*G76)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 76,
+      "sourceRef": "Erins Studio!A76"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G77=\"\",\"\",O77*G77)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 77,
+      "sourceRef": "Erins Studio!A77"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G78=\"\",\"\",O78*G78)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 78,
+      "sourceRef": "Erins Studio!A78"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G79=\"\",\"\",O79*G79)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 79,
+      "sourceRef": "Erins Studio!A79"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G80=\"\",\"\",O80*G80)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 80,
+      "sourceRef": "Erins Studio!A80"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G81=\"\",\"\",O81*G81)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 81,
+      "sourceRef": "Erins Studio!A81"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G82=\"\",\"\",O82*G82)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 82,
+      "sourceRef": "Erins Studio!A82"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G83=\"\",\"\",O83*G83)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 83,
+      "sourceRef": "Erins Studio!A83"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G84=\"\",\"\",O84*G84)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 84,
+      "sourceRef": "Erins Studio!A84"
+    },
+    {
+      "field": "Notes [P]",
+      "formula": "IF(G85=\"\",\"\",O85*G85)",
+      "exampleWorksheet": "Erins Studio",
+      "exampleRow": 85,
+      "sourceRef": "Erins Studio!A85"
+    }
+  ],
+  "ambiguousRows": [
+    {
+      "worksheet": "Unit A",
+      "rowNumber": 72,
+      "sourceRef": "Unit A!K72",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Originals/Print Tables",
+        "sku": "Canvas Print CoA Stickers",
+        "description": "Canvas Print CoA Stickers",
+        "supplier": null,
+        "size": "1 case",
+        "account": "Canvas Prints"
+      }
+    },
+    {
+      "worksheet": "Unit A",
+      "rowNumber": 75,
+      "sourceRef": "Unit A!H75",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Originals/Print Tables",
+        "sku": "Canvas scissors",
+        "description": null,
+        "supplier": null,
+        "size": "1 pair",
+        "account": "Originals/Canvas prints"
+      }
+    },
+    {
+      "worksheet": "Unit B",
+      "rowNumber": 9,
+      "sourceRef": "Unit B!J9",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Material Bays",
+        "sku": "STR6",
+        "description": null,
+        "supplier": "Framer's Inventory (Email)",
+        "size": "1 bundle",
+        "account": "Originals"
+      }
+    },
+    {
+      "worksheet": "Unit B",
+      "rowNumber": 10,
+      "sourceRef": "Unit B!J10",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Material Bays",
+        "sku": "STR12",
+        "description": null,
+        "supplier": "Framer's Inventory (Email)",
+        "size": "1 bundle",
+        "account": "Originals"
+      }
+    },
+    {
+      "worksheet": "Unit B",
+      "rowNumber": 107,
+      "sourceRef": "Unit B!H107",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Paper Prints",
+        "sku": "Stickers for paper prints",
+        "description": null,
+        "supplier": null,
+        "size": "1 roll",
+        "account": "Paper Prints"
+      }
+    },
+    {
+      "worksheet": "Unit C",
+      "rowNumber": 32,
+      "sourceRef": "Unit C!H32",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Prints",
+        "sku": "Hard White Plastic",
+        "description": null,
+        "supplier": null,
+        "size": "1 sheet",
+        "account": "Canvas/3D Prints"
+      }
+    },
+    {
+      "worksheet": "Unit C",
+      "rowNumber": 34,
+      "sourceRef": "Unit C!H34",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Prints",
+        "sku": "ABS Plastic",
+        "description": null,
+        "supplier": null,
+        "size": "1 pallet",
+        "account": "Originals"
+      }
+    }
+  ],
+  "parserLimitations": [
+    "The xlsx package returns formula expressions but not the full Excel calculation chain or external links.",
+    "Cell style extraction is limited to style references exposed by the parser; conditional formatting rules are not fully expanded.",
+    "Merged-cell category labels may require manual review where Excel visual grouping carries business meaning.",
+    "Workbook macros/VBA and print-layout directives are not executed by this parser."
+  ]
+}
