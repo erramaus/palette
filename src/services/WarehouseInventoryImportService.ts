@@ -10,9 +10,12 @@ import type {
   InventoryItem,
   InventoryLocation,
   InventoryPurchaseRecommendation,
+  InventoryCswDocument,
   InventoryRuleTrace,
+  PurchaseOrderDraft,
   InventorySupplier,
   InventoryUnitOfMeasure,
+  PurchaseApprovalStatus,
   WarehouseInventorySeedRow,
 } from '../types/inventory'
 
@@ -46,54 +49,144 @@ const nowIso = (): string => new Date().toISOString()
 
 const todayDate = (): string => new Date().toISOString().slice(0, 10)
 
+const mergeRecommendationLists = (
+  computed: InventoryPurchaseRecommendation[],
+  previous: InventoryPurchaseRecommendation[] | undefined,
+): InventoryPurchaseRecommendation[] => {
+  const previousById = new Map(previous?.map((recommendation) => [recommendation.id, recommendation]))
+
+  return computed.map((recommendation) => {
+    const prior = previousById.get(recommendation.id)
+    if (!prior) return recommendation
+
+    return {
+      ...recommendation,
+      approvalStatus: prior.approvalStatus,
+      reviewedQuantity: prior.reviewedQuantity,
+      reviewedReason: prior.reviewedReason,
+      approvalHistory: prior.approvalHistory,
+      status: prior.approvalStatus === 'PENDING' ? recommendation.status : prior.status,
+    }
+  })
+}
+
+const getRecommendationOrderQuantity = (recommendation: InventoryPurchaseRecommendation): number => {
+  return recommendation.reviewedQuantity ?? recommendation.suggestedPurchaseQuantity ?? 0
+}
+
+const summarizeAccountAllocation = (recommendations: InventoryPurchaseRecommendation[]): Record<string, number> => {
+  return recommendations.reduce<Record<string, number>>((allocation, recommendation) => {
+    const account = recommendation.account ?? 'Unassigned'
+    allocation[account] = (allocation[account] ?? 0) + (recommendation.subtotal ?? 0)
+    return allocation
+  }, {})
+}
+
+const summarizeSupplierRecommendations = (recommendations: InventoryPurchaseRecommendation[]): Array<{
+  supplier: string
+  lineItemCount: number
+  total: number
+  majorItems: string[]
+  notes: string[]
+}> => {
+  const grouped = new Map<string, InventoryPurchaseRecommendation[]>()
+  for (const recommendation of recommendations) {
+    const supplier = recommendation.supplier ?? 'Unassigned'
+    const current = grouped.get(supplier) ?? []
+    current.push(recommendation)
+    grouped.set(supplier, current)
+  }
+
+  return [...grouped.entries()].map(([supplier, groupedRecommendations]) => ({
+    supplier,
+    lineItemCount: groupedRecommendations.length,
+    total: groupedRecommendations.reduce((sum, recommendation) => sum + (recommendation.subtotal ?? 0), 0),
+    majorItems: groupedRecommendations.slice(0, 5).map((recommendation) => recommendation.item),
+    notes: groupedRecommendations
+      .filter((recommendation) => recommendation.status === 'NEEDS_REVIEW' || recommendation.status === 'COUNT_REQUIRED')
+      .map((recommendation) => recommendation.calculationExplanation),
+  }))
+}
+
+const buildRecommendationList = (
+  items: InventoryItem[],
+  previousRecommendations: InventoryPurchaseRecommendation[] | undefined,
+): InventoryPurchaseRecommendation[] => mergeRecommendationLists(
+  items.filter((item) => item.active).map(computeRecommendation),
+  previousRecommendations,
+)
+
 const computeRecommendation = (item: InventoryItem): InventoryPurchaseRecommendation => {
-  const available = item.quantityAvailable
-  const shortageFromDesired = item.desiredStock !== null ? Math.max(0, item.desiredStock - available) : 0
-
-  if (item.desiredStock !== null) {
-    return {
-      id: makeId('inv-reco', item.id),
-      itemId: item.id,
-      worksheetName: item.sourceTrace.worksheetName,
-      rowNumber: item.sourceTrace.rowNumber,
-      availableQuantity: available,
-      observedShortage: shortageFromDesired,
-      desiredStock: item.desiredStock,
-      reorderLevel: item.reorderLevel,
-      suggestedPurchaseQuantity: shortageFromDesired,
-      status: shortageFromDesired > 0 ? 'READY' : 'READY',
-      rationale: 'Suggested purchase derived from confirmed desired/max stock minus available quantity.',
-    }
-  }
-
-  if (item.reorderLevel !== null && available < item.reorderLevel) {
-    return {
-      id: makeId('inv-reco', item.id),
-      itemId: item.id,
-      worksheetName: item.sourceTrace.worksheetName,
-      rowNumber: item.sourceTrace.rowNumber,
-      availableQuantity: available,
-      observedShortage: Math.max(0, item.reorderLevel - available),
-      desiredStock: null,
-      reorderLevel: item.reorderLevel,
-      suggestedPurchaseQuantity: null,
-      status: 'NEEDS_REVIEW',
-      rationale: 'Reorder threshold exists but no confirmed desired stock quantity. No guessed purchase quantity created.',
-    }
-  }
+  const currentStock = item.quantityOnHand
+  const maximumQuantity = item.desiredStock
+  const reorderThreshold = item.reorderLevel
+  const weeksOnHand = currentStock !== null && maximumQuantity && maximumQuantity > 0 ? (12 / maximumQuantity) * currentStock : null
+  const currentStockValue = currentStock ?? 0
+  const suggestedOrderQuantity =
+    currentStock === null || maximumQuantity === null
+      ? null
+      : reorderThreshold !== null && currentStock > reorderThreshold
+        ? 0
+        : Math.max(0, maximumQuantity - currentStock)
+  const subtotal = suggestedOrderQuantity !== null && item.unitCost !== null ? suggestedOrderQuantity * item.unitCost : null
+  const sourceWorksheet = item.sourceTrace.worksheetName
+  const sourceRow = item.sourceTrace.rowNumber
+  const isCountRequired = item.sourceStock === null
+  const isNeedsReview = !isCountRequired && (maximumQuantity === null || reorderThreshold === null)
+  const status = isCountRequired
+    ? 'COUNT_REQUIRED'
+    : suggestedOrderQuantity === null
+      ? 'NEEDS_REVIEW'
+      : suggestedOrderQuantity > 0
+        ? 'RECOMMENDED'
+        : 'NOT_REQUIRED'
 
   return {
     id: makeId('inv-reco', item.id),
+    inventoryItemId: item.id,
     itemId: item.id,
-    worksheetName: item.sourceTrace.worksheetName,
-    rowNumber: item.sourceTrace.rowNumber,
-    availableQuantity: available,
-    observedShortage: 0,
-    desiredStock: item.desiredStock,
-    reorderLevel: item.reorderLevel,
-    suggestedPurchaseQuantity: null,
-    status: 'NEEDS_REVIEW',
-    rationale: 'No confirmed reorder trigger detected for this row. Recommendation is deferred for review.',
+    item: item.name,
+    sizePackage: item.packageSizeRaw,
+    sku: item.sku,
+    description: item.description,
+    supplier: item.preferredSupplierName,
+    account: item.subcategory,
+    currentStock,
+    reorderThreshold,
+    maximumQuantity,
+    suggestedOrderQuantity,
+    priceEach: item.unitCost,
+    subtotal,
+    weeksOnHand,
+    requiredByDate: null,
+    notes: item.notes,
+    sourceWorksheet,
+    sourceRow,
+    calculationExplanation: isCountRequired
+      ? 'Inventory count is required before a purchase recommendation can be finalized.'
+      : isNeedsReview
+        ? 'Workbook row does not include enough information to finalize purchase quantity.'
+        : suggestedOrderQuantity && suggestedOrderQuantity > 0
+          ? 'Purchase quantity follows workbook max qty minus current stock.'
+          : 'Current stock is above the reorder threshold so no purchase is required.',
+    approvalStatus: 'PENDING',
+    reviewedQuantity: suggestedOrderQuantity,
+    reviewedReason: null,
+    approvalHistory: [],
+    sourceTrace: item.sourceTrace,
+    worksheetName: sourceWorksheet,
+    rowNumber: sourceRow,
+    availableQuantity: item.quantityAvailable,
+    observedShortage: maximumQuantity !== null ? Math.max(0, maximumQuantity - currentStockValue) : 0,
+    desiredStock: maximumQuantity,
+    reorderLevel: reorderThreshold,
+    suggestedPurchaseQuantity: suggestedOrderQuantity,
+    status,
+    rationale: isCountRequired
+      ? 'Stock count required before purchase recommendation can be approved.'
+      : suggestedOrderQuantity && suggestedOrderQuantity > 0
+        ? 'Recommended order quantity matches workbook calculation.'
+        : 'No purchase order recommended from current workbook values.',
   }
 }
 
@@ -191,6 +284,9 @@ const buildStateFromSeed = (
     return {
       id: stableId,
       workbookSourceId,
+      sourceStock: row.stock,
+      sourceMaximumQuantity: row.desiredStock,
+      sourceReorderQuantity: row.reorderQuantity,
       name: row.description ?? row.sku ?? `Row ${row.rowNumber}`,
       categoryId,
       categoryName: row.category,
@@ -239,9 +335,7 @@ const buildStateFromSeed = (
     }))
 
   const items = [...importedItems, ...removedItems]
-  const recommendations = items
-    .filter((item) => item.active)
-    .map(computeRecommendation)
+  const recommendations = buildRecommendationList(items, previous?.recommendations)
 
   return {
     importedAt,
@@ -254,6 +348,8 @@ const buildStateFromSeed = (
     sessions: previous?.sessions ?? [],
     entries: previous?.entries ?? [],
     recommendations,
+    purchaseOrders: previous?.purchaseOrders ?? [],
+    cswDocuments: previous?.cswDocuments ?? [],
     adjustments: previous?.adjustments ?? [],
     receipts: previous?.receipts ?? [],
     ruleTraces,
@@ -316,13 +412,147 @@ const applyApprovedSession = (state: InventoryFoundationState, session: Inventor
   }
 
   const updatedItems = [...itemById.values()]
-  const recommendations = updatedItems.filter((item) => item.active).map(computeRecommendation)
+  const recommendations = buildRecommendationList(updatedItems, state.recommendations)
 
   return {
     ...state,
     items: updatedItems,
     adjustments,
     recommendations,
+  }
+}
+
+const buildPurchaseOrderDrafts = (state: InventoryFoundationState, requestedBy: string): PurchaseOrderDraft[] => {
+  const eligibleRecommendations = state.recommendations.filter((recommendation) => {
+    const orderQuantity = getRecommendationOrderQuantity(recommendation)
+    return orderQuantity > 0 && (recommendation.status === 'RECOMMENDED' || recommendation.status === 'DIRECTOR_APPROVED' || recommendation.status === 'APPROVED_FOR_PURCHASE')
+  })
+
+  const groupedBySupplier = new Map<string, InventoryPurchaseRecommendation[]>()
+  for (const recommendation of eligibleRecommendations) {
+    const supplier = recommendation.supplier ?? 'Unassigned'
+    const group = groupedBySupplier.get(supplier) ?? []
+    group.push(recommendation)
+    groupedBySupplier.set(supplier, group)
+  }
+
+  const existingDrafts = new Map(state.purchaseOrders.map((draft) => [draft.id, draft]))
+
+  return [...groupedBySupplier.entries()].map(([supplier, recommendations], index) => {
+    const draftId = makeId('po-draft', `${supplier}-${recommendations.map((recommendation) => recommendation.id).join('|')}`)
+    const existingDraft = existingDrafts.get(draftId)
+    const existingLineByRecommendationId = new Map(existingDraft?.lines.map((line) => [line.recommendationId ?? line.id, line]))
+
+    const lines = recommendations.map((recommendation) => {
+      const quantityOrdered = getRecommendationOrderQuantity(recommendation)
+      const existingLine = existingLineByRecommendationId.get(recommendation.id)
+      const quantityReceived = existingLine?.quantityReceived ?? 0
+      const quantityRemaining = Math.max(0, quantityOrdered - quantityReceived)
+      const unitPrice = recommendation.priceEach
+      const subtotal = unitPrice !== null ? quantityOrdered * unitPrice : null
+
+      return {
+        id: makeId('po-line', `${draftId}-${recommendation.id}`),
+        recommendationId: recommendation.id,
+        inventoryItemId: recommendation.inventoryItemId,
+        supplier: recommendation.supplier,
+        account: recommendation.account,
+        sku: recommendation.sku,
+        description: recommendation.description,
+        sizePackage: recommendation.sizePackage,
+        quantityOrdered,
+        quantityReceived,
+        quantityRemaining,
+        unitPrice,
+        subtotal,
+        sourceWorksheet: recommendation.sourceWorksheet,
+        sourceRow: recommendation.sourceRow,
+        sourceItemSnapshot: recommendation.item,
+        notes: recommendation.notes,
+        accountAllocation: {
+          [recommendation.account ?? 'Unassigned']: subtotal ?? 0,
+        },
+        receipts: existingLine?.receipts ?? [],
+      }
+    })
+
+    const total = lines.reduce((sum, line) => sum + (line.subtotal ?? 0), 0)
+    const accountAllocation = lines.reduce<Record<string, number>>((allocation, line) => {
+      const account = Object.keys(line.accountAllocation)[0] ?? 'Unassigned'
+      allocation[account] = (allocation[account] ?? 0) + (line.subtotal ?? 0)
+      return allocation
+    }, {})
+
+    return {
+      id: draftId,
+      poDraftNumber: existingDraft?.poDraftNumber ?? `PO-${todayDate()}-${String(index + 1).padStart(3, '0')}`,
+      supplier,
+      dateCreated: existingDraft?.dateCreated ?? nowIso(),
+      requestedBy: existingDraft?.requestedBy ?? requestedBy,
+      accountLabel: existingDraft?.accountLabel ?? supplier,
+      accountAllocation,
+      lines,
+      total,
+      notes: existingDraft?.notes ?? null,
+      approvalStatus: existingDraft?.approvalStatus ?? 'DRAFT',
+      approvalHistory: existingDraft?.approvalHistory ?? [{
+        status: 'DRAFT',
+        changedAt: nowIso(),
+        changedBy: requestedBy,
+        reason: 'Purchase order draft generated from inventory recommendations.',
+      }],
+      orderNotes: existingDraft?.orderNotes ?? [],
+      receipts: existingDraft?.receipts ?? [],
+      sourceInventoryCount: lines.length,
+    }
+  })
+}
+
+const buildCswDocument = (state: InventoryFoundationState, requestedBy: string): InventoryCswDocument => {
+  const activeRecommendations = state.recommendations.filter((recommendation) => recommendation.status !== 'NOT_REQUIRED' && recommendation.status !== 'CANCELLED')
+  const actionableRecommendations = activeRecommendations.filter((recommendation) => getRecommendationOrderQuantity(recommendation) > 0)
+  const sourcePurchaseOrderIds = state.purchaseOrders.map((purchaseOrder) => purchaseOrder.id)
+  const documentId = makeId('inv-csw', `${state.workbookName}-${activeRecommendations.map((recommendation) => recommendation.id).join('|')}-${sourcePurchaseOrderIds.join('|')}`)
+  const existingDocument = state.cswDocuments.find((document) => document.id === documentId)
+
+  const supplierSummaries = summarizeSupplierRecommendations(actionableRecommendations)
+  const accountTotals = summarizeAccountAllocation(actionableRecommendations)
+  const totalRecommendedPurchaseValue = actionableRecommendations.reduce((sum, recommendation) => sum + (recommendation.subtotal ?? 0), 0)
+  const urgentOrZeroStockItems = activeRecommendations
+    .filter((recommendation) => (recommendation.currentStock ?? 0) <= 0)
+    .map((recommendation) => recommendation.item)
+  const itemsWithInsufficientCountsOrMissingPricing = activeRecommendations
+    .filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW' || recommendation.priceEach === null)
+    .map((recommendation) => recommendation.item)
+
+  return {
+    id: documentId,
+    title: 'Completed Staff Work: Inventory Purchase Recommendations',
+    to: existingDocument?.to ?? 'Director of Operations',
+    from: existingDocument?.from ?? requestedBy,
+    date: existingDocument?.date ?? nowIso(),
+    subject: 'Warehouse inventory purchase recommendations and PO drafts',
+    inventoryDate: state.sessions[0]?.inventoryDate ?? state.importedAt.slice(0, 10),
+    totalItemsCounted: state.items.filter((item) => item.active).length,
+    recommendedItemCount: actionableRecommendations.length,
+    needsReviewCount: activeRecommendations.filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW').length,
+    suppliers: supplierSummaries,
+    totalRecommendedPurchaseValue,
+    accountAllocationTotals: accountTotals,
+    urgentOrZeroStockItems,
+    itemsWithInsufficientCountsOrMissingPricing,
+    situation: `Workbook-backed inventory review for ${state.workbookName} includes ${actionableRecommendations.length} purchase recommendation line(s).`,
+    dataSummary: `There are ${state.items.filter((item) => item.active).length} active inventory items and ${activeRecommendations.filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW').length} items needing review.`,
+    evaluation: `Estimated purchase value is ${totalRecommendedPurchaseValue.toFixed(2)} across ${supplierSummaries.length} supplier group(s).`,
+    purchaseSummary: supplierSummaries.length > 0 ? supplierSummaries.map((summary) => `${summary.supplier}: ${summary.lineItemCount} line(s) / ${summary.total.toFixed(2)}`).join('; ') : 'No purchase lines are ready for ordering.',
+    accountSummary: Object.entries(accountTotals).length > 0 ? Object.entries(accountTotals).map(([account, total]) => `${account}: ${total.toFixed(2)}`).join('; ') : 'No account allocations calculated.',
+    risksAndExceptions: itemsWithInsufficientCountsOrMissingPricing.length > 0 ? `${itemsWithInsufficientCountsOrMissingPricing.length} item(s) still need count confirmation, review, or pricing.` : 'No outstanding exceptions detected in the current recommendation set.',
+    recommendation: actionableRecommendations.length > 0 ? 'Approve the CSW and release approved purchase orders for ordering.' : 'No purchase action is required from the current workbook state.',
+    approvalStatus: existingDocument?.approvalStatus ?? 'PENDING',
+    approvalSignatureName: existingDocument?.approvalSignatureName ?? null,
+    approvalDate: existingDocument?.approvalDate ?? null,
+    sourceRecommendationIds: activeRecommendations.map((recommendation) => recommendation.id),
+    sourcePurchaseOrderIds,
   }
 }
 
@@ -373,7 +603,7 @@ export class WarehouseInventoryImportService {
     return {
       ...state,
       items: nextItems,
-      recommendations: nextItems.filter((item) => item.active).map(computeRecommendation),
+      recommendations: buildRecommendationList(nextItems, state.recommendations),
     }
   }
 
@@ -398,7 +628,7 @@ export class WarehouseInventoryImportService {
     return {
       ...state,
       items: nextItems,
-      recommendations: nextItems.filter((item) => item.active).map(computeRecommendation),
+      recommendations: buildRecommendationList(nextItems, state.recommendations),
     }
   }
 
@@ -483,5 +713,291 @@ export class WarehouseInventoryImportService {
     }
 
     return applyApprovedSession(nextState, approvedSession)
+  }
+
+  approveRecommendation(
+    state: InventoryFoundationState,
+    recommendationId: string,
+    input: { approvedBy: string; quantity?: number | null; reason?: string | null },
+  ): InventoryFoundationState {
+    const approvalHistoryEntry = {
+      status: 'APPROVED' as PurchaseApprovalStatus,
+      approvedAt: nowIso(),
+      approvedBy: input.approvedBy,
+      reason: input.reason ?? null,
+      quantity: input.quantity ?? null,
+    }
+
+    return {
+      ...state,
+      recommendations: state.recommendations.map((recommendation) => {
+        if (recommendation.id !== recommendationId) return recommendation
+        return {
+          ...recommendation,
+          reviewedQuantity: input.quantity ?? recommendation.reviewedQuantity ?? recommendation.suggestedPurchaseQuantity,
+          reviewedReason: input.reason ?? recommendation.reviewedReason,
+          approvalStatus: 'APPROVED',
+          status: 'DIRECTOR_APPROVED',
+          approvalHistory: [approvalHistoryEntry, ...recommendation.approvalHistory],
+        }
+      }),
+    }
+  }
+
+  rejectRecommendation(
+    state: InventoryFoundationState,
+    recommendationId: string,
+    input: { rejectedBy: string; reason?: string | null },
+  ): InventoryFoundationState {
+    const rejectionHistoryEntry = {
+      status: 'REJECTED' as PurchaseApprovalStatus,
+      approvedAt: nowIso(),
+      approvedBy: input.rejectedBy,
+      reason: input.reason ?? null,
+      quantity: null,
+    }
+
+    return {
+      ...state,
+      recommendations: state.recommendations.map((recommendation) => {
+        if (recommendation.id !== recommendationId) return recommendation
+        return {
+          ...recommendation,
+          reviewedReason: input.reason ?? recommendation.reviewedReason,
+          approvalStatus: 'REJECTED',
+          status: 'REJECTED',
+          approvalHistory: [rejectionHistoryEntry, ...recommendation.approvalHistory],
+        }
+      }),
+    }
+  }
+
+  createPurchaseOrderDrafts(state: InventoryFoundationState, requestedBy = 'Inventory Control'): InventoryFoundationState {
+    const nextDrafts = buildPurchaseOrderDrafts(state, requestedBy)
+    const nextDraftIds = new Set(nextDrafts.map((draft) => draft.id))
+    return {
+      ...state,
+      purchaseOrders: [
+        ...nextDrafts,
+        ...state.purchaseOrders.filter((purchaseOrder) => !nextDraftIds.has(purchaseOrder.id)),
+      ],
+    }
+  }
+
+  generateCswDocument(state: InventoryFoundationState, requestedBy = 'Inventory Control'): InventoryFoundationState {
+    const nextDocument = buildCswDocument(state, requestedBy)
+    const existingIndex = state.cswDocuments.findIndex((document) => document.id === nextDocument.id)
+    const cswDocuments = existingIndex >= 0
+      ? state.cswDocuments.map((document, index) => index === existingIndex ? nextDocument : document)
+      : [nextDocument, ...state.cswDocuments]
+
+    return {
+      ...state,
+      cswDocuments,
+    }
+  }
+
+  approveCswDocument(
+    state: InventoryFoundationState,
+    documentId: string,
+    input: { approvedBy: string; reason?: string | null },
+  ): InventoryFoundationState {
+    const approvedAt = nowIso()
+    const document = state.cswDocuments.find((candidate) => candidate.id === documentId)
+    const sourceRecommendationIds = new Set(document?.sourceRecommendationIds ?? [])
+    const sourcePurchaseOrderIds = new Set(document?.sourcePurchaseOrderIds ?? [])
+    return {
+      ...state,
+      cswDocuments: state.cswDocuments.map((document) => {
+        if (document.id !== documentId) return document
+        return {
+          ...document,
+          approvalStatus: 'APPROVED',
+          approvalSignatureName: input.approvedBy,
+          approvalDate: approvedAt,
+        }
+      }),
+      recommendations: state.recommendations.map((recommendation) => {
+        if (!sourceRecommendationIds.has(recommendation.id)) return recommendation
+        return {
+          ...recommendation,
+          approvalStatus: 'APPROVED',
+          status: 'APPROVED_FOR_PURCHASE',
+          approvalHistory: [{
+            status: 'APPROVED' as PurchaseApprovalStatus,
+            approvedAt,
+            approvedBy: input.approvedBy,
+            reason: input.reason ?? null,
+            quantity: recommendation.reviewedQuantity ?? recommendation.suggestedPurchaseQuantity ?? null,
+          }, ...recommendation.approvalHistory],
+        }
+      }),
+      purchaseOrders: state.purchaseOrders.map((purchaseOrder) => {
+        if (!sourcePurchaseOrderIds.has(purchaseOrder.id)) return purchaseOrder
+        return {
+          ...purchaseOrder,
+          approvalStatus: purchaseOrder.approvalStatus === 'DRAFT' ? 'APPROVED' : purchaseOrder.approvalStatus,
+          approvalHistory: [{
+            status: 'APPROVED',
+            changedAt: approvedAt,
+            changedBy: input.approvedBy,
+            reason: input.reason ?? null,
+          }, ...purchaseOrder.approvalHistory],
+        }
+      }),
+    }
+  }
+
+  rejectCswDocument(
+    state: InventoryFoundationState,
+    documentId: string,
+    input: { rejectedBy: string; reason?: string | null },
+  ): InventoryFoundationState {
+    const rejectedAt = nowIso()
+    return {
+      ...state,
+      cswDocuments: state.cswDocuments.map((document) => {
+        if (document.id !== documentId) return document
+        return {
+          ...document,
+          approvalStatus: 'DISAPPROVED',
+          approvalSignatureName: input.rejectedBy,
+          approvalDate: rejectedAt,
+        }
+      }),
+    }
+  }
+
+  markPurchaseOrderOrdered(
+    state: InventoryFoundationState,
+    purchaseOrderId: string,
+    input: { orderedBy: string; notes?: string | null },
+  ): InventoryFoundationState {
+    const orderedAt = nowIso()
+    return {
+      ...state,
+      purchaseOrders: state.purchaseOrders.map((purchaseOrder) => {
+        if (purchaseOrder.id !== purchaseOrderId) return purchaseOrder
+        return {
+          ...purchaseOrder,
+          approvalStatus: 'ORDERED',
+          approvalHistory: [{
+            status: 'ORDERED',
+            changedAt: orderedAt,
+            changedBy: input.orderedBy,
+            reason: input.notes ?? null,
+          }, ...purchaseOrder.approvalHistory],
+        }
+      }),
+      recommendations: state.recommendations.map((recommendation) => {
+        if (!state.purchaseOrders.some((purchaseOrder) => purchaseOrder.id === purchaseOrderId && purchaseOrder.lines.some((line) => line.recommendationId === recommendation.id))) {
+          return recommendation
+        }
+        return {
+          ...recommendation,
+          status: 'ORDERED',
+        }
+      }),
+    }
+  }
+
+  recordReceipt(
+    state: InventoryFoundationState,
+    input: { purchaseOrderId: string; lineId: string; quantityReceived: number; receivedBy: string; notes?: string | null },
+  ): InventoryFoundationState {
+    if (input.quantityReceived <= 0) {
+      throw new Error('Receipt quantity must be greater than zero.')
+    }
+
+    const receivedAt = nowIso()
+    const receiptId = makeId('inv-receipt', `${input.purchaseOrderId}-${input.lineId}-${receivedAt}`)
+    const itemById = new Map(state.items.map((item) => [item.id, { ...item }]))
+    const recommendationById = new Map(state.recommendations.map((recommendation) => [recommendation.id, { ...recommendation }]))
+    const receiptStatusByRecommendationId = new Map<string, InventoryPurchaseRecommendation['status']>()
+
+    const purchaseOrders = state.purchaseOrders.map((purchaseOrder) => {
+      if (purchaseOrder.id !== input.purchaseOrderId) return purchaseOrder
+
+      const lines = purchaseOrder.lines.map((line) => {
+        if (line.id !== input.lineId) return line
+
+        const receivedQuantity = line.quantityReceived + input.quantityReceived
+        const quantityRemaining = Math.max(0, line.quantityOrdered - receivedQuantity)
+        const receipts = [...line.receipts, {
+          id: receiptId,
+          receivedAt,
+          quantityReceived: input.quantityReceived,
+          notes: input.notes ?? null,
+        }]
+
+        const item = itemById.get(line.inventoryItemId)
+        if (item) {
+          item.quantityOnHand += input.quantityReceived
+          item.quantityAvailable = Math.max(0, item.quantityOnHand - item.quantityReserved)
+        }
+
+        const recommendation = line.recommendationId ? recommendationById.get(line.recommendationId) : null
+        if (recommendation) {
+          const nextStatus = quantityRemaining > 0 ? 'PARTIALLY_RECEIVED' : 'RECEIVED'
+          recommendation.status = nextStatus
+          receiptStatusByRecommendationId.set(recommendation.id, nextStatus)
+        }
+
+        return {
+          ...line,
+          quantityReceived: receivedQuantity,
+          quantityRemaining,
+          receipts,
+        }
+      })
+
+      const receipt = {
+        id: receiptId,
+        purchaseOrderId: purchaseOrder.id,
+        purchaseOrderLineId: input.lineId,
+        itemId: lines.find((line) => line.id === input.lineId)?.inventoryItemId ?? null,
+        supplierId: null,
+        quantityReceived: input.quantityReceived,
+        quantityRemaining: lines.find((line) => line.id === input.lineId)?.quantityRemaining ?? null,
+        receivedAt,
+        notes: input.notes ?? null,
+      }
+
+      const allReceived = lines.every((line) => line.quantityRemaining === 0)
+
+      return {
+        ...purchaseOrder,
+        lines,
+        receipts: [...purchaseOrder.receipts, receipt],
+        approvalStatus: allReceived ? 'RECEIVED' : 'PARTIALLY_RECEIVED',
+      } as PurchaseOrderDraft
+    })
+
+    const nextItems = [...itemById.values()]
+    const nextRecommendations = buildRecommendationList(nextItems, [...recommendationById.values()]).map((recommendation) => {
+      const nextStatus = receiptStatusByRecommendationId.get(recommendation.id)
+      return nextStatus ? { ...recommendation, status: nextStatus } : recommendation
+    })
+
+    return {
+      ...state,
+      items: nextItems,
+      purchaseOrders,
+      receipts: [
+        {
+          id: receiptId,
+          purchaseOrderId: input.purchaseOrderId,
+          purchaseOrderLineId: input.lineId,
+          itemId: purchaseOrders.find((purchaseOrder) => purchaseOrder.id === input.purchaseOrderId)?.lines.find((line) => line.id === input.lineId)?.inventoryItemId ?? '',
+          supplierId: null,
+          quantityReceived: input.quantityReceived,
+          quantityRemaining: purchaseOrders.find((purchaseOrder) => purchaseOrder.id === input.purchaseOrderId)?.lines.find((line) => line.id === input.lineId)?.quantityRemaining ?? null,
+          receivedAt,
+          notes: input.notes ?? null,
+        },
+        ...state.receipts,
+      ],
+      recommendations: nextRecommendations,
+    }
   }
 }

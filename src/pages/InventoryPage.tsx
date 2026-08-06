@@ -8,6 +8,7 @@ import type {
   InventoryFoundationState,
   InventoryItem,
   InventoryPurchaseRecommendation,
+	PurchaseOrderDraft,
 } from '../types/inventory'
 
 const inventoryService = new WarehouseInventoryImportService()
@@ -105,12 +106,6 @@ const getRecommendationPriority = (recommendation: InventoryPurchaseRecommendati
   return 'Routine'
 }
 
-const getDirectorApprovalLabel = (recommendation: InventoryPurchaseRecommendation): string => {
-  if (recommendation.status === 'NEEDS_REVIEW') return 'Review Source Row'
-  if (recommendation.observedShortage > 0) return 'Pending Director'
-  return 'Not Required'
-}
-
 const InventoryPage = () => {
   const { productionJobs } = useAppState()
 
@@ -139,6 +134,10 @@ const InventoryPage = () => {
 	const [countNotes, setCountNotes] = useState<Record<string, string>>({})
 	const [countValues, setCountValues] = useState<Record<string, string>>({})
 	const [countStatuses, setCountStatuses] = useState<Record<string, InventoryCountEntryStatus>>({})
+	const [recommendationQuantities, setRecommendationQuantities] = useState<Record<string, string>>({})
+	const [recommendationReasons, setRecommendationReasons] = useState<Record<string, string>>({})
+	const [receiptQuantities, setReceiptQuantities] = useState<Record<string, string>>({})
+	const [receiptNotes, setReceiptNotes] = useState<Record<string, string>>({})
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
 	useEffect(() => {
@@ -285,6 +284,14 @@ const InventoryPage = () => {
 		[state.recommendations],
 	)
 
+	const approvedOrRecommendedQueue = useMemo(
+		() => state.recommendations.filter((recommendation) => recommendation.status !== 'NOT_REQUIRED' && recommendation.status !== 'CANCELLED'),
+		[state.recommendations],
+	)
+
+	const purchaseOrders = useMemo(() => state.purchaseOrders, [state.purchaseOrders])
+	const latestCswDocument = useMemo(() => state.cswDocuments[0] ?? null, [state.cswDocuments])
+
 	const selectedItemRecommendation = useMemo(
 		() => (selectedItem ? recommendationByItemId.get(selectedItem.id) ?? null : null),
 		[recommendationByItemId, selectedItem],
@@ -372,6 +379,60 @@ const InventoryPage = () => {
 	const saveState = (next: InventoryFoundationState): void => {
 		setState(next)
 		inventoryService.save(next)
+	}
+
+	const approveRecommendation = (recommendation: InventoryPurchaseRecommendation): void => {
+		const quantityRaw = recommendationQuantities[recommendation.id]
+		const quantity = quantityRaw === undefined || quantityRaw.trim() === '' ? recommendation.suggestedPurchaseQuantity : Number(quantityRaw)
+		saveState(inventoryService.approveRecommendation(state, recommendation.id, {
+			approvedBy: 'Inventory Director',
+			quantity: typeof quantity === 'number' && Number.isFinite(quantity) ? quantity : null,
+			reason: recommendationReasons[recommendation.id] ?? null,
+		}))
+	}
+
+	const rejectRecommendation = (recommendation: InventoryPurchaseRecommendation): void => {
+		saveState(inventoryService.rejectRecommendation(state, recommendation.id, {
+			rejectedBy: 'Inventory Director',
+			reason: recommendationReasons[recommendation.id] ?? null,
+		}))
+	}
+
+	const createPurchaseOrders = (): void => {
+		saveState(inventoryService.createPurchaseOrderDrafts(state, 'Inventory Director'))
+	}
+
+	const generateCsw = (): void => {
+		const nextState = inventoryService.createPurchaseOrderDrafts(state, 'Inventory Director')
+		saveState(inventoryService.generateCswDocument(nextState, 'Inventory Director'))
+	}
+
+	const approveCsw = (): void => {
+		if (!latestCswDocument) return
+		saveState(inventoryService.approveCswDocument(state, latestCswDocument.id, { approvedBy: 'Inventory Director' }))
+	}
+
+	const rejectCsw = (): void => {
+		if (!latestCswDocument) return
+		saveState(inventoryService.rejectCswDocument(state, latestCswDocument.id, { rejectedBy: 'Inventory Director' }))
+	}
+
+	const markOrdered = (purchaseOrderId: string): void => {
+		saveState(inventoryService.markPurchaseOrderOrdered(state, purchaseOrderId, { orderedBy: 'Inventory Director' }))
+	}
+
+	const recordReceipt = (purchaseOrder: PurchaseOrderDraft, lineId: string): void => {
+		const quantityRaw = receiptQuantities[lineId]
+		const quantity = Number(quantityRaw)
+		if (!Number.isFinite(quantity) || quantity <= 0) return
+
+		saveState(inventoryService.recordReceipt(state, {
+			purchaseOrderId: purchaseOrder.id,
+			lineId,
+			quantityReceived: quantity,
+			receivedBy: 'Inventory Receiver',
+			notes: receiptNotes[lineId] ?? null,
+		}))
 	}
 
 	const reimportWorkbook = (): void => {
@@ -766,21 +827,37 @@ const InventoryPage = () => {
 						<section className="inventory-workspace-card" ref={purchaseWorkspaceRef}>
 							<div className="inventory-section-header">
 								<div>
-									<h3>Purchase Review</h3>
-									<p>Suggested purchases and shortages for director review only. No purchase orders are created here.</p>
+									<h3>Purchase Recommendations</h3>
+									<p>Workbook-backed purchase review, PO drafting, CSW generation, and receiving actions.</p>
 								</div>
+								<div className="inventory-section-actions">
+									<button type="button" className="btn" onClick={createPurchaseOrders}>
+										Create PO Drafts
+									</button>
+									<button type="button" className="btn btn-primary" onClick={generateCsw}>
+										Generate CSW
+									</button>
+								</div>
+							</div>
+							<div className="inventory-count-summary-grid" style={{ marginBottom: '1rem' }}>
+								<div className="inventory-mini-stat"><span>Open Recommendations</span><strong>{approvedOrRecommendedQueue.length}</strong></div>
+								<div className="inventory-mini-stat"><span>PO Drafts</span><strong>{purchaseOrders.length}</strong></div>
+								<div className="inventory-mini-stat"><span>CSW Documents</span><strong>{state.cswDocuments.length}</strong></div>
+								<div className="inventory-mini-stat"><span>Approved / Rejected</span><strong>{state.recommendations.filter((recommendation) => recommendation.approvalStatus !== 'PENDING').length}</strong></div>
 							</div>
 							<div className="inventory-grid-scroll inventory-grid-scroll-short">
 								<table className="inventory-enterprise-table inventory-enterprise-table-compact">
 									<thead>
 										<tr>
-											<th>Suggested Purchases</th>
+											<th>Item</th>
+											<th>Qty</th>
 											<th>Shortages</th>
 											<th>Supplier</th>
 											<th>Estimated Cost</th>
 											<th>Priority</th>
 											<th>Required By</th>
-											<th>Director Approval</th>
+											<th>Status</th>
+											<th>Approve / Reject</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -798,18 +875,155 @@ const InventoryPage = () => {
 															<span>{item?.locationName ?? recommendation.worksheetName}</span>
 														</div>
 													</td>
+													<td>
+														<input
+															type="number"
+															min={0}
+															value={recommendationQuantities[recommendation.id] ?? recommendation.suggestedPurchaseQuantity ?? ''}
+															onChange={(event) => setRecommendationQuantities((current) => ({ ...current, [recommendation.id]: event.target.value }))}
+														/>
+													</td>
 													<td>{recommendation.observedShortage}</td>
 													<td>{item?.preferredSupplierName ?? '--'}</td>
 													<td>{formatCurrency(estimatedCost)}</td>
 													<td><span className="inventory-pill inventory-pill-outline">{getRecommendationPriority(recommendation, item)}</span></td>
 													<td>{relatedJobs[0]?.dueDate ? formatDate(relatedJobs[0].dueDate) : '--'}</td>
-													<td>{getDirectorApprovalLabel(recommendation)}</td>
+													<td>{recommendation.approvalStatus}/{recommendation.status}</td>
+													<td>
+														<div className="inventory-section-actions">
+															<button type="button" className="btn" onClick={() => approveRecommendation(recommendation)}>Approve</button>
+															<button type="button" className="btn" onClick={() => rejectRecommendation(recommendation)}>Reject</button>
+														</div>
+														<label style={{ display: 'block', marginTop: '0.5rem' }}>
+															<span>Reason</span>
+															<input
+																type="text"
+																value={recommendationReasons[recommendation.id] ?? ''}
+																onChange={(event) => setRecommendationReasons((current) => ({ ...current, [recommendation.id]: event.target.value }))}
+															/>
+														</label>
+													</td>
 												</tr>
 											)
 										})}
 									</tbody>
 								</table>
 							</div>
+
+							<section className="inventory-workspace-card" style={{ marginTop: '1rem' }}>
+								<div className="inventory-section-header">
+									<div>
+										<h3>Purchase Order Drafts</h3>
+										<p>Grouped by supplier from approved or recommended purchase lines.</p>
+									</div>
+								</div>
+								<div className="inventory-grid-scroll inventory-grid-scroll-short">
+									<table className="inventory-enterprise-table inventory-enterprise-table-compact">
+										<thead>
+											<tr>
+												<th>PO Draft</th>
+												<th>Supplier</th>
+												<th>Lines</th>
+												<th>Total</th>
+												<th>Status</th>
+												<th>Mark Ordered</th>
+												<th>Receive</th>
+											</tr>
+										</thead>
+										<tbody>
+											{purchaseOrders.map((purchaseOrder) => (
+												<tr key={purchaseOrder.id}>
+													<td>{purchaseOrder.poDraftNumber}</td>
+													<td>{purchaseOrder.supplier}</td>
+													<td>{purchaseOrder.lines.length}</td>
+													<td>{formatCurrency(purchaseOrder.total)}</td>
+													<td>{purchaseOrder.approvalStatus}</td>
+													<td>
+														<button type="button" className="btn" onClick={() => markOrdered(purchaseOrder.id)}>Mark Ordered</button>
+													</td>
+													<td>{purchaseOrder.approvalStatus === 'ORDERED' || purchaseOrder.approvalStatus === 'PARTIALLY_RECEIVED' ? 'Use line receipts below' : '--'}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+								{purchaseOrders.length > 0 ? (
+									<div className="inventory-grid-scroll inventory-grid-scroll-short" style={{ marginTop: '1rem' }}>
+										<table className="inventory-enterprise-table inventory-enterprise-table-compact">
+											<thead>
+												<tr>
+													<th>PO Draft</th>
+													<th>Item</th>
+													<th>Qty Ordered</th>
+													<th>Qty Received</th>
+													<th>Receive</th>
+													<th>Notes</th>
+												</tr>
+											</thead>
+											<tbody>
+												{purchaseOrders.flatMap((purchaseOrder) => purchaseOrder.lines.map((line) => (
+													<tr key={line.id}>
+														<td>{purchaseOrder.poDraftNumber}</td>
+														<td>{line.description ?? line.inventoryItemId}</td>
+														<td>{line.quantityOrdered}</td>
+														<td>{line.quantityReceived}</td>
+														<td>
+															<div className="inventory-reservation-row">
+																<input
+																	type="number"
+																	min={1}
+																	value={receiptQuantities[line.id] ?? ''}
+																	onChange={(event) => setReceiptQuantities((current) => ({ ...current, [line.id]: event.target.value }))}
+																/>
+																<button type="button" className="btn" onClick={() => recordReceipt(purchaseOrder, line.id)}>Record Receipt</button>
+															</div>
+														</td>
+														<td>
+															<input
+																type="text"
+																value={receiptNotes[line.id] ?? ''}
+																onChange={(event) => setReceiptNotes((current) => ({ ...current, [line.id]: event.target.value }))}
+															/>
+														</td>
+													</tr>
+												))) }
+											</tbody>
+										</table>
+									</div>
+								) : null}
+							</section>
+
+							<section className="inventory-workspace-card" style={{ marginTop: '1rem' }}>
+								<div className="inventory-section-header">
+									<div>
+										<h3>Completed Staff Work</h3>
+										<p>Generated CSW document sourced from current inventory purchase recommendations.</p>
+									</div>
+									<div className="inventory-section-actions">
+										<button type="button" className="btn" onClick={approveCsw}>Approve</button>
+										<button type="button" className="btn" onClick={rejectCsw}>Reject</button>
+									</div>
+								</div>
+								{latestCswDocument ? (
+									<>
+										<div className="inventory-count-summary-grid" style={{ marginBottom: '1rem' }}>
+											<div className="inventory-mini-stat"><span>Title</span><strong>{latestCswDocument.title}</strong></div>
+											<div className="inventory-mini-stat"><span>Recommendation Lines</span><strong>{latestCswDocument.recommendedItemCount}</strong></div>
+											<div className="inventory-mini-stat"><span>Purchase Value</span><strong>{formatCurrency(latestCswDocument.totalRecommendedPurchaseValue)}</strong></div>
+											<div className="inventory-mini-stat"><span>Status</span><strong>{latestCswDocument.approvalStatus}</strong></div>
+										</div>
+										<dl className="inventory-meta-grid">
+											<div><dt>To</dt><dd>{latestCswDocument.to}</dd></div>
+											<div><dt>From</dt><dd>{latestCswDocument.from}</dd></div>
+											<div><dt>Date</dt><dd>{formatDateTime(latestCswDocument.date)}</dd></div>
+											<div><dt>Subject</dt><dd>{latestCswDocument.subject}</dd></div>
+										</dl>
+										<p className="inventory-detail-copy">{latestCswDocument.recommendation}</p>
+									</>
+								) : (
+									<p className="inventory-empty-state">Generate a CSW to capture the current purchase recommendation summary.</p>
+								)}
+							</section>
 						</section>
 
 						<section className="inventory-workspace-card">

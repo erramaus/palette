@@ -29,8 +29,8 @@ describe('WarehouseInventoryImportService', () => {
     const service = new WarehouseInventoryImportService()
     const state = service.importFromSeed(null)
 
-    expect(state.items.length).toBe(316)
-    expect(state.items.filter((item) => item.status === 'NEEDS_REVIEW').length).toBe(7)
+    expect(state.items.length).toBe(442)
+    expect(state.items.filter((item) => item.status === 'NEEDS_REVIEW').length).toBe(11)
   })
 
   it('marks removed source items inactive instead of deleting them', () => {
@@ -163,6 +163,60 @@ describe('WarehouseInventoryImportService', () => {
     expect(recommendation).toBeDefined()
     expect(recommendation?.status).toBe('NEEDS_REVIEW')
     expect(recommendation?.suggestedPurchaseQuantity).toBeNull()
+  })
+
+  it('creates PO drafts and a CSW from approved recommendations', () => {
+    const service = new WarehouseInventoryImportService()
+    const imported = service.importFromSeed(null)
+    const recommendation = imported.recommendations.find((candidate) => (candidate.suggestedPurchaseQuantity ?? 0) > 0)
+
+    expect(recommendation).toBeDefined()
+
+    const approved = service.approveRecommendation(imported, recommendation!.id, {
+      approvedBy: 'Test Director',
+      quantity: recommendation?.suggestedPurchaseQuantity ?? null,
+      reason: 'Approved for test coverage.',
+    })
+    const withDrafts = service.createPurchaseOrderDrafts(approved, 'Test Director')
+    const withCsw = service.generateCswDocument(withDrafts, 'Test Director')
+
+    expect(withDrafts.purchaseOrders.length).toBeGreaterThan(0)
+    expect(withDrafts.purchaseOrders[0].lines.length).toBeGreaterThan(0)
+    expect(withCsw.cswDocuments.length).toBeGreaterThan(0)
+    expect(withCsw.cswDocuments[0].sourceRecommendationIds.length).toBeGreaterThan(0)
+  })
+
+  it('records receipts and updates purchase order and inventory quantities', () => {
+    const service = new WarehouseInventoryImportService()
+    const imported = service.importFromSeed(null)
+    const recommendation = imported.recommendations.find((candidate) => (candidate.suggestedPurchaseQuantity ?? 0) > 0)
+
+    expect(recommendation).toBeDefined()
+
+    const approved = service.approveRecommendation(imported, recommendation!.id, {
+      approvedBy: 'Test Director',
+      quantity: recommendation?.suggestedPurchaseQuantity ?? null,
+    })
+    const withDrafts = service.createPurchaseOrderDrafts(approved, 'Test Director')
+    const purchaseOrder = withDrafts.purchaseOrders[0]
+    const line = purchaseOrder.lines[0]
+    const beforeQuantity = withDrafts.items.find((candidate) => candidate.id === line.inventoryItemId)?.quantityOnHand ?? 0
+
+    const received = service.recordReceipt(withDrafts, {
+      purchaseOrderId: purchaseOrder.id,
+      lineId: line.id,
+      quantityReceived: 1,
+      receivedBy: 'Test Receiver',
+      notes: 'Partial receipt for test coverage.',
+    })
+
+    const updatedOrder = received.purchaseOrders.find((candidate) => candidate.id === purchaseOrder.id)
+    const updatedItem = received.items.find((candidate) => candidate.id === line.inventoryItemId)
+
+    expect(updatedOrder?.approvalStatus).toBe('PARTIALLY_RECEIVED')
+    expect(updatedOrder?.lines[0].quantityReceived).toBe(1)
+    expect(updatedItem?.quantityOnHand).toBe(beforeQuantity + 1)
+    expect(received.receipts[0].quantityReceived).toBe(1)
   })
 
   it('persists and reloads without duplicate records', () => {

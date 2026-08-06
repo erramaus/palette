@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import xlsx from 'xlsx'
 
-const workbookPath = path.resolve('docs/source/Warehouse Inventory 2026-07-08.xlsx')
+const workbookPath = path.resolve('docs/source/Warehouse Inventory 2026-08-06.xlsx')
 const workbook = xlsx.readFile(workbookPath, {
   cellFormula: true,
   cellNF: true,

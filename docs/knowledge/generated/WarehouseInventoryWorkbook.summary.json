@@ -1,5 +1,5 @@
 {
-  "workbook": "Warehouse Inventory 2026-07-08.xlsx",
+  "workbook": "Warehouse Inventory 2026-08-06.xlsx",
   "sheetCount": 7,
   "worksheetsAnalyzed": [
     {
@@ -41,8 +41,8 @@
       "worksheet": "Unit B",
       "visibility": "VISIBLE",
       "headerRow": 3,
-      "rowCount": 114,
-      "formulaCount": 435,
+      "rowCount": 211,
+      "formulaCount": 809,
       "mergedRanges": [
         "C1:K1",
         "G2:K2",
@@ -51,7 +51,12 @@
         "A43:A86",
         "A87:A103",
         "A104:A107",
-        "A108:A116"
+        "A108:A116",
+        "A118:A125",
+        "A126:A156",
+        "A157:A197",
+        "A198:A204",
+        "A205:A213"
       ],
       "headers": [
         "COLUMN_A [A]",
@@ -69,21 +74,36 @@
         "Account [M]",
         "Price Ea. [N]",
         "Subtotal [O]",
-        "Notes [P]"
+        "Notes [P]",
+        "COLUMN_Q [Q]",
+        "COLUMN_R [R]",
+        "COLUMN_S [S]",
+        "COLUMN_T [T]",
+        "COLUMN_U [U]",
+        "COLUMN_V [V]",
+        "COLUMN_W [W]",
+        "COLUMN_X [X]",
+        "COLUMN_Y [Y]",
+        "COLUMN_Z [Z]",
+        "COLUMN_AA [AA]"
       ]
     },
     {
       "worksheet": "Unit C",
       "visibility": "VISIBLE",
       "headerRow": 2,
-      "rowCount": 33,
-      "formulaCount": 125,
+      "rowCount": 64,
+      "formulaCount": 244,
       "mergedRanges": [
+        "A56:A62",
+        "A63:A65",
         "C1:K1",
         "A3:A9",
         "A10:A24",
         "A25:A31",
-        "A32:A34"
+        "A32:A34",
+        "A43:A55",
+        "A36:A42"
       ],
       "headers": [
         "COLUMN_A [A]",
@@ -157,7 +177,7 @@
       "mergedRanges": [],
       "headers": [
         "Unit A: [A]",
-        "$6,235.00 [B]",
+        "$8,979.00 [B]",
         "COLUMN_C [C]",
         "ACCOUNT [D]",
         "TOTAL [E]",
@@ -257,7 +277,7 @@
       "worksheet": "Unit B",
       "visibility": "VISIBLE",
       "headerRow": 3,
-      "rowCount": 114,
+      "rowCount": 211,
       "headers": [
         "COLUMN_A [A]",
         "ORDER [B]",
@@ -274,15 +294,26 @@
         "Account [M]",
         "Price Ea. [N]",
         "Subtotal [O]",
-        "Notes [P]"
+        "Notes [P]",
+        "COLUMN_Q [Q]",
+        "COLUMN_R [R]",
+        "COLUMN_S [S]",
+        "COLUMN_T [T]",
+        "COLUMN_U [U]",
+        "COLUMN_V [V]",
+        "COLUMN_W [W]",
+        "COLUMN_X [X]",
+        "COLUMN_Y [Y]",
+        "COLUMN_Z [Z]",
+        "COLUMN_AA [AA]"
       ],
-      "formulaCount": 435
+      "formulaCount": 809
     },
     {
       "worksheet": "Unit C",
       "visibility": "VISIBLE",
       "headerRow": 2,
-      "rowCount": 33,
+      "rowCount": 64,
       "headers": [
         "COLUMN_A [A]",
         "ORDER [B]",
@@ -301,7 +332,7 @@
         "Subtotal [O]",
         "Notes [P]"
       ],
-      "formulaCount": 125
+      "formulaCount": 244
     },
     {
       "worksheet": "Erins Studio",
@@ -341,7 +372,7 @@
     }
   ],
   "inventoryStats": {
-    "inventoryItemsFound": 316,
+    "inventoryItemsFound": 442,
     "categoriesFound": [
       "3D Printer Supplies",
       "Brushes",
@@ -393,13 +424,14 @@
       "Lowes",
       "Monroe Speciality",
       "N/A",
+      "Ook",
       "swissQprints",
       "Tools Today",
       "Uline",
       "Walmart",
       "Warehouse"
     ],
-    "ambiguousRowCount": 7
+    "ambiguousRowCount": 11
   },
   "formulaRulesFound": [
     {
@@ -2877,8 +2909,8 @@
       "field": "Item#2 [J]",
       "formula": "\"31561521201248\"",
       "exampleWorksheet": "Unit B",
-      "exampleRow": 5,
-      "sourceRef": "Unit B!J5"
+      "exampleRow": 119,
+      "sourceRef": "Unit B!J119"
     },
     {
       "field": "ORDER [B]",
@@ -2891,8 +2923,8 @@
       "field": "Price Ea. [N]",
       "formula": "0.91*200",
       "exampleWorksheet": "Unit B",
-      "exampleRow": 6,
-      "sourceRef": "Unit B!N6"
+      "exampleRow": 120,
+      "sourceRef": "Unit B!N120"
     },
     {
       "field": "ORDER [B]",
@@ -2905,8 +2937,8 @@
       "field": "Item#2 [J]",
       "formula": "\"31561521266784\"",
       "exampleWorksheet": "Unit B",
-      "exampleRow": 7,
-      "sourceRef": "Unit B!J7"
+      "exampleRow": 121,
+      "sourceRef": "Unit B!J121"
     },
     {
       "field": "ORDER [B]",
@@ -3256,14 +3288,14 @@
       "formula": "IF(G97=\"\",\"\",IF(G97>D97,\"\",C97-G97))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 97,
-      "sourceRef": "Unit B!F97"
+      "sourceRef": "Unit B!A97"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F97=\"\",\"\",N97*F97)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 97,
-      "sourceRef": "Unit B!O97"
+      "sourceRef": "Unit B!A97"
     },
     {
       "field": "ORDER [B]",
@@ -3305,14 +3337,14 @@
       "formula": "IF(G99=\"\",\"\",IF(G99>D99,\"\",C99-G99))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 99,
-      "sourceRef": "Unit B!F99"
+      "sourceRef": "Unit B!A99"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F99=\"\",\"\",N99*F99)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 99,
-      "sourceRef": "Unit B!O99"
+      "sourceRef": "Unit B!A99"
     },
     {
       "field": "ORDER [B]",
@@ -3529,14 +3561,14 @@
       "formula": "IF(G108=\"\",\"\",IF(G108>D108,\"\",C108-G108))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 108,
-      "sourceRef": "Unit B!F108"
+      "sourceRef": "Unit B!A108"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F108=\"\",\"\",N108*F108)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 108,
-      "sourceRef": "Unit B!O108"
+      "sourceRef": "Unit B!A108"
     },
     {
       "field": "ORDER [B]",
@@ -3585,14 +3617,14 @@
       "formula": "IF(G110=\"\",\"\",IF(G110>D110,\"\",C110-G110))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 110,
-      "sourceRef": "Unit B!F110"
+      "sourceRef": "Unit B!A110"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F110=\"\",\"\",N110*F110)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 110,
-      "sourceRef": "Unit B!O110"
+      "sourceRef": "Unit B!A110"
     },
     {
       "field": "ORDER [B]",
@@ -3613,14 +3645,14 @@
       "formula": "IF(G111=\"\",\"\",IF(G111>D111,\"\",C111-G111))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 111,
-      "sourceRef": "Unit B!F111"
+      "sourceRef": "Unit B!A111"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F111=\"\",\"\",N111*F111)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 111,
-      "sourceRef": "Unit B!O111"
+      "sourceRef": "Unit B!A111"
     },
     {
       "field": "ORDER [B]",
@@ -3641,14 +3673,14 @@
       "formula": "IF(G112=\"\",\"\",IF(G112>D112,\"\",C112-G112))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 112,
-      "sourceRef": "Unit B!F112"
+      "sourceRef": "Unit B!A112"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F112=\"\",\"\",N112*F112)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 112,
-      "sourceRef": "Unit B!O112"
+      "sourceRef": "Unit B!A112"
     },
     {
       "field": "ORDER [B]",
@@ -3669,14 +3701,14 @@
       "formula": "IF(G113=\"\",\"\",IF(G113>D113,\"\",C113-G113))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 113,
-      "sourceRef": "Unit B!F113"
+      "sourceRef": "Unit B!A113"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F113=\"\",\"\",N113*F113)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 113,
-      "sourceRef": "Unit B!O113"
+      "sourceRef": "Unit B!A113"
     },
     {
       "field": "ORDER [B]",
@@ -3697,14 +3729,14 @@
       "formula": "IF(G114=\"\",\"\",IF(G114>D114,\"\",C114-G114))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 114,
-      "sourceRef": "Unit B!F114"
+      "sourceRef": "Unit B!A114"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F114=\"\",\"\",N114*F114)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 114,
-      "sourceRef": "Unit B!O114"
+      "sourceRef": "Unit B!A114"
     },
     {
       "field": "ORDER [B]",
@@ -3725,14 +3757,14 @@
       "formula": "IF(G115=\"\",\"\",IF(G115>D115,\"\",C115-G115))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 115,
-      "sourceRef": "Unit B!F115"
+      "sourceRef": "Unit B!A115"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F115=\"\",\"\",N115*F115)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 115,
-      "sourceRef": "Unit B!O115"
+      "sourceRef": "Unit B!A115"
     },
     {
       "field": "ORDER [B]",
@@ -3753,14 +3785,2604 @@
       "formula": "IF(G116=\"\",\"\",IF(G116>D116,\"\",C116-G116))",
       "exampleWorksheet": "Unit B",
       "exampleRow": 116,
-      "sourceRef": "Unit B!F116"
+      "sourceRef": "Unit B!A116"
     },
     {
       "field": "Subtotal [O]",
       "formula": "IF(F116=\"\",\"\",N116*F116)",
       "exampleWorksheet": "Unit B",
       "exampleRow": 116,
-      "sourceRef": "Unit B!O116"
+      "sourceRef": "Unit B!A116"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C118*G118",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 118,
+      "sourceRef": "Unit B!E118"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G118=\"\",\"\",IF(G118>D118,\"\",C118-G118))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 118,
+      "sourceRef": "Unit B!F118"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F118=\"\",\"\",N118*F118)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 118,
+      "sourceRef": "Unit B!O118"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B118+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 119,
+      "sourceRef": "Unit B!B119"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C119*G119",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 119,
+      "sourceRef": "Unit B!E119"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G119=\"\",\"\",IF(G119>D119,\"\",C119-G119))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 119,
+      "sourceRef": "Unit B!A119"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F119=\"\",\"\",N119*F119)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 119,
+      "sourceRef": "Unit B!A119"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B119+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 120,
+      "sourceRef": "Unit B!B120"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C120*G120",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 120,
+      "sourceRef": "Unit B!E120"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G120=\"\",\"\",IF(G120>D120,\"\",C120-G120))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 120,
+      "sourceRef": "Unit B!A120"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F120=\"\",\"\",N120*F120)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 120,
+      "sourceRef": "Unit B!A120"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B120+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 121,
+      "sourceRef": "Unit B!B121"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C121*G121",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 121,
+      "sourceRef": "Unit B!E121"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G121=\"\",\"\",IF(G121>D121,\"\",C121-G121))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 121,
+      "sourceRef": "Unit B!A121"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F121=\"\",\"\",N121*F121)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 121,
+      "sourceRef": "Unit B!A121"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B121+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 122,
+      "sourceRef": "Unit B!B122"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C122*G122",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 122,
+      "sourceRef": "Unit B!E122"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G122=\"\",\"\",IF(G122>D122,\"\",C122-G122))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 122,
+      "sourceRef": "Unit B!A122"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F122=\"\",\"\",N122*F122)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 122,
+      "sourceRef": "Unit B!A122"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B122+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 123,
+      "sourceRef": "Unit B!B123"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C123*G123",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 123,
+      "sourceRef": "Unit B!E123"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G123=\"\",\"\",IF(G123>D123,\"\",C123-G123))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 123,
+      "sourceRef": "Unit B!F123"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F123=\"\",\"\",N123*F123)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 123,
+      "sourceRef": "Unit B!O123"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B123+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 124,
+      "sourceRef": "Unit B!B124"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C124*G124",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 124,
+      "sourceRef": "Unit B!E124"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G124=\"\",\"\",IF(G124>D124,\"\",C124-G124))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 124,
+      "sourceRef": "Unit B!A124"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F124=\"\",\"\",N124*F124)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 124,
+      "sourceRef": "Unit B!A124"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B124+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 125,
+      "sourceRef": "Unit B!B125"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C125*G125",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 125,
+      "sourceRef": "Unit B!E125"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G125=\"\",\"\",IF(G125>D125,\"\",C125-G125))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 125,
+      "sourceRef": "Unit B!A125"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F125=\"\",\"\",N125*F125)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 125,
+      "sourceRef": "Unit B!A125"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B125+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 126,
+      "sourceRef": "Unit B!B126"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C126*G126",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 126,
+      "sourceRef": "Unit B!E126"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G126=\"\",\"\",IF(G126>D126,\"\",C126-G126))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 126,
+      "sourceRef": "Unit B!A126"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F126=\"\",\"\",N126*F126)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 126,
+      "sourceRef": "Unit B!A126"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B126+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 127,
+      "sourceRef": "Unit B!B127"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C127*G127",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 127,
+      "sourceRef": "Unit B!E127"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G127=\"\",\"\",IF(G127>D127,\"\",C127-G127))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 127,
+      "sourceRef": "Unit B!A127"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F127=\"\",\"\",N127*F127)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 127,
+      "sourceRef": "Unit B!A127"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B127+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 128,
+      "sourceRef": "Unit B!B128"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C128*G128",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 128,
+      "sourceRef": "Unit B!E128"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G128=\"\",\"\",IF(G128>D128,\"\",C128-G128))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 128,
+      "sourceRef": "Unit B!A128"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F128=\"\",\"\",N128*F128)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 128,
+      "sourceRef": "Unit B!A128"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B128+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 129,
+      "sourceRef": "Unit B!B129"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C129*G129",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 129,
+      "sourceRef": "Unit B!E129"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G129=\"\",\"\",IF(G129>D129,\"\",C129-G129))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 129,
+      "sourceRef": "Unit B!A129"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F129=\"\",\"\",N129*F129)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 129,
+      "sourceRef": "Unit B!A129"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B129+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 130,
+      "sourceRef": "Unit B!B130"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C130*G130",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 130,
+      "sourceRef": "Unit B!E130"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G130=\"\",\"\",IF(G130>D130,\"\",C130-G130))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 130,
+      "sourceRef": "Unit B!F130"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F130=\"\",\"\",N130*F130)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 130,
+      "sourceRef": "Unit B!O130"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B130+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 131,
+      "sourceRef": "Unit B!B131"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C131*G131",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 131,
+      "sourceRef": "Unit B!E131"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G131=\"\",\"\",IF(G131>D131,\"\",C131-G131))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 131,
+      "sourceRef": "Unit B!F131"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F131=\"\",\"\",N131*F131)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 131,
+      "sourceRef": "Unit B!O131"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B131+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 132,
+      "sourceRef": "Unit B!B132"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C132*G132",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 132,
+      "sourceRef": "Unit B!E132"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G132=\"\",\"\",IF(G132>D132,\"\",C132-G132))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 132,
+      "sourceRef": "Unit B!A132"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F132=\"\",\"\",N132*F132)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 132,
+      "sourceRef": "Unit B!A132"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B132+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 133,
+      "sourceRef": "Unit B!B133"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C133*G133",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 133,
+      "sourceRef": "Unit B!E133"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G133=\"\",\"\",IF(G133>D133,\"\",C133-G133))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 133,
+      "sourceRef": "Unit B!F133"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F133=\"\",\"\",N133*F133)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 133,
+      "sourceRef": "Unit B!O133"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B133+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 134,
+      "sourceRef": "Unit B!B134"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C134*G134",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 134,
+      "sourceRef": "Unit B!E134"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G134=\"\",\"\",IF(G134>D134,\"\",C134-G134))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 134,
+      "sourceRef": "Unit B!A134"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F134=\"\",\"\",N134*F134)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 134,
+      "sourceRef": "Unit B!A134"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B134+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 135,
+      "sourceRef": "Unit B!B135"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C135*G135",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 135,
+      "sourceRef": "Unit B!E135"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G135=\"\",\"\",IF(G135>D135,\"\",C135-G135))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 135,
+      "sourceRef": "Unit B!A135"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F135=\"\",\"\",N135*F135)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 135,
+      "sourceRef": "Unit B!A135"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B135+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 136,
+      "sourceRef": "Unit B!B136"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C136*G136",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 136,
+      "sourceRef": "Unit B!E136"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G136=\"\",\"\",IF(G136>D136,\"\",C136-G136))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 136,
+      "sourceRef": "Unit B!A136"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F136=\"\",\"\",N136*F136)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 136,
+      "sourceRef": "Unit B!A136"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B136+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 137,
+      "sourceRef": "Unit B!B137"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C137*G137",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 137,
+      "sourceRef": "Unit B!E137"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G137=\"\",\"\",IF(G137>D137,\"\",C137-G137))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 137,
+      "sourceRef": "Unit B!A137"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F137=\"\",\"\",N137*F137)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 137,
+      "sourceRef": "Unit B!A137"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B137+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 138,
+      "sourceRef": "Unit B!B138"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C138*G138",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 138,
+      "sourceRef": "Unit B!E138"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G138=\"\",\"\",IF(G138>D138,\"\",C138-G138))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 138,
+      "sourceRef": "Unit B!A138"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F138=\"\",\"\",N138*F138)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 138,
+      "sourceRef": "Unit B!A138"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B138+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 139,
+      "sourceRef": "Unit B!B139"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C139*G139",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 139,
+      "sourceRef": "Unit B!E139"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G139=\"\",\"\",IF(G139>D139,\"\",C139-G139))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 139,
+      "sourceRef": "Unit B!A139"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F139=\"\",\"\",N139*F139)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 139,
+      "sourceRef": "Unit B!A139"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B139+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 140,
+      "sourceRef": "Unit B!B140"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C140*G140",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 140,
+      "sourceRef": "Unit B!E140"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F140=\"\",\"\",N140*F140)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 140,
+      "sourceRef": "Unit B!A140"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B140+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 141,
+      "sourceRef": "Unit B!B141"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C141*G141",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 141,
+      "sourceRef": "Unit B!E141"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G141=\"\",\"\",IF(G141>D141,\"\",C141-G141))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 141,
+      "sourceRef": "Unit B!A141"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F141=\"\",\"\",N141*F141)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 141,
+      "sourceRef": "Unit B!A141"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B141+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 142,
+      "sourceRef": "Unit B!B142"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C142*G142",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 142,
+      "sourceRef": "Unit B!E142"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G142=\"\",\"\",IF(G142>D142,\"\",C142-G142))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 142,
+      "sourceRef": "Unit B!A142"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F142=\"\",\"\",N142*F142)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 142,
+      "sourceRef": "Unit B!A142"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B142+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 143,
+      "sourceRef": "Unit B!B143"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C143*G143",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 143,
+      "sourceRef": "Unit B!E143"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G143=\"\",\"\",IF(G143>D143,\"\",C143-G143))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 143,
+      "sourceRef": "Unit B!A143"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F143=\"\",\"\",N143*F143)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 143,
+      "sourceRef": "Unit B!A143"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B143+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 144,
+      "sourceRef": "Unit B!B144"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C144*G144",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 144,
+      "sourceRef": "Unit B!E144"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G144=\"\",\"\",IF(G144>D144,\"\",C144-G144))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 144,
+      "sourceRef": "Unit B!A144"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F144=\"\",\"\",N144*F144)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 144,
+      "sourceRef": "Unit B!A144"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B144+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 145,
+      "sourceRef": "Unit B!B145"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C145*G145",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 145,
+      "sourceRef": "Unit B!E145"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G145=\"\",\"\",IF(G145>D145,\"\",C145-G145))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 145,
+      "sourceRef": "Unit B!A145"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F145=\"\",\"\",N145*F145)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 145,
+      "sourceRef": "Unit B!A145"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B145+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 146,
+      "sourceRef": "Unit B!B146"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C146*G146",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 146,
+      "sourceRef": "Unit B!E146"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G146=\"\",\"\",IF(G146>D146,\"\",C146-G146))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 146,
+      "sourceRef": "Unit B!A146"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F146=\"\",\"\",N146*F146)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 146,
+      "sourceRef": "Unit B!A146"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B146+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 147,
+      "sourceRef": "Unit B!B147"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F147=\"\",\"\",N147*F147)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 147,
+      "sourceRef": "Unit B!A147"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B147+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 148,
+      "sourceRef": "Unit B!B148"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C148*G148",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 148,
+      "sourceRef": "Unit B!E148"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G148=\"\",\"\",IF(G148>D148,\"\",C148-G148))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 148,
+      "sourceRef": "Unit B!A148"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F148=\"\",\"\",N148*F148)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 148,
+      "sourceRef": "Unit B!A148"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B148+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 149,
+      "sourceRef": "Unit B!B149"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C149*G149",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 149,
+      "sourceRef": "Unit B!E149"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G149=\"\",\"\",IF(G149>D149,\"\",C149-G149))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 149,
+      "sourceRef": "Unit B!A149"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F149=\"\",\"\",N149*F149)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 149,
+      "sourceRef": "Unit B!A149"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B149+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 150,
+      "sourceRef": "Unit B!B150"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C150*G150",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 150,
+      "sourceRef": "Unit B!E150"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G150=\"\",\"\",IF(G150>D150,\"\",C150-G150))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 150,
+      "sourceRef": "Unit B!A150"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F150=\"\",\"\",N150*F150)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 150,
+      "sourceRef": "Unit B!A150"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B150+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 151,
+      "sourceRef": "Unit B!B151"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C151*G151",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 151,
+      "sourceRef": "Unit B!E151"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G151=\"\",\"\",IF(G151>D151,\"\",C151-G151))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 151,
+      "sourceRef": "Unit B!A151"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F151=\"\",\"\",N151*F151)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 151,
+      "sourceRef": "Unit B!A151"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B151+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 152,
+      "sourceRef": "Unit B!B152"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C152*G152",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 152,
+      "sourceRef": "Unit B!E152"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G152=\"\",\"\",IF(G152>D152,\"\",C152-G152))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 152,
+      "sourceRef": "Unit B!A152"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F152=\"\",\"\",N152*F152)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 152,
+      "sourceRef": "Unit B!A152"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B152+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 153,
+      "sourceRef": "Unit B!B153"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C153*G153",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 153,
+      "sourceRef": "Unit B!E153"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F153=\"\",\"\",N153*F153)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 153,
+      "sourceRef": "Unit B!A153"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B153+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 154,
+      "sourceRef": "Unit B!B154"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C154*G154",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 154,
+      "sourceRef": "Unit B!E154"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F154=\"\",\"\",N154*F154)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 154,
+      "sourceRef": "Unit B!A154"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B154+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 155,
+      "sourceRef": "Unit B!B155"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C155*G155",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 155,
+      "sourceRef": "Unit B!E155"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F155=\"\",\"\",N155*F155)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 155,
+      "sourceRef": "Unit B!A155"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B155+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 156,
+      "sourceRef": "Unit B!B156"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C156*G156",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 156,
+      "sourceRef": "Unit B!E156"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F156=\"\",\"\",N156*F156)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 156,
+      "sourceRef": "Unit B!A156"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B156+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 157,
+      "sourceRef": "Unit B!B157"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C157*G157",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 157,
+      "sourceRef": "Unit B!E157"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G157=\"\",\"\",IF(G157>D157,\"\",C157-G157))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 157,
+      "sourceRef": "Unit B!A157"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F157=\"\",\"\",N157*F157)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 157,
+      "sourceRef": "Unit B!A157"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B157+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 158,
+      "sourceRef": "Unit B!B158"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C158*G158",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 158,
+      "sourceRef": "Unit B!E158"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G158=\"\",\"\",IF(G158>D158,\"\",C158-G158))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 158,
+      "sourceRef": "Unit B!A158"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F158=\"\",\"\",N158*F158)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 158,
+      "sourceRef": "Unit B!A158"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B158+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 159,
+      "sourceRef": "Unit B!B159"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C159*G159",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 159,
+      "sourceRef": "Unit B!E159"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G159=\"\",\"\",IF(G159>D159,\"\",C159-G159))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 159,
+      "sourceRef": "Unit B!A159"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F159=\"\",\"\",N159*F159)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 159,
+      "sourceRef": "Unit B!A159"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B159+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 160,
+      "sourceRef": "Unit B!B160"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C160*G160",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 160,
+      "sourceRef": "Unit B!E160"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G160=\"\",\"\",IF(G160>D160,\"\",C160-G160))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 160,
+      "sourceRef": "Unit B!A160"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F160=\"\",\"\",N160*F160)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 160,
+      "sourceRef": "Unit B!A160"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B160+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 161,
+      "sourceRef": "Unit B!B161"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C161*G161",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 161,
+      "sourceRef": "Unit B!E161"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G161=\"\",\"\",IF(G161>D161,\"\",C161-G161))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 161,
+      "sourceRef": "Unit B!F161"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F161=\"\",\"\",N161*F161)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 161,
+      "sourceRef": "Unit B!O161"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B161+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 162,
+      "sourceRef": "Unit B!B162"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C162*G162",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 162,
+      "sourceRef": "Unit B!E162"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G162=\"\",\"\",IF(G162>D162,\"\",C162-G162))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 162,
+      "sourceRef": "Unit B!A162"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F162=\"\",\"\",N162*F162)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 162,
+      "sourceRef": "Unit B!A162"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B162+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 163,
+      "sourceRef": "Unit B!B163"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C163*G163",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 163,
+      "sourceRef": "Unit B!E163"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G163=\"\",\"\",IF(G163>D163,\"\",C163-G163))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 163,
+      "sourceRef": "Unit B!A163"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F163=\"\",\"\",N163*F163)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 163,
+      "sourceRef": "Unit B!A163"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B163+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 164,
+      "sourceRef": "Unit B!B164"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C164*G164",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 164,
+      "sourceRef": "Unit B!E164"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G164=\"\",\"\",IF(G164>D164,\"\",C164-G164))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 164,
+      "sourceRef": "Unit B!A164"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F164=\"\",\"\",N164*F164)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 164,
+      "sourceRef": "Unit B!A164"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B164+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 165,
+      "sourceRef": "Unit B!B165"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C165*G165",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 165,
+      "sourceRef": "Unit B!E165"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G165=\"\",\"\",IF(G165>D165,\"\",C165-G165))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 165,
+      "sourceRef": "Unit B!A165"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F165=\"\",\"\",N165*F165)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 165,
+      "sourceRef": "Unit B!A165"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B165+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 166,
+      "sourceRef": "Unit B!B166"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C166*G166",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 166,
+      "sourceRef": "Unit B!E166"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G166=\"\",\"\",IF(G166>D166,\"\",C166-G166))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 166,
+      "sourceRef": "Unit B!A166"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F166=\"\",\"\",N166*F166)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 166,
+      "sourceRef": "Unit B!A166"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B166+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 167,
+      "sourceRef": "Unit B!B167"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C167*G167",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 167,
+      "sourceRef": "Unit B!E167"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G167=\"\",\"\",IF(G167>D167,\"\",C167-G167))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 167,
+      "sourceRef": "Unit B!A167"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F167=\"\",\"\",N167*F167)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 167,
+      "sourceRef": "Unit B!A167"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B167+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 168,
+      "sourceRef": "Unit B!B168"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C168*G168",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 168,
+      "sourceRef": "Unit B!E168"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G168=\"\",\"\",IF(G168>D168,\"\",C168-G168))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 168,
+      "sourceRef": "Unit B!A168"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F168=\"\",\"\",N168*F168)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 168,
+      "sourceRef": "Unit B!A168"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B168+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 169,
+      "sourceRef": "Unit B!B169"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C169*G169",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 169,
+      "sourceRef": "Unit B!E169"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G169=\"\",\"\",IF(G169>D169,\"\",C169-G169))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 169,
+      "sourceRef": "Unit B!A169"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F169=\"\",\"\",N169*F169)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 169,
+      "sourceRef": "Unit B!A169"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B169+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 170,
+      "sourceRef": "Unit B!B170"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C170*G170",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 170,
+      "sourceRef": "Unit B!E170"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G170=\"\",\"\",IF(G170>D170,\"\",C170-G170))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 170,
+      "sourceRef": "Unit B!F170"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F170=\"\",\"\",N170*F170)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 170,
+      "sourceRef": "Unit B!O170"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B170+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 171,
+      "sourceRef": "Unit B!B171"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C171*G171",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 171,
+      "sourceRef": "Unit B!E171"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G171=\"\",\"\",IF(G171>D171,\"\",C171-G171))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 171,
+      "sourceRef": "Unit B!A171"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F171=\"\",\"\",N171*F171)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 171,
+      "sourceRef": "Unit B!A171"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B171+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 172,
+      "sourceRef": "Unit B!B172"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C172*G172",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 172,
+      "sourceRef": "Unit B!E172"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F172=\"\",\"\",N172*F172)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 172,
+      "sourceRef": "Unit B!A172"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B172+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 173,
+      "sourceRef": "Unit B!B173"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C173*G173",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 173,
+      "sourceRef": "Unit B!E173"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G173=\"\",\"\",IF(G173>D173,\"\",C173-G173))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 173,
+      "sourceRef": "Unit B!A173"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F173=\"\",\"\",N173*F173)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 173,
+      "sourceRef": "Unit B!A173"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B173+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 174,
+      "sourceRef": "Unit B!B174"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C174*G174",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 174,
+      "sourceRef": "Unit B!E174"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G174=\"\",\"\",IF(G174>D174,\"\",C174-G174))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 174,
+      "sourceRef": "Unit B!A174"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F174=\"\",\"\",N174*F174)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 174,
+      "sourceRef": "Unit B!A174"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B174+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 175,
+      "sourceRef": "Unit B!B175"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C175*G175",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 175,
+      "sourceRef": "Unit B!E175"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G175=\"\",\"\",IF(G175>D175,\"\",C175-G175))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 175,
+      "sourceRef": "Unit B!A175"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F175=\"\",\"\",N175*F175)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 175,
+      "sourceRef": "Unit B!A175"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B175+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 176,
+      "sourceRef": "Unit B!B176"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C176*G176",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 176,
+      "sourceRef": "Unit B!E176"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G176=\"\",\"\",IF(G176>D176,\"\",C176-G176))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 176,
+      "sourceRef": "Unit B!F176"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F176=\"\",\"\",N176*F176)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 176,
+      "sourceRef": "Unit B!O176"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B176+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 177,
+      "sourceRef": "Unit B!B177"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C177*G177",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 177,
+      "sourceRef": "Unit B!E177"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G177=\"\",\"\",IF(G177>D177,\"\",C177-G177))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 177,
+      "sourceRef": "Unit B!A177"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F177=\"\",\"\",N177*F177)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 177,
+      "sourceRef": "Unit B!A177"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B177+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 178,
+      "sourceRef": "Unit B!B178"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C178*G178",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 178,
+      "sourceRef": "Unit B!E178"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G178=\"\",\"\",IF(G178>D178,\"\",C178-G178))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 178,
+      "sourceRef": "Unit B!A178"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F178=\"\",\"\",N178*F178)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 178,
+      "sourceRef": "Unit B!A178"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B178+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 179,
+      "sourceRef": "Unit B!B179"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C179*G179",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 179,
+      "sourceRef": "Unit B!E179"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G179=\"\",\"\",IF(G179>D179,\"\",C179-G179))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 179,
+      "sourceRef": "Unit B!A179"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F179=\"\",\"\",N179*F179)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 179,
+      "sourceRef": "Unit B!A179"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B179+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 180,
+      "sourceRef": "Unit B!B180"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C180*G180",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 180,
+      "sourceRef": "Unit B!E180"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G180=\"\",\"\",IF(G180>D180,\"\",C180-G180))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 180,
+      "sourceRef": "Unit B!A180"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F180=\"\",\"\",N180*F180)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 180,
+      "sourceRef": "Unit B!A180"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B180+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 181,
+      "sourceRef": "Unit B!B181"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C181*G181",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 181,
+      "sourceRef": "Unit B!E181"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G181=\"\",\"\",IF(G181>D181,\"\",C181-G181))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 181,
+      "sourceRef": "Unit B!F181"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F181=\"\",\"\",N181*F181)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 181,
+      "sourceRef": "Unit B!O181"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B181+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 182,
+      "sourceRef": "Unit B!B182"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C182*G182",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 182,
+      "sourceRef": "Unit B!E182"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G182=\"\",\"\",IF(G182>D182,\"\",C182-G182))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 182,
+      "sourceRef": "Unit B!A182"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F182=\"\",\"\",N182*F182)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 182,
+      "sourceRef": "Unit B!A182"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B182+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 183,
+      "sourceRef": "Unit B!B183"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C183*G183",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 183,
+      "sourceRef": "Unit B!E183"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G183=\"\",\"\",IF(G183>D183,\"\",C183-G183))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 183,
+      "sourceRef": "Unit B!F183"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F183=\"\",\"\",N183*F183)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 183,
+      "sourceRef": "Unit B!O183"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B183+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 184,
+      "sourceRef": "Unit B!B184"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C184*G184",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 184,
+      "sourceRef": "Unit B!E184"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G184=\"\",\"\",IF(G184>D184,\"\",C184-G184))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 184,
+      "sourceRef": "Unit B!F184"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F184=\"\",\"\",N184*F184)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 184,
+      "sourceRef": "Unit B!O184"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B184+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 185,
+      "sourceRef": "Unit B!B185"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C185*G185",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 185,
+      "sourceRef": "Unit B!E185"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G185=\"\",\"\",IF(G185>D185,\"\",C185-G185))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 185,
+      "sourceRef": "Unit B!A185"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F185=\"\",\"\",N185*F185)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 185,
+      "sourceRef": "Unit B!A185"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B185+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 186,
+      "sourceRef": "Unit B!B186"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C186*G186",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 186,
+      "sourceRef": "Unit B!E186"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G186=\"\",\"\",IF(G186>D186,\"\",C186-G186))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 186,
+      "sourceRef": "Unit B!A186"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F186=\"\",\"\",N186*F186)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 186,
+      "sourceRef": "Unit B!A186"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B186+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 187,
+      "sourceRef": "Unit B!B187"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C187*G187",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 187,
+      "sourceRef": "Unit B!E187"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G187=\"\",\"\",IF(G187>D187,\"\",C187-G187))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 187,
+      "sourceRef": "Unit B!A187"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F187=\"\",\"\",N187*F187)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 187,
+      "sourceRef": "Unit B!A187"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B187+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 188,
+      "sourceRef": "Unit B!B188"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C188*G188",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 188,
+      "sourceRef": "Unit B!E188"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G188=\"\",\"\",IF(G188>D188,\"\",C188-G188))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 188,
+      "sourceRef": "Unit B!F188"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F188=\"\",\"\",N188*F188)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 188,
+      "sourceRef": "Unit B!O188"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B188+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 189,
+      "sourceRef": "Unit B!B189"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C189*G189",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 189,
+      "sourceRef": "Unit B!E189"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G189=\"\",\"\",IF(G189>D189,\"\",C189-G189))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 189,
+      "sourceRef": "Unit B!F189"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F189=\"\",\"\",N189*F189)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 189,
+      "sourceRef": "Unit B!O189"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B189+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 190,
+      "sourceRef": "Unit B!B190"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C190*G190",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 190,
+      "sourceRef": "Unit B!E190"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G190=\"\",\"\",IF(G190>D190,\"\",C190-G190))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 190,
+      "sourceRef": "Unit B!A190"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F190=\"\",\"\",N190*F190)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 190,
+      "sourceRef": "Unit B!A190"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B190+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 191,
+      "sourceRef": "Unit B!B191"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C191*G191",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 191,
+      "sourceRef": "Unit B!E191"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G191=\"\",\"\",IF(G191>D191,\"\",C191-G191))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 191,
+      "sourceRef": "Unit B!A191"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F191=\"\",\"\",N191*F191)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 191,
+      "sourceRef": "Unit B!A191"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B191+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 192,
+      "sourceRef": "Unit B!B192"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G192=\"\",\"\",IF(G192>D192,\"\",C192-G192))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 192,
+      "sourceRef": "Unit B!F192"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F192=\"\",\"\",N192*F192)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 192,
+      "sourceRef": "Unit B!O192"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B192+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 193,
+      "sourceRef": "Unit B!B193"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C193*G193",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 193,
+      "sourceRef": "Unit B!E193"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G193=\"\",\"\",IF(G193>D193,\"\",C193-G193))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 193,
+      "sourceRef": "Unit B!A193"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F193=\"\",\"\",N193*F193)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 193,
+      "sourceRef": "Unit B!A193"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B193+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 194,
+      "sourceRef": "Unit B!B194"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C194*G194",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 194,
+      "sourceRef": "Unit B!E194"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G194=\"\",\"\",IF(G194>D194,\"\",C194-G194))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 194,
+      "sourceRef": "Unit B!A194"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B194+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 195,
+      "sourceRef": "Unit B!B195"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C195*G195",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 195,
+      "sourceRef": "Unit B!E195"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G195=\"\",\"\",IF(G195>D195,\"\",C195-G195))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 195,
+      "sourceRef": "Unit B!A195"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F195=\"\",\"\",N195*F195)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 195,
+      "sourceRef": "Unit B!A195"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B195+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 196,
+      "sourceRef": "Unit B!B196"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C196*G196",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 196,
+      "sourceRef": "Unit B!E196"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G196=\"\",\"\",IF(G196>D196,\"\",C196-G196))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 196,
+      "sourceRef": "Unit B!A196"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F196=\"\",\"\",N196*F196)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 196,
+      "sourceRef": "Unit B!A196"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B196+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 197,
+      "sourceRef": "Unit B!B197"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C197*G197",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 197,
+      "sourceRef": "Unit B!E197"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G197=\"\",\"\",IF(G197>D197,\"\",C197-G197))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 197,
+      "sourceRef": "Unit B!A197"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F197=\"\",\"\",N197*F197)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 197,
+      "sourceRef": "Unit B!A197"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B197+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 198,
+      "sourceRef": "Unit B!B198"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C198*G198",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 198,
+      "sourceRef": "Unit B!E198"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G198=\"\",\"\",IF(G198>D198,\"\",C198-G198))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 198,
+      "sourceRef": "Unit B!A198"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F198=\"\",\"\",N198*F198)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 198,
+      "sourceRef": "Unit B!A198"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B198+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 199,
+      "sourceRef": "Unit B!B199"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C199*G199",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 199,
+      "sourceRef": "Unit B!E199"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G199=\"\",\"\",IF(G199>D199,\"\",C199-G199))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 199,
+      "sourceRef": "Unit B!A199"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F199=\"\",\"\",N199*F199)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 199,
+      "sourceRef": "Unit B!A199"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B199+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 200,
+      "sourceRef": "Unit B!B200"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C200*G200",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 200,
+      "sourceRef": "Unit B!E200"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G200=\"\",\"\",IF(G200>D200,\"\",C200-G200))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 200,
+      "sourceRef": "Unit B!A200"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F200=\"\",\"\",N200*F200)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 200,
+      "sourceRef": "Unit B!A200"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B200+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 201,
+      "sourceRef": "Unit B!B201"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F201=\"\",\"\",N201*F201)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 201,
+      "sourceRef": "Unit B!A201"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B201+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 202,
+      "sourceRef": "Unit B!B202"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C202*G202",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 202,
+      "sourceRef": "Unit B!E202"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G202=\"\",\"\",IF(G202>D202,\"\",C202-G202))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 202,
+      "sourceRef": "Unit B!A202"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F202=\"\",\"\",N202*F202)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 202,
+      "sourceRef": "Unit B!A202"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B202+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 203,
+      "sourceRef": "Unit B!B203"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C203*G203",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 203,
+      "sourceRef": "Unit B!E203"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F203=\"\",\"\",N203*F203)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 203,
+      "sourceRef": "Unit B!A203"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B203+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 204,
+      "sourceRef": "Unit B!B204"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C204*G204",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 204,
+      "sourceRef": "Unit B!E204"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G204=\"\",\"\",IF(G204>D204,\"\",C204-G204))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 204,
+      "sourceRef": "Unit B!A204"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F204=\"\",\"\",N204*F204)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 204,
+      "sourceRef": "Unit B!A204"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B204+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 205,
+      "sourceRef": "Unit B!B205"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C205*G205",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 205,
+      "sourceRef": "Unit B!E205"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G205=\"\",\"\",IF(G205>D205,\"\",C205-G205))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 205,
+      "sourceRef": "Unit B!F205"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F205=\"\",\"\",N205*F205)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 205,
+      "sourceRef": "Unit B!O205"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B205+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 206,
+      "sourceRef": "Unit B!B206"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C206*G206",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 206,
+      "sourceRef": "Unit B!E206"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G206=\"\",\"\",IF(G206>D206,\"\",C206-G206))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 206,
+      "sourceRef": "Unit B!F206"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F206=\"\",\"\",N206*F206)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 206,
+      "sourceRef": "Unit B!O206"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B206+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 207,
+      "sourceRef": "Unit B!B207"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C207*G207",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 207,
+      "sourceRef": "Unit B!E207"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G207=\"\",\"\",IF(G207>D207,\"\",C207-G207))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 207,
+      "sourceRef": "Unit B!F207"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F207=\"\",\"\",N207*F207)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 207,
+      "sourceRef": "Unit B!O207"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B207+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 208,
+      "sourceRef": "Unit B!B208"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C208*G208",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 208,
+      "sourceRef": "Unit B!E208"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G208=\"\",\"\",IF(G208>D208,\"\",C208-G208))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 208,
+      "sourceRef": "Unit B!F208"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F208=\"\",\"\",N208*F208)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 208,
+      "sourceRef": "Unit B!O208"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B208+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 209,
+      "sourceRef": "Unit B!B209"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C209*G209",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 209,
+      "sourceRef": "Unit B!E209"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G209=\"\",\"\",IF(G209>D209,\"\",C209-G209))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 209,
+      "sourceRef": "Unit B!F209"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F209=\"\",\"\",N209*F209)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 209,
+      "sourceRef": "Unit B!O209"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B209+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 210,
+      "sourceRef": "Unit B!B210"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C210*G210",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 210,
+      "sourceRef": "Unit B!E210"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G210=\"\",\"\",IF(G210>D210,\"\",C210-G210))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 210,
+      "sourceRef": "Unit B!F210"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F210=\"\",\"\",N210*F210)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 210,
+      "sourceRef": "Unit B!O210"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B210+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 211,
+      "sourceRef": "Unit B!B211"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C211*G211",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 211,
+      "sourceRef": "Unit B!E211"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G211=\"\",\"\",IF(G211>D211,\"\",C211-G211))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 211,
+      "sourceRef": "Unit B!F211"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F211=\"\",\"\",N211*F211)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 211,
+      "sourceRef": "Unit B!O211"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B211+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 212,
+      "sourceRef": "Unit B!B212"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C212*G212",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 212,
+      "sourceRef": "Unit B!E212"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G212=\"\",\"\",IF(G212>D212,\"\",C212-G212))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 212,
+      "sourceRef": "Unit B!F212"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F212=\"\",\"\",N212*F212)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 212,
+      "sourceRef": "Unit B!O212"
+    },
+    {
+      "field": "ORDER [B]",
+      "formula": "B212+1",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 213,
+      "sourceRef": "Unit B!B213"
+    },
+    {
+      "field": "WEEKS ON HAND [E]",
+      "formula": "12/C213*G213",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 213,
+      "sourceRef": "Unit B!E213"
+    },
+    {
+      "field": "ORDER QTY. [F]",
+      "formula": "IF(G213=\"\",\"\",IF(G213>D213,\"\",C213-G213))",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 213,
+      "sourceRef": "Unit B!F213"
+    },
+    {
+      "field": "Subtotal [O]",
+      "formula": "IF(F213=\"\",\"\",N213*F213)",
+      "exampleWorksheet": "Unit B",
+      "exampleRow": 213,
+      "sourceRef": "Unit B!O213"
     },
     {
       "field": "ORDER [B]",
@@ -4428,6 +7050,36 @@
       }
     },
     {
+      "worksheet": "Unit B",
+      "rowNumber": 123,
+      "sourceRef": "Unit B!J123",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Material Bays",
+        "sku": "STR6",
+        "description": null,
+        "supplier": "Framer's Inventory (Email)",
+        "size": "1 bundle",
+        "account": "Originals"
+      }
+    },
+    {
+      "worksheet": "Unit B",
+      "rowNumber": 124,
+      "sourceRef": "Unit B!J124",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Material Bays",
+        "sku": "STR12",
+        "description": null,
+        "supplier": "Framer's Inventory (Email)",
+        "size": "1 bundle",
+        "account": "Originals"
+      }
+    },
+    {
       "worksheet": "Unit C",
       "rowNumber": 32,
       "sourceRef": "Unit C!H32",
@@ -4446,6 +7098,36 @@
       "worksheet": "Unit C",
       "rowNumber": 34,
       "sourceRef": "Unit C!H34",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Prints",
+        "sku": "ABS Plastic",
+        "description": null,
+        "supplier": null,
+        "size": "1 pallet",
+        "account": "Originals"
+      }
+    },
+    {
+      "worksheet": "Unit C",
+      "rowNumber": 63,
+      "sourceRef": "Unit C!H63",
+      "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
+      "status": "NEEDS_REVIEW",
+      "values": {
+        "category": "Prints",
+        "sku": "Hard White Plastic",
+        "description": null,
+        "supplier": null,
+        "size": "1 sheet",
+        "account": "Canvas/3D Prints"
+      }
+    },
+    {
+      "worksheet": "Unit C",
+      "rowNumber": 65,
+      "sourceRef": "Unit C!H65",
       "reason": "Missing one or more required source fields (description, item/SKU, supplier, or size).",
       "status": "NEEDS_REVIEW",
       "values": {
