@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import SummaryCard from '../components/dashboard/SummaryCard'
 import { ProductionAnalyticsService } from '../services/ProductionAnalyticsService'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { IntelligenceService } from '../services/intelligence/IntelligenceService'
@@ -51,6 +52,7 @@ const formatWeeklyMetric = (metric: ProductionMetricDefinition | undefined): str
 
 const DashboardPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const {
     productionJobs,
     threeDFilePreparations,
@@ -208,6 +210,18 @@ const DashboardPage = () => {
   const activeProductionCount = productionJobs.filter(
     (job) => !job.onHold && job.steps.SHIPPED !== 'COMPLETE',
   ).length
+
+  useEffect(() => {
+    if (!location.hash) return
+
+    const elementId = location.hash.slice(1)
+    const target = document.getElementById(elementId)
+    if (!target) return
+
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [location.hash])
 
   const overdueOrders = productionJobs.filter((job) => job.dueStatus === 'OVERDUE')
   const atRiskOrders = productionJobs.filter((job) => job.dueStatus === 'AT_RISK')
@@ -509,42 +523,15 @@ const DashboardPage = () => {
       </div>
 
       <section className="summary-grid dashboard-kpi-grid">
-        <article className="summary-card">
-          <p>Today's Production</p>
-          <h3>{todayShipments.length}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Late Orders</p>
-          <h3>{overdueOrders.length}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Production Health</p>
-          <h3>{atRiskOrders.length}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Active Production</p>
-          <h3>{activeProductionCount}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Capacity</p>
-          <h3>{formatPercent(scheduleAttainment)}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Materials</p>
-          <h3>{formatPercent(firstPassQuality)}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Print Queue</p>
-          <h3>{completedMinutesToday}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Timeline</p>
-          <h3>{carryForwardMinutes}</h3>
-        </article>
-        <article className="summary-card">
-          <p>Active Team</p>
-          <h3>{activeDirectorCount} Director / {activeOperatorCount} Operator</h3>
-        </article>
+        <SummaryCard label="Today's Production" value={todayShipments.length} to="/battle-plans" />
+        <SummaryCard label="Late Orders" value={overdueOrders.length} to="/workshop-list?filter=late" />
+        <SummaryCard label="Production Health" value={atRiskOrders.length} to="/dashboard#production-health" />
+        <SummaryCard label="Active Production" value={activeProductionCount} to="/workshop-list?filter=active" />
+        <SummaryCard label="Capacity" value={formatPercent(scheduleAttainment)} to="/battle-plans#capacity" />
+        <SummaryCard label="Materials" value={formatPercent(firstPassQuality)} to="/inventory?filter=shortages" />
+        <SummaryCard label="Print Queue" value={completedMinutesToday} to="/tools/print-table-optimizer" />
+        <SummaryCard label="Timeline" value={carryForwardMinutes} to="/dashboard#timeline" />
+        <SummaryCard label="Active Team" value={`${activeDirectorCount} Director / ${activeOperatorCount} Operator`} to="/settings?section=employees" />
       </section>
 
       <section className="panel">
@@ -624,7 +611,7 @@ const DashboardPage = () => {
         </article>
       </section>
 
-      <section className="panel dashboard-intelligence-summary">
+      <section id="production-health" className="panel dashboard-intelligence-summary">
         <div className="work-item-section-header">
           <div>
             <h3>Production Health</h3>
@@ -921,7 +908,7 @@ const DashboardPage = () => {
       </section>
 
       <section className="dashboard-two-col">
-        <article className="panel">
+        <article id="timeline" className="panel">
           <h3>Today's Production</h3>
           <div className="dashboard-employee-grid">
             {employeeRows.map((row) => (

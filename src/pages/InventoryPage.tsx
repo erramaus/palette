@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import InventorySummaryCard from '../components/inventory/InventorySummaryCard'
 import { useAppState } from '../state/AppStateContext'
 import { WarehouseInventoryImportService } from '../services/WarehouseInventoryImportService'
@@ -107,6 +108,7 @@ const getRecommendationPriority = (recommendation: InventoryPurchaseRecommendati
 }
 
 const InventoryPage = () => {
+	const location = useLocation()
   const { productionJobs } = useAppState()
 
   const countWorkspaceRef = useRef<HTMLElement | null>(null)
@@ -139,6 +141,16 @@ const InventoryPage = () => {
 	const [receiptQuantities, setReceiptQuantities] = useState<Record<string, string>>({})
 	const [receiptNotes, setReceiptNotes] = useState<Record<string, string>>({})
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+	useEffect(() => {
+		const params = new URLSearchParams(location.search)
+		if (params.get('filter') === 'shortages') {
+			setFilterPurchaseNeeded(true)
+			window.requestAnimationFrame(() => {
+				purchaseWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			})
+		}
+	}, [location.search])
 
 	useEffect(() => {
 		if (!selectedItemId) return

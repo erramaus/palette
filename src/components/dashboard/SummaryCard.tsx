@@ -1,14 +1,28 @@
+import { useNavigate } from 'react-router-dom'
+
 interface SummaryCardProps {
   label: string
-  value: number
+  value: string | number
+  to: string
+  hint?: string
 }
 
-const SummaryCard = ({ label, value }: SummaryCardProps) => {
+const SummaryCard = ({ label, value, to, hint = 'View' }: SummaryCardProps) => {
+  const navigate = useNavigate()
+
   return (
-    <article className="summary-card">
+    <button
+      type="button"
+      className="summary-card summary-card-action"
+      onClick={() => navigate(to)}
+      aria-label={`${label} ${hint}`}
+    >
       <p>{label}</p>
       <h3>{value}</h3>
-    </article>
+      <span className="summary-card-hint" aria-hidden="true">
+        {hint} →
+      </span>
+    </button>
   )
 }
 

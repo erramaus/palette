@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
 import PriorityBadge from '../components/common/PriorityBadge'
 import OperationLifecycleActions from '../components/production/OperationLifecycleActions'
@@ -123,6 +123,7 @@ const defaultFormState = (env: WorkshopListUiEnvironment): AddWorkItemFormState 
 
 const WorkshopListPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { workshopHierarchy, employees } = useAppState()
   const directorId = employees.find((employee) => employee.role === 'PRODUCTION_DIRECTOR')?.id ?? employees[0]?.id ?? 'system'
 
@@ -155,6 +156,21 @@ const WorkshopListPage = () => {
   const [filterLateOnly, setFilterLateOnly] = useState(false)
   const [filterBlockedOnly, setFilterBlockedOnly] = useState(false)
   const [filterTags, setFilterTags] = useState('')
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const filter = params.get('filter')
+
+    if (filter === 'late') {
+      setFilterLateOnly(true)
+      setFilterBlockedOnly(false)
+    }
+
+    if (filter === 'active') {
+      setFilterLateOnly(false)
+      setFilterBlockedOnly(false)
+    }
+  }, [location.search])
 
   const [addForm, setAddForm] = useState<AddWorkItemFormState>(() =>
     defaultFormState(environment),

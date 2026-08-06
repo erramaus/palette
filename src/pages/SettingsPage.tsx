@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
 import type { ForecastConfig } from '../types/productionForecasting'
 import type { PersistenceRecordSummary } from '../services/persistence'
@@ -19,7 +20,9 @@ const downloadJson = (contents: string, fileName: string): void => {
 }
 
 const SettingsPage = () => {
+  const location = useLocation()
 	const {
+		employees,
 		forecastSettings,
 		saveForecastSettings,
 		persistenceStatus,
@@ -33,6 +36,15 @@ const SettingsPage = () => {
 	const [pendingBackup, setPendingBackup] = useState<PendingBackup | null>(null)
 	const [restoreConfirmed, setRestoreConfirmed] = useState(false)
 	const [backupMessage, setBackupMessage] = useState<string | null>(null)
+
+	useEffect(() => {
+		const params = new URLSearchParams(location.search)
+		if (params.get('section') === 'employees') {
+			window.requestAnimationFrame(() => {
+				document.getElementById('employees')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			})
+		}
+	}, [location.search])
 
 	useEffect(() => {
 		setSettings(forecastSettings)
@@ -95,6 +107,21 @@ const SettingsPage = () => {
 			</div>
 
 			{persistenceWarning ? <p className="warning" role="alert">Recovery required: {persistenceWarning}</p> : null}
+
+			<section id="employees" className="panel">
+				<h3>Employees</h3>
+				<p className="subtle">{employees.filter((employee) => employee.active).length} active employees are available in the current app state.</p>
+				<div className="dashboard-employee-grid">
+					{employees.filter((employee) => employee.active).slice(0, 6).map((employee) => (
+						<article key={employee.id} className="dashboard-employee-card">
+							<div>
+								<h4>{employee.name}</h4>
+								<p className="subtle">{employee.role.replaceAll('_', ' ')}</p>
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
 
 			<section className="panel">
 				<h3>Forecast Configuration</h3>

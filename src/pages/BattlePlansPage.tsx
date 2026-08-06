@@ -2380,7 +2380,7 @@ const BattlePlansPage = () => {
               </div>
 
               <aside className="bp-worker-sidebar" aria-label="Worker summary and help">
-                <section className="panel bp-worker-summary">
+                <section id="capacity" className="panel bp-worker-summary">
                   <h4>Shift Summary</h4>
                   <div className="summary-line-list" role="list" aria-label="Worker queue summary">
                     <span>Active operations: {activeWorkerQueue.length}</span>
