@@ -3,9 +3,11 @@ import { useLocation } from 'react-router-dom'
 import InventorySummaryCard from '../components/inventory/InventorySummaryCard'
 import { useAppState } from '../state/AppStateContext'
 import { WarehouseInventoryImportService } from '../services/WarehouseInventoryImportService'
+import { downloadPurchaseOrderPdf, printPurchaseOrderDocument } from '../utils/purchaseOrderPrintDocument'
 import type {
   InventoryCountEntry,
   InventoryCountEntryStatus,
+	InventoryCswDocument,
   InventoryFoundationState,
   InventoryItem,
   InventoryPurchaseRecommendation,
@@ -13,6 +15,7 @@ import type {
 } from '../types/inventory'
 
 const inventoryService = new WarehouseInventoryImportService()
+const PURCHASE_ORDER_REQUESTER = 'Dave Scott, Production Director'
 
 type InventorySortColumn =
   | 'item'
@@ -27,6 +30,27 @@ type InventorySortColumn =
   | 'lastCounted'
 
 type InventorySortDirection = 'asc' | 'desc'
+
+type ReviewedRecommendationTab = 'APPROVED' | 'REJECTED'
+
+type InventoryWorkspaceTab =
+	| 'INVENTORY'
+	| 'COUNT_SESSIONS'
+	| 'PURCHASE_RECOMMENDATIONS'
+	| 'PURCHASE_ORDERS'
+	| 'CSWS'
+	| 'RECEIVING_HISTORY'
+
+type PrintableDocumentBlock =
+	| { type: 'paragraph'; text: string; emphasis?: boolean }
+	| { type: 'table'; heading?: string; headers: string[]; rows: string[][] }
+	| { type: 'bullets'; heading: string; items: string[] }
+	| { type: 'approval'; statement: string; selectedDecision: string; signatureName: string | null; date: string | null }
+
+interface PrintableDocumentSection {
+	heading: string
+	blocks: PrintableDocumentBlock[]
+}
 
 type MaterialForecastBucket =
   | 'Frames'
@@ -46,6 +70,177 @@ const formatDate = (value: string | null): string =>
 
 const formatDateTime = (value: string | null): string =>
   value ? new Date(value).toLocaleString() : '--'
+
+const formatPurchaseOrderStatus = (status: PurchaseOrderDraft['approvalStatus']): string => {
+	switch (status) {
+		case 'DRAFT': return 'Draft'
+		case 'AWAITING_CSW_APPROVAL': return 'Awaiting Approval'
+		case 'APPROVED': return 'Approved'
+		case 'ORDERED': return 'Ordered'
+		case 'PARTIALLY_RECEIVED': return 'Partially Received'
+		case 'RECEIVED': return 'Received'
+		case 'CANCELLED': return 'Cancelled'
+	}
+}
+
+const escapeHtml = (value: string): string => value
+	.replace(/&/g, '&amp;')
+	.replace(/</g, '&lt;')
+	.replace(/>/g, '&gt;')
+	.replace(/"/g, '&quot;')
+	.replace(/'/g, '&#039;')
+
+const printDocument = (title: string, sections: PrintableDocumentSection[]): void => {
+	const printWindow = window.open('', '_blank')
+	if (!printWindow) return
+	printWindow.opener = null
+	const renderBlock = (block: PrintableDocumentBlock): string => {
+		switch (block.type) {
+			case 'paragraph':
+				return `<p${block.emphasis ? ' class="executive-summary"' : ''}>${escapeHtml(block.text)}</p>`
+			case 'table':
+				return `${block.heading ? `<h3>${escapeHtml(block.heading)}</h3>` : ''}<table><thead><tr>${block.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${block.rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+			case 'bullets':
+				return `<h3>${escapeHtml(block.heading)}</h3><ul>${block.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+			case 'approval': {
+				const choices = ['Approved', 'Approved with Changes', 'Disapproved']
+				return `<p>${escapeHtml(block.statement)}</p><div class="decisions">${choices.map((choice) => `<span>${block.selectedDecision === choice ? '[X]' : '[ ]'} ${escapeHtml(choice)}</span>`).join('')}</div><div class="signature"><span>Signature<br><strong>${escapeHtml(block.signatureName ? 'Recorded electronically' : '________________________')}</strong></span><span>Printed name<br><strong>${escapeHtml(block.signatureName ?? '________________________')}</strong></span><span>Date<br><strong>${escapeHtml(block.date ? formatDate(block.date) : '________________')}</strong></span></div>`
+			}
+		}
+	}
+	printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;color:#17243a;margin:40px;max-width:900px}h1{font-size:24px;margin:0 0 24px}h2{font-size:15px;border-bottom:2px solid #263b59;padding-bottom:6px;margin-top:24px}h3{font-size:12px;margin:18px 0 7px}p,li,td,th{font-size:10px;line-height:1.45}.executive-summary{border-left:4px solid #263b59;background:#edf2f8;padding:12px;font-size:12px;font-weight:bold}table{width:100%;border-collapse:collapse;margin:7px 0 12px}th,td{border-bottom:1px solid #d9e0e9;padding:6px;text-align:left}th{background:#f1f4f8;text-transform:uppercase;font-size:9px}.decisions{display:flex;gap:24px;margin:14px 0;font-size:11px;font-weight:bold}.signature{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:20px;font-size:9px;text-transform:uppercase}.signature strong{display:block;border-bottom:1px solid #77879b;padding:8px 0 5px;font-size:10px;text-transform:none}@media print{body{margin:20px}}</style></head><body><h1>${escapeHtml(title)}</h1>${sections.map((section) => `<section><h2>${escapeHtml(section.heading)}</h2>${section.blocks.map(renderBlock).join('')}</section>`).join('')}</body></html>`)
+	printWindow.document.close()
+	printWindow.focus()
+	printWindow.print()
+}
+
+const downloadDocumentPdf = async (
+	filename: string,
+	title: string,
+	sections: PrintableDocumentSection[],
+): Promise<void> => {
+	const { jsPDF } = await import('jspdf')
+	const pdf = new jsPDF()
+	const left = 16
+	const pageWidth = pdf.internal.pageSize.getWidth() - (left * 2)
+	let y = 18
+	const ensureSpace = (height: number): void => {
+		if (y + height <= 282) return
+		pdf.addPage()
+		y = 18
+	}
+	const writeText = (text: string, options: { bold?: boolean; size?: number; indent?: number } = {}): void => {
+		const indent = options.indent ?? 0
+		pdf.setFontSize(options.size ?? 9)
+		pdf.setFont('helvetica', options.bold ? 'bold' : 'normal')
+		const wrappedLines = pdf.splitTextToSize(text, pageWidth - indent) as string[]
+		ensureSpace((wrappedLines.length * 5) + 2)
+		pdf.text(wrappedLines, left + indent, y)
+		y += (wrappedLines.length * 5) + 2
+	}
+	const writeTable = (block: Extract<PrintableDocumentBlock, { type: 'table' }>): void => {
+		if (block.heading) writeText(block.heading, { bold: true, size: 10 })
+		const columnWidth = pageWidth / block.headers.length
+		const drawRow = (row: string[], header: boolean): void => {
+			const wrappedCells = row.map((cell) => pdf.splitTextToSize(cell, columnWidth - 4) as string[])
+			const rowHeight = Math.max(...wrappedCells.map((cell) => cell.length), 1) * 4 + 4
+			ensureSpace(rowHeight)
+			if (header) pdf.setFillColor(241, 244, 248)
+			wrappedCells.forEach((cell, index) => {
+				pdf.setDrawColor(217, 224, 233)
+				pdf.rect(left + (index * columnWidth), y, columnWidth, rowHeight, header ? 'FD' : 'S')
+				pdf.setFontSize(7.5)
+				pdf.setFont('helvetica', header ? 'bold' : 'normal')
+				pdf.text(cell, left + (index * columnWidth) + 2, y + 4)
+			})
+			y += rowHeight
+		}
+		drawRow(block.headers, true)
+		block.rows.forEach((row) => drawRow(row, false))
+		y += 4
+	}
+
+	pdf.setFontSize(18)
+	pdf.text(title, left, y)
+	y += 12
+
+	for (const section of sections) {
+		if (y > 270) {
+			pdf.addPage()
+			y = 18
+		}
+		pdf.setFontSize(12)
+		pdf.setFont('helvetica', 'bold')
+		pdf.text(section.heading, left, y)
+		y += 7
+
+		for (const block of section.blocks) {
+			switch (block.type) {
+				case 'paragraph':
+					writeText(block.text, { bold: block.emphasis, size: block.emphasis ? 10 : 9 })
+					break
+				case 'table':
+					writeTable(block)
+					break
+				case 'bullets':
+					writeText(block.heading, { bold: true, size: 10 })
+					block.items.forEach((item) => writeText(`- ${item}`, { indent: 3 }))
+					break
+				case 'approval':
+					writeText(block.statement)
+					writeText(['Approved', 'Approved with Changes', 'Disapproved'].map((choice) => `${block.selectedDecision === choice ? '[X]' : '[ ]'} ${choice}`).join('    '), { bold: true })
+					writeText(`Signature: ${block.signatureName ? 'Recorded electronically' : '________________'}    Printed name: ${block.signatureName ?? '________________'}    Date: ${block.date ? formatDate(block.date) : '________________'}`)
+					break
+			}
+		}
+		y += 4
+	}
+
+	const blob = pdf.output('blob')
+	const url = window.URL.createObjectURL(blob)
+	const anchor = document.createElement('a')
+	anchor.href = url
+	anchor.download = filename
+	document.body.appendChild(anchor)
+	anchor.click()
+	anchor.remove()
+	window.requestAnimationFrame(() => window.URL.revokeObjectURL(url))
+}
+
+const getCswDocument = (document: InventoryCswDocument): PrintableDocumentSection[] => [
+	{ heading: 'Situation', blocks: [{ type: 'paragraph', text: document.situation }] },
+	{
+		heading: 'Data',
+		blocks: [
+			{ type: 'paragraph', text: getCswExecutiveSummary(document), emphasis: true },
+			{ type: 'table', heading: 'Totals', headers: ['Measure', 'Total'], rows: [
+				['Recommended purchase value', formatCurrency(document.totalRecommendedPurchaseValue)],
+				['Purchase lines', String(document.recommendedItemCount)],
+				['Attached purchase orders', String(document.purchaseOrderReferences.length)],
+				['Items needing review', String(document.needsReviewCount)],
+			] },
+			{ type: 'table', heading: 'Supplier Totals', headers: ['Supplier', 'Lines', 'Total'], rows: document.suppliers.map((supplier) => [supplier.supplier, String(supplier.lineItemCount), formatCurrency(supplier.total)]) },
+			{ type: 'bullets', heading: 'Highest-Priority Purchases', items: document.highestPriorityPurchases.map((purchase) => `${purchase.item} - ${purchase.reason}; ${purchase.supplier}; Qty ${purchase.quantity}; ${formatCurrency(purchase.subtotal)}`) },
+			{ type: 'table', heading: 'Attached Purchase Orders', headers: ['Purchase Order', 'Supplier', 'Lines', 'Total'], rows: document.purchaseOrderReferences.map((purchaseOrder) => [purchaseOrder.number, purchaseOrder.supplier, String(purchaseOrder.lineItemCount), formatCurrency(purchaseOrder.total)]) },
+			{ type: 'paragraph', text: 'Detailed item lists are provided in the attached purchase orders and are not repeated in this CSW.' },
+		],
+	},
+	{ heading: 'Solution', blocks: [{ type: 'approval', statement: getCswSolutionStatement(document), selectedDecision: getCswDecisionLabel(document), signatureName: document.approvalSignatureName, date: document.approvalDate }] },
+]
+
+const getCswExecutiveSummary = (document: InventoryCswDocument): string =>
+	`Approval is requested for ${document.recommendedItemCount} purchase line(s) totaling ${formatCurrency(document.totalRecommendedPurchaseValue)} across ${document.suppliers.length} supplier(s) and ${document.purchaseOrderReferences.length} attached purchase order(s).`
+
+const getCswSolutionStatement = (document: InventoryCswDocument): string => document.solution.split('\n')[0]
+
+const getCswDecisionLabel = (document: InventoryCswDocument): string => {
+	switch (document.approvalStatus) {
+		case 'APPROVED': return 'Approved'
+		case 'APPROVED_WITH_MODIFICATIONS': return 'Approved with Changes'
+		case 'DISAPPROVED': return 'Disapproved'
+		default: return 'Pending decision'
+	}
+}
 
 const formatSessionStatusLabel = (status: string): string => {
 	switch (status) {
@@ -159,13 +354,16 @@ const InventoryPage = () => {
 
   const countWorkspaceRef = useRef<HTMLElement | null>(null)
   const purchaseWorkspaceRef = useRef<HTMLElement | null>(null)
+	const recommendationsListRef = useRef<HTMLElement | null>(null)
 	const poDraftWorkspaceRef = useRef<HTMLElement | null>(null)
 	const cswWorkspaceRef = useRef<HTMLElement | null>(null)
+	const receivingHistoryRef = useRef<HTMLElement | null>(null)
 	const drawerRef = useRef<HTMLElement | null>(null)
 
 	const [initialization] = useState(initializeInventoryState)
 	const [state, setState] = useState<InventoryFoundationState>(initialization.state)
 	const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(initialization.loadError)
+	const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<InventoryWorkspaceTab>('INVENTORY')
 
 	const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
 	const [searchQuery, setSearchQuery] = useState('')
@@ -185,12 +383,17 @@ const InventoryPage = () => {
 	const [recommendationReasons, setRecommendationReasons] = useState<Record<string, string>>({})
 	const [receiptQuantities, setReceiptQuantities] = useState<Record<string, string>>({})
 	const [receiptNotes, setReceiptNotes] = useState<Record<string, string>>({})
+	const [selectedPurchaseOrderId, setSelectedPurchaseOrderId] = useState<string | null>(null)
+	const [receivingPurchaseOrderId, setReceivingPurchaseOrderId] = useState<string | null>(null)
+	const [selectedCswDocumentId, setSelectedCswDocumentId] = useState<string | null>(null)
+	const [reviewedRecommendationTab, setReviewedRecommendationTab] = useState<ReviewedRecommendationTab>('APPROVED')
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
 	useEffect(() => {
 		const params = new URLSearchParams(location.search)
 		if (params.get('filter') === 'shortages') {
 			setFilterPurchaseNeeded(true)
+			setActiveWorkspaceTab('PURCHASE_RECOMMENDATIONS')
 			window.requestAnimationFrame(() => {
 				purchaseWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 			})
@@ -198,15 +401,20 @@ const InventoryPage = () => {
 
 		if (params.get('section') === 'needs-review') {
 			setFilterNeedsReview(true)
+			setActiveWorkspaceTab('PURCHASE_RECOMMENDATIONS')
 		}
 
 		if (params.get('section') === 'po-drafts') {
+			setActiveWorkspaceTab('PURCHASE_ORDERS')
 			window.requestAnimationFrame(() => {
 				poDraftWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 			})
 		}
 
 		if (params.get('section') === 'csw') {
+			setActiveWorkspaceTab('CSWS')
+			const selectedCswId = params.get('csw')
+			if (selectedCswId) setSelectedCswDocumentId(selectedCswId)
 			window.requestAnimationFrame(() => {
 				cswWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 			})
@@ -364,13 +572,25 @@ const InventoryPage = () => {
 		[state.recommendations],
 	)
 
-	const approvedOrRecommendedQueue = useMemo(
-		() => state.recommendations.filter((recommendation) => recommendation.status !== 'NOT_REQUIRED' && recommendation.status !== 'CANCELLED'),
-		[state.recommendations],
-	)
-
 	const purchaseOrders = useMemo(() => state.purchaseOrders, [state.purchaseOrders])
 	const latestCswDocument = useMemo(() => state.cswDocuments[0] ?? null, [state.cswDocuments])
+	const selectedPurchaseOrder = useMemo(
+		() => purchaseOrders.find((purchaseOrder) => purchaseOrder.id === selectedPurchaseOrderId) ?? null,
+		[purchaseOrders, selectedPurchaseOrderId],
+	)
+	const selectedCswDocument = useMemo(
+		() => state.cswDocuments.find((document) => document.id === selectedCswDocumentId) ?? latestCswDocument,
+		[latestCswDocument, selectedCswDocumentId, state.cswDocuments],
+	)
+	const approvedRecommendations = useMemo(
+		() => state.recommendations.filter((recommendation) => recommendation.approvalStatus === 'APPROVED' || recommendation.approvalStatus === 'APPROVED_WITH_MODIFICATIONS'),
+		[state.recommendations],
+	)
+	const rejectedRecommendations = useMemo(
+		() => state.recommendations.filter((recommendation) => recommendation.approvalStatus === 'REJECTED'),
+		[state.recommendations],
+	)
+	const reviewedRecommendations = reviewedRecommendationTab === 'APPROVED' ? approvedRecommendations : rejectedRecommendations
 
 	const selectedItemRecommendation = useMemo(
 		() => (selectedItem ? recommendationByItemId.get(selectedItem.id) ?? null : null),
@@ -479,22 +699,30 @@ const InventoryPage = () => {
 	}
 
 	const createPurchaseOrders = (): void => {
-		saveState(inventoryService.createPurchaseOrderDrafts(state, 'Inventory Director'))
+		saveState(inventoryService.createPurchaseOrderDrafts(state, PURCHASE_ORDER_REQUESTER))
 	}
 
 	const generateCsw = (): void => {
-		const nextState = inventoryService.createPurchaseOrderDrafts(state, 'Inventory Director')
+		const nextState = inventoryService.createPurchaseOrderDrafts(state, PURCHASE_ORDER_REQUESTER)
 		saveState(inventoryService.generateCswDocument(nextState, 'Inventory Director'))
 	}
 
 	const approveCsw = (): void => {
-		if (!latestCswDocument) return
-		saveState(inventoryService.approveCswDocument(state, latestCswDocument.id, { approvedBy: 'Inventory Director' }))
+		if (!selectedCswDocument) return
+		saveState(inventoryService.approveCswDocument(state, selectedCswDocument.id, { approvedBy: 'Inventory Director' }))
+	}
+
+	const approveCswWithChanges = (): void => {
+		if (!selectedCswDocument) return
+		saveState(inventoryService.approveCswDocument(state, selectedCswDocument.id, {
+			approvedBy: 'Inventory Director',
+			withChanges: true,
+		}))
 	}
 
 	const rejectCsw = (): void => {
-		if (!latestCswDocument) return
-		saveState(inventoryService.rejectCswDocument(state, latestCswDocument.id, { rejectedBy: 'Inventory Director' }))
+		if (!selectedCswDocument) return
+		saveState(inventoryService.rejectCswDocument(state, selectedCswDocument.id, { rejectedBy: 'Inventory Director' }))
 	}
 
 	const markOrdered = (purchaseOrderId: string): void => {
@@ -652,12 +880,60 @@ const InventoryPage = () => {
 		window.URL.revokeObjectURL(url)
 	}
 
-	const jumpToCountWorkspace = (): void => {
-		countWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+	const jumpToPurchaseWorkspace = (): void => {
+		setActiveWorkspaceTab('PURCHASE_RECOMMENDATIONS')
 	}
 
-	const jumpToPurchaseWorkspace = (): void => {
-		purchaseWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+	const openRecommendations = (): void => {
+		setActiveWorkspaceTab('PURCHASE_RECOMMENDATIONS')
+	}
+
+	const openPurchaseOrders = (): void => {
+		setActiveWorkspaceTab('PURCHASE_ORDERS')
+	}
+
+	const openCswDocuments = (): void => {
+		setActiveWorkspaceTab('CSWS')
+	}
+
+	const openReceivingHistory = (): void => {
+		setActiveWorkspaceTab('RECEIVING_HISTORY')
+	}
+
+	const openPurchaseOrder = (purchaseOrderId: string): void => {
+		setSelectedPurchaseOrderId(purchaseOrderId)
+		setReceivingPurchaseOrderId(null)
+	}
+
+	const openReferencedPurchaseOrder = (purchaseOrderId: string): void => {
+		openPurchaseOrder(purchaseOrderId)
+		setActiveWorkspaceTab('PURCHASE_ORDERS')
+	}
+
+	const printPurchaseOrder = (purchaseOrder: PurchaseOrderDraft): void => {
+		const relatedCsw = state.cswDocuments.find((document) => document.sourcePurchaseOrderIds.includes(purchaseOrder.id)) ?? null
+		printPurchaseOrderDocument({
+			purchaseOrder,
+			relatedCsw,
+			inventoryCountDate: relatedCsw?.inventoryDate ?? latestSession?.inventoryDate ?? null,
+		})
+	}
+
+	const downloadPurchaseOrder = async (purchaseOrder: PurchaseOrderDraft): Promise<void> => {
+		const relatedCsw = state.cswDocuments.find((document) => document.sourcePurchaseOrderIds.includes(purchaseOrder.id)) ?? null
+		await downloadPurchaseOrderPdf({
+			purchaseOrder,
+			relatedCsw,
+			inventoryCountDate: relatedCsw?.inventoryDate ?? latestSession?.inventoryDate ?? null,
+		})
+	}
+
+	const printCsw = (document: InventoryCswDocument): void => {
+		printDocument(document.title, getCswDocument(document))
+	}
+
+	const downloadCsw = async (document: InventoryCswDocument): Promise<void> => {
+		await downloadDocumentPdf(`palette-csw-${document.inventoryDate}.pdf`, document.title, getCswDocument(document))
 	}
 
 	const handleSort = (column: InventorySortColumn): void => {
@@ -692,19 +968,28 @@ const InventoryPage = () => {
 					</p>
 				</div>
 				<div className="inventory-v2-hero-actions">
-						{!activeSession ? (
+					{activeWorkspaceTab === 'COUNT_SESSIONS' && !activeSession ? (
 							<button type="button" className="btn btn-primary inventory-v2-count-cta" onClick={startWarehouseCount}>
 								Start Count Session
 							</button>
 						) : null}
-					<button type="button" className="btn" onClick={reimportWorkbook}>
+					{activeWorkspaceTab === 'INVENTORY' ? <button type="button" className="btn" onClick={reimportWorkbook}>
 						Reimport Workbook Seed
-					</button>
-					<span className="inventory-v2-chip">{sortedItems.length} visible items</span>
+					</button> : null}
+					{activeWorkspaceTab === 'INVENTORY' ? <span className="inventory-v2-chip">{sortedItems.length} visible items</span> : null}
 				</div>
 			</header>
 
-			<section className="inventory-summary-grid" aria-label="Inventory summary">
+			<nav className="inventory-workspace-tabs" role="tablist" aria-label="Inventory workspaces">
+				<button id="inventory-tab" aria-controls="inventory-panel" type="button" role="tab" aria-selected={activeWorkspaceTab === 'INVENTORY'} className={activeWorkspaceTab === 'INVENTORY' ? 'is-active' : ''} onClick={() => setActiveWorkspaceTab('INVENTORY')}>Inventory</button>
+				<button id="count-sessions-tab" aria-controls="count-sessions-panel" type="button" role="tab" aria-selected={activeWorkspaceTab === 'COUNT_SESSIONS'} className={activeWorkspaceTab === 'COUNT_SESSIONS' ? 'is-active' : ''} onClick={() => setActiveWorkspaceTab('COUNT_SESSIONS')}>Count Sessions</button>
+				<button id="purchase-recommendations-tab" aria-controls="purchase-recommendations-panel" type="button" role="tab" aria-selected={activeWorkspaceTab === 'PURCHASE_RECOMMENDATIONS'} className={activeWorkspaceTab === 'PURCHASE_RECOMMENDATIONS' ? 'is-active' : ''} onClick={openRecommendations}>Purchase Recommendations</button>
+				<button id="purchase-orders-tab" aria-controls="purchase-orders-panel" type="button" role="tab" aria-selected={activeWorkspaceTab === 'PURCHASE_ORDERS'} className={activeWorkspaceTab === 'PURCHASE_ORDERS' ? 'is-active' : ''} onClick={openPurchaseOrders}>Purchase Orders</button>
+				<button id="csws-tab" aria-controls="csws-panel" type="button" role="tab" aria-selected={activeWorkspaceTab === 'CSWS'} className={activeWorkspaceTab === 'CSWS' ? 'is-active' : ''} onClick={openCswDocuments}>CSWs</button>
+				<button id="receiving-history-tab" aria-controls="receiving-history-panel" type="button" role="tab" aria-selected={activeWorkspaceTab === 'RECEIVING_HISTORY'} className={activeWorkspaceTab === 'RECEIVING_HISTORY' ? 'is-active' : ''} onClick={openReceivingHistory}>Receiving History</button>
+			</nav>
+
+			<section className="inventory-summary-grid" aria-label="Inventory summary" hidden={activeWorkspaceTab !== 'INVENTORY'}>
 				<InventorySummaryCard
 					label="Total Inventory Value"
 					value={formatCurrency(inventoryTotals.inventoryValue)}
@@ -743,7 +1028,7 @@ const InventoryPage = () => {
 				/>
 			</section>
 
-			<section className="inventory-toolbar" aria-label="Inventory toolbar">
+			<section className="inventory-toolbar" aria-label="Inventory toolbar" hidden={activeWorkspaceTab !== 'INVENTORY'}>
 				<label className="inventory-toolbar-search">
 					<span>Search</span>
 					<input
@@ -789,17 +1074,14 @@ const InventoryPage = () => {
 				<button type="button" className={`inventory-toolbar-toggle ${filterNeedsReview ? 'is-active' : ''}`} onClick={() => setFilterNeedsReview((current) => !current)}>
 					Needs Review
 				</button>
-				<button type="button" className="inventory-toolbar-toggle" onClick={jumpToCountWorkspace}>
-					Count Session
-				</button>
 				<button type="button" className="inventory-toolbar-toggle" onClick={exportVisibleItems}>
 					Export
 				</button>
 			</section>
 
-			<section className={selectedItem ? 'inventory-workspace-layout inventory-workspace-layout-with-drawer' : 'inventory-workspace-layout'}>
+			<section className={selectedItem && activeWorkspaceTab === 'INVENTORY' ? 'inventory-workspace-layout inventory-workspace-layout-with-drawer' : 'inventory-workspace-layout'}>
 				<div className="inventory-workspace-main">
-					<section className="inventory-grid-card" aria-label="Inventory grid">
+					<section id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab" className="inventory-grid-card" hidden={activeWorkspaceTab !== 'INVENTORY'}>
 						<div className="inventory-grid-card-header">
 							<div>
 								<h3>Main Grid</h3>
@@ -871,10 +1153,10 @@ const InventoryPage = () => {
 					</section>
 
 					<div className="inventory-secondary-grid">
-						<section className="inventory-workspace-card" ref={countWorkspaceRef}>
+						<section id="count-sessions-panel" role="tabpanel" aria-labelledby="count-sessions-tab" className="inventory-workspace-card inventory-tab-panel" ref={countWorkspaceRef} hidden={activeWorkspaceTab !== 'COUNT_SESSIONS'}>
 							<div className="inventory-section-header">
 								<div>
-									<h3>Count Session</h3>
+									<h3>Count Sessions</h3>
 									<p>Dedicated warehouse count workspace with session progress, approval routing, and discrepancy handling.</p>
 								</div>
 								<div className="inventory-section-actions">
@@ -974,27 +1256,13 @@ const InventoryPage = () => {
 							)}
 						</section>
 
-						<section className="inventory-workspace-card" ref={purchaseWorkspaceRef}>
-							<div className="inventory-section-header">
-								<div>
-									<h3>Purchase Recommendations</h3>
-									<p>Workbook-backed purchase review, PO drafting, CSW generation, and receiving actions.</p>
+						<section className="inventory-workspace-card inventory-tab-panel" ref={purchaseWorkspaceRef} hidden={activeWorkspaceTab === 'INVENTORY' || activeWorkspaceTab === 'COUNT_SESSIONS'}>
+							<section id="purchase-recommendations-panel" role="tabpanel" ref={recommendationsListRef} className="inventory-section-destination inventory-purchasing-section" tabIndex={-1} aria-labelledby="purchase-recommendations-tab" hidden={activeWorkspaceTab !== 'PURCHASE_RECOMMENDATIONS'}>
+								<div className="inventory-section-header">
+									<div><h3 id="open-recommendations-heading">Recommendations</h3><p>Review open inventory requirements and completed decisions.</p></div>
+									<button type="button" className="btn" onClick={createPurchaseOrders}>Create Purchase Orders</button>
 								</div>
-								<div className="inventory-section-actions">
-									<button type="button" className="btn" onClick={createPurchaseOrders}>
-										Create PO Drafts
-									</button>
-									<button type="button" className="btn btn-primary" onClick={generateCsw}>
-										Generate CSW
-									</button>
-								</div>
-							</div>
-							<div className="inventory-count-summary-grid" style={{ marginBottom: '1rem' }}>
-								<div className="inventory-mini-stat"><span>Open Recommendations</span><strong>{approvedOrRecommendedQueue.length}</strong></div>
-								<div className="inventory-mini-stat"><span>PO Drafts</span><strong>{purchaseOrders.length}</strong></div>
-								<div className="inventory-mini-stat"><span>CSW Documents</span><strong>{state.cswDocuments.length}</strong></div>
-								<div className="inventory-mini-stat"><span>Approved / Rejected</span><strong>{state.recommendations.filter((recommendation) => recommendation.approvalStatus !== 'PENDING').length}</strong></div>
-							</div>
+								<h4 className="inventory-subsection-title">Open Recommendations</h4>
 							<div className="inventory-grid-scroll inventory-grid-scroll-short">
 								<table className="inventory-enterprise-table inventory-enterprise-table-compact">
 									<thead>
@@ -1059,25 +1327,53 @@ const InventoryPage = () => {
 									</tbody>
 								</table>
 							</div>
-
-							<section className="inventory-workspace-card" ref={poDraftWorkspaceRef} style={{ marginTop: '1rem' }}>
+								<div className="inventory-reviewed-recommendations">
 								<div className="inventory-section-header">
 									<div>
-										<h3>Purchase Order Drafts</h3>
-										<p>Grouped by supplier from approved or recommended purchase lines.</p>
+										<h3>Reviewed Recommendations</h3>
+										<p>Completed recommendation decisions separated by outcome.</p>
+									</div>
+									<div className="inventory-review-tabs" role="tablist" aria-label="Reviewed recommendation status">
+										<button type="button" role="tab" aria-selected={reviewedRecommendationTab === 'APPROVED'} className={reviewedRecommendationTab === 'APPROVED' ? 'is-active' : ''} onClick={() => setReviewedRecommendationTab('APPROVED')}>Approved ({approvedRecommendations.length})</button>
+										<button type="button" role="tab" aria-selected={reviewedRecommendationTab === 'REJECTED'} className={reviewedRecommendationTab === 'REJECTED' ? 'is-active' : ''} onClick={() => setReviewedRecommendationTab('REJECTED')}>Rejected ({rejectedRecommendations.length})</button>
 									</div>
 								</div>
-								<div className="inventory-grid-scroll inventory-grid-scroll-short">
+								{reviewedRecommendations.length > 0 ? (
+									<div className="inventory-grid-scroll inventory-grid-scroll-short">
+										<table className="inventory-enterprise-table inventory-enterprise-table-compact">
+											<thead><tr><th>Item</th><th>Supplier</th><th>Quantity</th><th>Decision</th><th>Reason</th></tr></thead>
+											<tbody>{reviewedRecommendations.map((recommendation) => (
+												<tr key={recommendation.id}>
+													<td>{recommendation.item}</td>
+													<td>{recommendation.supplier ?? '--'}</td>
+													<td>{recommendation.reviewedQuantity ?? recommendation.suggestedPurchaseQuantity ?? '--'}</td>
+													<td>{recommendation.approvalStatus.replace(/_/g, ' ')}</td>
+													<td>{recommendation.reviewedReason ?? '--'}</td>
+												</tr>
+											))}</tbody>
+										</table>
+									</div>
+								) : <p className="inventory-empty-state">No {reviewedRecommendationTab.toLowerCase()} recommendations yet.</p>}
+								</div>
+							</section>
+
+							<section id="purchase-orders-panel" role="tabpanel" aria-labelledby="purchase-orders-tab" className="inventory-purchasing-section inventory-section-destination" ref={poDraftWorkspaceRef} tabIndex={-1} hidden={activeWorkspaceTab !== 'PURCHASE_ORDERS'}>
+								<div className="inventory-section-header">
+									<div>
+										<h3>Purchase Orders</h3>
+										<p>Open an order to review details, print, download, mark it ordered, or receive items.</p>
+									</div>
+								</div>
+								{purchaseOrders.length > 0 ? <div className="inventory-grid-scroll inventory-grid-scroll-short">
 									<table className="inventory-enterprise-table inventory-enterprise-table-compact">
 										<thead>
 											<tr>
-												<th>PO Draft</th>
+												<th>Purchase Order</th>
 												<th>Supplier</th>
 												<th>Lines</th>
 												<th>Total</th>
 												<th>Status</th>
-												<th>Mark Ordered</th>
-												<th>Receive</th>
+												<th>Action</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -1087,96 +1383,164 @@ const InventoryPage = () => {
 													<td>{purchaseOrder.supplier}</td>
 													<td>{purchaseOrder.lines.length}</td>
 													<td>{formatCurrency(purchaseOrder.total)}</td>
-													<td>{purchaseOrder.approvalStatus}</td>
-													<td>
-														<button type="button" className="btn" onClick={() => markOrdered(purchaseOrder.id)}>Mark Ordered</button>
-													</td>
-													<td>{purchaseOrder.approvalStatus === 'ORDERED' || purchaseOrder.approvalStatus === 'PARTIALLY_RECEIVED' ? 'Use line receipts below' : '--'}</td>
+													<td><span className="inventory-pill inventory-pill-outline">{formatPurchaseOrderStatus(purchaseOrder.approvalStatus)}</span></td>
+													<td><button type="button" className="btn" onClick={() => openPurchaseOrder(purchaseOrder.id)}>Open</button></td>
 												</tr>
 											))}
 										</tbody>
 									</table>
-								</div>
-								{purchaseOrders.length > 0 ? (
-									<div className="inventory-grid-scroll inventory-grid-scroll-short" style={{ marginTop: '1rem' }}>
-										<table className="inventory-enterprise-table inventory-enterprise-table-compact">
-											<thead>
-												<tr>
-													<th>PO Draft</th>
-													<th>Item</th>
-													<th>Qty Ordered</th>
-													<th>Qty Received</th>
-													<th>Receive</th>
-													<th>Notes</th>
-												</tr>
-											</thead>
-											<tbody>
-												{purchaseOrders.flatMap((purchaseOrder) => purchaseOrder.lines.map((line) => (
-													<tr key={line.id}>
-														<td>{purchaseOrder.poDraftNumber}</td>
-														<td>{line.description ?? line.inventoryItemId}</td>
-														<td>{line.quantityOrdered}</td>
-														<td>{line.quantityReceived}</td>
-														<td>
-															<div className="inventory-reservation-row">
-																<input
-																	type="number"
-																	min={1}
-																	value={receiptQuantities[line.id] ?? ''}
-																	onChange={(event) => setReceiptQuantities((current) => ({ ...current, [line.id]: event.target.value }))}
-																/>
-																<button type="button" className="btn" onClick={() => recordReceipt(purchaseOrder, line.id)}>Record Receipt</button>
-															</div>
-														</td>
-														<td>
-															<input
-																type="text"
-																value={receiptNotes[line.id] ?? ''}
-																onChange={(event) => setReceiptNotes((current) => ({ ...current, [line.id]: event.target.value }))}
-															/>
-														</td>
-													</tr>
-												))) }
-											</tbody>
-										</table>
-									</div>
+								</div> : <p className="inventory-empty-state">No purchase orders have been created.</p>}
+								{selectedPurchaseOrder ? (
+									<article className="inventory-document-detail inventory-purchase-order-detail" aria-label={`${selectedPurchaseOrder.poDraftNumber} details`}>
+										<div className="inventory-section-header">
+											<div><span className="inventory-v2-eyebrow">Open Purchase Order</span><h4>{selectedPurchaseOrder.poDraftNumber}</h4><p>{selectedPurchaseOrder.supplier} | {selectedPurchaseOrder.lines.length} lines | {formatCurrency(selectedPurchaseOrder.total)}</p></div>
+											<div className="inventory-section-actions">
+												<button type="button" className="btn" onClick={() => printPurchaseOrder(selectedPurchaseOrder)}>Print</button>
+												<button type="button" className="btn btn-primary" onClick={() => void downloadPurchaseOrder(selectedPurchaseOrder)}>Download PDF</button>
+												<button type="button" className="btn" disabled={selectedPurchaseOrder.approvalStatus !== 'APPROVED'} onClick={() => markOrdered(selectedPurchaseOrder.id)}>Mark Ordered</button>
+												<button type="button" className="btn" disabled={selectedPurchaseOrder.approvalStatus !== 'ORDERED' && selectedPurchaseOrder.approvalStatus !== 'PARTIALLY_RECEIVED'} onClick={() => setReceivingPurchaseOrderId(selectedPurchaseOrder.id)}>Receive Items</button>
+											</div>
+										</div>
+										<dl className="inventory-meta-grid"><div><dt>Requested By</dt><dd>{selectedPurchaseOrder.requestedBy}</dd></div><div><dt>Created</dt><dd>{formatDateTime(selectedPurchaseOrder.dateCreated)}</dd></div><div><dt>Status</dt><dd>{formatPurchaseOrderStatus(selectedPurchaseOrder.approvalStatus)}</dd></div><div><dt>Account</dt><dd>{selectedPurchaseOrder.accountLabel}</dd></div></dl>
+										<div className="inventory-grid-scroll inventory-grid-scroll-short inventory-document-lines">
+											<table className="inventory-enterprise-table inventory-enterprise-table-compact">
+												<thead><tr><th>Item</th><th>SKU</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
+												<tbody>{selectedPurchaseOrder.lines.map((line) => (
+													<tr key={line.id}><td>{line.sourceItemSnapshot ?? line.description ?? line.inventoryItemId}</td><td>{line.sku ?? '--'}</td><td>{line.quantityOrdered}</td><td>{formatCurrency(line.unitPrice)}</td><td>{formatCurrency(line.subtotal)}</td></tr>
+												))}</tbody>
+											</table>
+										</div>
+										{receivingPurchaseOrderId === selectedPurchaseOrder.id ? (
+											<div className="inventory-receive-items">
+												<h4>Receive Items</h4>
+												{selectedPurchaseOrder.lines.filter((line) => line.quantityRemaining > 0).map((line) => (
+													<div className="inventory-receive-line" key={line.id}>
+														<div><strong>{line.sourceItemSnapshot ?? line.description ?? line.inventoryItemId}</strong><span>{line.quantityRemaining} remaining</span></div>
+														<input type="number" min={1} max={line.quantityRemaining} value={receiptQuantities[line.id] ?? ''} onChange={(event) => setReceiptQuantities((current) => ({ ...current, [line.id]: event.target.value }))} placeholder="Quantity" />
+														<input type="text" value={receiptNotes[line.id] ?? ''} onChange={(event) => setReceiptNotes((current) => ({ ...current, [line.id]: event.target.value }))} placeholder="Receiving notes" />
+														<button type="button" className="btn btn-primary" onClick={() => recordReceipt(selectedPurchaseOrder, line.id)}>Receive</button>
+													</div>
+												))}
+											</div>
+										) : null}
+									</article>
 								) : null}
 							</section>
 
-							<section className="inventory-workspace-card" ref={cswWorkspaceRef} style={{ marginTop: '1rem' }}>
+							<section id="csws-panel" role="tabpanel" aria-labelledby="csws-tab" className="inventory-purchasing-section inventory-section-destination" ref={cswWorkspaceRef} tabIndex={-1} hidden={activeWorkspaceTab !== 'CSWS'}>
 								<div className="inventory-section-header">
 									<div>
-										<h3>Completed Staff Work</h3>
-										<p>Generated CSW document sourced from current inventory purchase recommendations.</p>
+										<h3>CSWs</h3>
+										<p>Generated Completed Staff Work records sourced from inventory purchase recommendations.</p>
 									</div>
 									<div className="inventory-section-actions">
-										<button type="button" className="btn" onClick={approveCsw}>Approve</button>
-										<button type="button" className="btn" onClick={rejectCsw}>Reject</button>
+										<button type="button" className="btn btn-primary" onClick={generateCsw}>Generate CSW</button>
 									</div>
 								</div>
-								{latestCswDocument ? (
+								{state.cswDocuments.length > 0 ? (
 									<>
-										<div className="inventory-count-summary-grid" style={{ marginBottom: '1rem' }}>
-											<div className="inventory-mini-stat"><span>Title</span><strong>{latestCswDocument.title}</strong></div>
-											<div className="inventory-mini-stat"><span>Recommendation Lines</span><strong>{latestCswDocument.recommendedItemCount}</strong></div>
-											<div className="inventory-mini-stat"><span>Purchase Value</span><strong>{formatCurrency(latestCswDocument.totalRecommendedPurchaseValue)}</strong></div>
-											<div className="inventory-mini-stat"><span>Status</span><strong>{latestCswDocument.approvalStatus}</strong></div>
+										<div className="inventory-document-list">
+											{state.cswDocuments.map((document) => (
+												<button type="button" key={document.id} className={selectedCswDocument?.id === document.id ? 'inventory-document-list-item is-active' : 'inventory-document-list-item'} onClick={() => setSelectedCswDocumentId(document.id)}>
+													<span>{document.subject}</span><strong>{document.approvalStatus}</strong><small>{formatDateTime(document.date)}</small>
+												</button>
+											))}
+										</div>
+										{selectedCswDocument ? <>
+										<div className="inventory-section-actions inventory-document-actions">
+											<button type="button" className="btn" onClick={() => printCsw(selectedCswDocument)}>Print CSW</button>
+											<button type="button" className="btn btn-primary" onClick={() => void downloadCsw(selectedCswDocument)}>Download PDF</button>
 										</div>
 										<dl className="inventory-meta-grid">
-											<div><dt>To</dt><dd>{latestCswDocument.to}</dd></div>
-											<div><dt>From</dt><dd>{latestCswDocument.from}</dd></div>
-											<div><dt>Date</dt><dd>{formatDateTime(latestCswDocument.date)}</dd></div>
-											<div><dt>Subject</dt><dd>{latestCswDocument.subject}</dd></div>
+											<div><dt>To</dt><dd>{selectedCswDocument.to}</dd></div>
+											<div><dt>From</dt><dd>{selectedCswDocument.from}</dd></div>
+											<div><dt>Date</dt><dd>{formatDateTime(selectedCswDocument.date)}</dd></div>
+											<div><dt>Subject</dt><dd>{selectedCswDocument.subject}</dd></div>
 										</dl>
-										<p className="inventory-detail-copy">{latestCswDocument.recommendation}</p>
+										<div className="inventory-csw-sections inventory-csw-executive">
+											<section>
+												<h4>1. Situation</h4>
+												<p className="inventory-csw-situation">{selectedCswDocument.situation}</p>
+											</section>
+											<section>
+												<h4>2. Data</h4>
+												<div className="inventory-csw-summary">
+													<span>Executive Summary</span>
+													<strong>{getCswExecutiveSummary(selectedCswDocument)}</strong>
+												</div>
+												<div className="inventory-csw-totals" aria-label="CSW totals">
+													<div><span>Recommended value</span><strong>{formatCurrency(selectedCswDocument.totalRecommendedPurchaseValue)}</strong></div>
+													<div><span>Purchase lines</span><strong>{selectedCswDocument.recommendedItemCount}</strong></div>
+													<div><span>Attached POs</span><strong>{selectedCswDocument.purchaseOrderReferences.length}</strong></div>
+													<div><span>Needs review</span><strong>{selectedCswDocument.needsReviewCount}</strong></div>
+												</div>
+												<div className="inventory-csw-data-block">
+													<h5>Supplier Totals</h5>
+													<div className="inventory-grid-scroll">
+														<table className="inventory-csw-table">
+															<thead><tr><th>Supplier</th><th>Lines</th><th>Total</th></tr></thead>
+															<tbody>{selectedCswDocument.suppliers.map((supplier) => <tr key={supplier.supplier}><td>{supplier.supplier}</td><td>{supplier.lineItemCount}</td><td>{formatCurrency(supplier.total)}</td></tr>)}</tbody>
+														</table>
+													</div>
+												</div>
+												<div className="inventory-csw-data-block">
+													<h5>Highest-Priority Purchases</h5>
+													<ul className="inventory-csw-priority-list">{selectedCswDocument.highestPriorityPurchases.map((purchase) => <li key={`${purchase.supplier}-${purchase.item}`}><strong>{purchase.item}</strong><span>{purchase.reason} · {purchase.supplier} · Qty {purchase.quantity} · {formatCurrency(purchase.subtotal)}</span></li>)}</ul>
+												</div>
+												<div className="inventory-csw-data-block">
+													<h5>Attached Purchase Orders</h5>
+													<div className="inventory-grid-scroll">
+														<table className="inventory-csw-table">
+															<thead><tr><th>Purchase Order</th><th>Supplier</th><th>Lines</th><th>Total</th></tr></thead>
+															<tbody>{selectedCswDocument.purchaseOrderReferences.map((purchaseOrder) => <tr key={purchaseOrder.id}><td><button type="button" className="inventory-csw-po-link" onClick={() => openReferencedPurchaseOrder(purchaseOrder.id)}>{purchaseOrder.number}</button></td><td>{purchaseOrder.supplier}</td><td>{purchaseOrder.lineItemCount}</td><td>{formatCurrency(purchaseOrder.total)}</td></tr>)}</tbody>
+														</table>
+													</div>
+													<p className="inventory-csw-appendix-note">Detailed item lists are provided in the attached purchase orders and are not repeated in this CSW.</p>
+												</div>
+											</section>
+											<section>
+												<h4>3. Solution</h4>
+												<p className="inventory-csw-approval-statement">{getCswSolutionStatement(selectedCswDocument)}</p>
+												<div className="inventory-csw-decisions" aria-label="CSW approval decision">
+													<button type="button" className={selectedCswDocument.approvalStatus === 'APPROVED' ? 'is-selected' : ''} onClick={approveCsw}>Approved</button>
+													<button type="button" className={selectedCswDocument.approvalStatus === 'APPROVED_WITH_MODIFICATIONS' ? 'is-selected' : ''} onClick={approveCswWithChanges}>Approved with Changes</button>
+													<button type="button" className={selectedCswDocument.approvalStatus === 'DISAPPROVED' ? 'is-selected' : ''} onClick={rejectCsw}>Disapproved</button>
+												</div>
+												<dl className="inventory-csw-signature">
+													<div><dt>Signature</dt><dd>{selectedCswDocument.approvalSignatureName ? 'Recorded electronically' : '________________________'}</dd></div>
+													<div><dt>Printed name</dt><dd>{selectedCswDocument.approvalSignatureName ?? '________________________'}</dd></div>
+													<div><dt>Date</dt><dd>{selectedCswDocument.approvalDate ? formatDate(selectedCswDocument.approvalDate) : '________________'}</dd></div>
+												</dl>
+												<p className="inventory-csw-current-decision">Current decision: <strong>{getCswDecisionLabel(selectedCswDocument)}</strong></p>
+											</section>
+										</div>
+										</> : null}
 									</>
 								) : (
-									<p className="inventory-empty-state">Generate a CSW to capture the current purchase recommendation summary.</p>
+									<p className="inventory-empty-state">No CSWs have been generated.</p>
 								)}
+							</section>
+
+							<section id="receiving-history-panel" role="tabpanel" aria-labelledby="receiving-history-tab" className="inventory-purchasing-section inventory-section-destination" ref={receivingHistoryRef} tabIndex={-1} hidden={activeWorkspaceTab !== 'RECEIVING_HISTORY'}>
+								<div className="inventory-section-header">
+									<div><h3>Receiving History</h3><p>Completed item receipts recorded from opened purchase orders.</p></div>
+								</div>
+								{state.receipts.length > 0 ? (
+									<div className="inventory-grid-scroll inventory-grid-scroll-short">
+										<table className="inventory-enterprise-table inventory-enterprise-table-compact">
+											<thead><tr><th>Received</th><th>Purchase Order</th><th>Item</th><th>Quantity</th><th>Remaining</th><th>Notes</th></tr></thead>
+											<tbody>{state.receipts.map((receipt) => {
+												const purchaseOrder = purchaseOrders.find((candidate) => candidate.id === receipt.purchaseOrderId)
+												const item = state.items.find((candidate) => candidate.id === receipt.itemId)
+												return <tr key={receipt.id}><td>{formatDateTime(receipt.receivedAt)}</td><td>{purchaseOrder?.poDraftNumber ?? '--'}</td><td>{item?.name ?? receipt.itemId}</td><td>{receipt.quantityReceived}</td><td>{receipt.quantityRemaining ?? '--'}</td><td>{receipt.notes ?? '--'}</td></tr>
+											})}</tbody>
+										</table>
+									</div>
+								) : <p className="inventory-empty-state">No items have been received yet.</p>}
 							</section>
 						</section>
 
-						<section className="inventory-workspace-card">
+						<section className="inventory-workspace-card" hidden={activeWorkspaceTab !== 'INVENTORY'}>
 							<div className="inventory-section-header">
 								<div>
 									<h3>Material Forecast</h3>
@@ -1214,7 +1578,7 @@ const InventoryPage = () => {
 					</div>
 				</div>
 
-				{selectedItem ? (
+				{selectedItem && activeWorkspaceTab === 'INVENTORY' ? (
 					<aside ref={drawerRef} className="inventory-detail-drawer" aria-label="Inventory detail drawer">
 						<div className="inventory-detail-stack">
 							<header className="inventory-detail-header">

@@ -2,6 +2,7 @@ import {
   WAREHOUSE_INVENTORY_SEED_ROWS,
   WAREHOUSE_INVENTORY_WORKBOOK_NAME,
 } from '../data/warehouseInventoryWorkbookSeed'
+import { CSW_APPROVAL_CHOICES } from '../types/csw'
 import type {
   InventoryAdjustment,
   InventoryCategory,
@@ -21,6 +22,19 @@ import type {
   PurchaseApprovalStatus,
   WarehouseInventorySeedRow,
 } from '../types/inventory'
+
+interface LegacyInventoryCswSections {
+  dataSummary?: string
+  evaluation?: string
+  purchaseSummary?: string
+  accountSummary?: string
+  risksAndExceptions?: string
+  recommendation?: string
+}
+
+type PersistedInventoryCswDocument = Omit<InventoryCswDocument, 'data' | 'solution' | 'highestPriorityPurchases' | 'purchaseOrderReferences' | 'referenceNumber'>
+  & Partial<Pick<InventoryCswDocument, 'data' | 'solution' | 'highestPriorityPurchases' | 'purchaseOrderReferences' | 'referenceNumber'>>
+  & LegacyInventoryCswSections
 
 const STORAGE_KEY = 'palette.inventory.foundation.v1'
 
@@ -102,15 +116,123 @@ const summarizeSupplierRecommendations = (recommendations: InventoryPurchaseReco
     grouped.set(supplier, current)
   }
 
-  return [...grouped.entries()].map(([supplier, groupedRecommendations]) => ({
-    supplier,
-    lineItemCount: groupedRecommendations.length,
-    total: groupedRecommendations.reduce((sum, recommendation) => sum + (recommendation.subtotal ?? 0), 0),
-    majorItems: groupedRecommendations.slice(0, 5).map((recommendation) => recommendation.item),
-    notes: groupedRecommendations
-      .filter((recommendation) => recommendation.status === 'NEEDS_REVIEW' || recommendation.status === 'COUNT_REQUIRED')
-      .map((recommendation) => recommendation.calculationExplanation),
-  }))
+  return [...grouped.entries()]
+    .map(([supplier, groupedRecommendations]) => ({
+      supplier,
+      lineItemCount: groupedRecommendations.length,
+      total: groupedRecommendations.reduce((sum, recommendation) => sum + (recommendation.subtotal ?? 0), 0),
+      majorItems: groupedRecommendations.slice(0, 5).map((recommendation) => recommendation.item),
+      notes: groupedRecommendations
+        .filter((recommendation) => recommendation.status === 'NEEDS_REVIEW' || recommendation.status === 'COUNT_REQUIRED')
+        .map((recommendation) => recommendation.calculationExplanation),
+    }))
+    .sort((left, right) => right.total - left.total)
+}
+
+const formatMoney = (value: number): string => value.toLocaleString(undefined, {
+  style: 'currency',
+  currency: 'USD',
+})
+
+const buildCswData = (
+  document: Pick<InventoryCswDocument,
+    | 'inventoryDate'
+    | 'totalItemsCounted'
+    | 'recommendedItemCount'
+    | 'needsReviewCount'
+    | 'suppliers'
+    | 'totalRecommendedPurchaseValue'
+    | 'accountAllocationTotals'
+    | 'urgentOrZeroStockItems'
+    | 'itemsWithInsufficientCountsOrMissingPricing'
+    | 'highestPriorityPurchases'
+    | 'purchaseOrderReferences'>,
+): string => {
+  const supplierFacts = document.suppliers.length > 0
+    ? document.suppliers.map((supplier) => `${supplier.supplier} | ${supplier.lineItemCount} | ${formatMoney(supplier.total)}`)
+    : ['No supplier purchase lines.']
+  const priorityFacts = document.highestPriorityPurchases.length > 0
+    ? document.highestPriorityPurchases.map((purchase) => `- ${purchase.item} | ${purchase.supplier} | Qty ${purchase.quantity} | ${formatMoney(purchase.subtotal)} | ${purchase.reason}`)
+    : ['- No priority purchases.']
+  const purchaseOrderFacts = document.purchaseOrderReferences.length > 0
+    ? document.purchaseOrderReferences.map((purchaseOrder) => `${purchaseOrder.number} | ${purchaseOrder.supplier} | ${purchaseOrder.lineItemCount} | ${formatMoney(purchaseOrder.total)}`)
+    : ['No purchase orders attached.']
+
+  return [
+    'Executive Summary',
+    `Approval is requested for ${document.recommendedItemCount} purchase line(s) totaling ${formatMoney(document.totalRecommendedPurchaseValue)} across ${document.suppliers.length} supplier(s) and ${document.purchaseOrderReferences.length} attached purchase order(s).`,
+    'Totals',
+    `Total recommended purchase value | ${formatMoney(document.totalRecommendedPurchaseValue)}`,
+    `Recommended purchase lines | ${document.recommendedItemCount}`,
+    `Active inventory items reviewed | ${document.totalItemsCounted}`,
+    `Items requiring further review | ${document.needsReviewCount}`,
+    `Urgent or zero-stock items | ${document.urgentOrZeroStockItems.length}`,
+    'Supplier Totals',
+    'Supplier | Lines | Total',
+    ...supplierFacts,
+    'Highest-Priority Purchases',
+    ...priorityFacts,
+    'Attached Purchase Orders',
+    'Purchase Order | Supplier | Lines | Total',
+    ...purchaseOrderFacts,
+    'Detailed item lists are provided in the attached purchase orders and are not repeated in this CSW.',
+  ].join('\n')
+}
+
+const buildCswSolution = (recommendedItemCount: number, total: number, purchaseOrderCount: number): string => {
+  const action = recommendedItemCount > 0
+    ? `Approve release of ${recommendedItemCount} purchase recommendation line(s) totaling ${formatMoney(total)} across ${purchaseOrderCount} purchase order(s).`
+    : 'Confirm that no purchase action is required from the current inventory review.'
+
+  const approvalChoices = CSW_APPROVAL_CHOICES.map((choice) => `[ ] ${choice}`).join('  ')
+  return `${action}\nDecision: ${approvalChoices}\nSignature: ____________________  Printed name: ____________________  Date: ____________________`
+}
+
+const normalizeCswDocument = (
+  persistedDocument: PersistedInventoryCswDocument,
+  purchaseOrders: PurchaseOrderDraft[],
+  index: number,
+): InventoryCswDocument => {
+  const highestPriorityPurchases = persistedDocument.highestPriorityPurchases
+    ?? persistedDocument.urgentOrZeroStockItems.slice(0, 5).map((item) => ({
+      item,
+      supplier: 'See attached purchase order',
+      quantity: 0,
+      subtotal: 0,
+      reason: 'Urgent or zero stock',
+    }))
+  const purchaseOrderReferences = persistedDocument.purchaseOrderReferences
+    ?? purchaseOrders.map((purchaseOrder) => ({
+      id: purchaseOrder.id,
+      number: purchaseOrder.poDraftNumber,
+      supplier: purchaseOrder.supplier,
+      lineItemCount: purchaseOrder.lines.length,
+      total: purchaseOrder.total,
+    }))
+  const executiveDocument = {
+    ...persistedDocument,
+    referenceNumber: persistedDocument.referenceNumber ?? `CSW-${persistedDocument.inventoryDate}-${String(index + 1).padStart(3, '0')}`,
+    highestPriorityPurchases,
+    purchaseOrderReferences,
+  }
+  const normalized = {
+    ...executiveDocument,
+    data: persistedDocument.highestPriorityPurchases && persistedDocument.purchaseOrderReferences && persistedDocument.data
+      ? persistedDocument.data
+      : buildCswData(executiveDocument),
+    solution: persistedDocument.solution?.includes('Printed name:') ? persistedDocument.solution : buildCswSolution(
+      persistedDocument.recommendedItemCount,
+      persistedDocument.totalRecommendedPurchaseValue,
+      purchaseOrders.length,
+    ),
+  }
+  delete normalized.dataSummary
+  delete normalized.evaluation
+  delete normalized.purchaseSummary
+  delete normalized.accountSummary
+  delete normalized.risksAndExceptions
+  delete normalized.recommendation
+  return normalized
 }
 
 const buildRecommendationList = (
@@ -207,7 +329,11 @@ const buildStateFromSeed = (
   const previousSessions = asArray<InventoryCountSession>(previous?.sessions)
   const previousEntries = asArray<InventoryCountEntry>(previous?.entries)
   const previousPurchaseOrders = asArray<PurchaseOrderDraft>(previous?.purchaseOrders)
-  const previousCswDocuments = asArray<InventoryCswDocument>(previous?.cswDocuments)
+    .map((purchaseOrder) => purchaseOrder.requestedBy === 'Inventory Director'
+      ? { ...purchaseOrder, requestedBy: 'Dave Scott, Production Director' }
+      : purchaseOrder)
+  const previousCswDocuments = asArray<PersistedInventoryCswDocument>(previous?.cswDocuments)
+    .map((document, index) => normalizeCswDocument(document, previousPurchaseOrders, index))
   const previousAdjustments = asArray<InventoryAdjustment>(previous?.adjustments)
   const previousReceipts = asArray<InventoryReceipt>(previous?.receipts)
   const previousActivityLog = asArray<InventoryActivityLogEntry>(previous?.activityLog)
@@ -533,7 +659,7 @@ const buildPurchaseOrderDrafts = (state: InventoryFoundationState, requestedBy: 
         status: 'DRAFT',
         changedAt: nowIso(),
         changedBy: requestedBy,
-        reason: 'Purchase order draft generated from inventory recommendations.',
+        reason: 'Purchase order generated from inventory recommendations.',
       }],
       orderNotes: existingDraft?.orderNotes ?? [],
       receipts: existingDraft?.receipts ?? [],
@@ -559,29 +685,67 @@ const buildCswDocument = (state: InventoryFoundationState, requestedBy: string):
     .filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW' || recommendation.priceEach === null)
     .map((recommendation) => recommendation.item)
 
-  return {
-    id: documentId,
-    title: 'Completed Staff Work: Inventory Purchase Recommendations',
-    to: existingDocument?.to ?? 'Director of Operations',
-    from: existingDocument?.from ?? requestedBy,
-    date: existingDocument?.date ?? nowIso(),
-    subject: 'Warehouse inventory purchase recommendations and PO drafts',
-    inventoryDate: state.sessions[0]?.inventoryDate ?? state.importedAt.slice(0, 10),
-    totalItemsCounted: state.items.filter((item) => item.active).length,
-    recommendedItemCount: actionableRecommendations.length,
-    needsReviewCount: activeRecommendations.filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW').length,
+  const inventoryDate = state.sessions[0]?.inventoryDate ?? state.importedAt.slice(0, 10)
+  const totalItemsCounted = state.items.filter((item) => item.active).length
+  const recommendedItemCount = actionableRecommendations.length
+  const needsReviewCount = activeRecommendations.filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW').length
+  const sectionFacts = {
+    inventoryDate,
+    totalItemsCounted,
+    recommendedItemCount,
+    needsReviewCount,
     suppliers: supplierSummaries,
     totalRecommendedPurchaseValue,
     accountAllocationTotals: accountTotals,
     urgentOrZeroStockItems,
     itemsWithInsufficientCountsOrMissingPricing,
-    situation: `Workbook-backed inventory review for ${state.workbookName} includes ${actionableRecommendations.length} purchase recommendation line(s).`,
-    dataSummary: `There are ${state.items.filter((item) => item.active).length} active inventory items and ${activeRecommendations.filter((recommendation) => recommendation.status === 'COUNT_REQUIRED' || recommendation.status === 'NEEDS_REVIEW').length} items needing review.`,
-    evaluation: `Estimated purchase value is ${totalRecommendedPurchaseValue.toFixed(2)} across ${supplierSummaries.length} supplier group(s).`,
-    purchaseSummary: supplierSummaries.length > 0 ? supplierSummaries.map((summary) => `${summary.supplier}: ${summary.lineItemCount} line(s) / ${summary.total.toFixed(2)}`).join('; ') : 'No purchase lines are ready for ordering.',
-    accountSummary: Object.entries(accountTotals).length > 0 ? Object.entries(accountTotals).map(([account, total]) => `${account}: ${total.toFixed(2)}`).join('; ') : 'No account allocations calculated.',
-    risksAndExceptions: itemsWithInsufficientCountsOrMissingPricing.length > 0 ? `${itemsWithInsufficientCountsOrMissingPricing.length} item(s) still need count confirmation, review, or pricing.` : 'No outstanding exceptions detected in the current recommendation set.',
-    recommendation: actionableRecommendations.length > 0 ? 'Approve the CSW and release approved purchase orders for ordering.' : 'No purchase action is required from the current workbook state.',
+    highestPriorityPurchases: actionableRecommendations
+      .map((recommendation) => ({
+        recommendation,
+        zeroStock: (recommendation.currentStock ?? 0) <= 0,
+      }))
+      .sort((left, right) => Number(right.zeroStock) - Number(left.zeroStock)
+        || right.recommendation.observedShortage - left.recommendation.observedShortage
+        || (right.recommendation.subtotal ?? 0) - (left.recommendation.subtotal ?? 0))
+      .slice(0, 5)
+      .map(({ recommendation, zeroStock }) => ({
+        item: recommendation.item,
+        supplier: recommendation.supplier ?? 'Unassigned',
+        quantity: getRecommendationOrderQuantity(recommendation),
+        subtotal: recommendation.subtotal ?? 0,
+        reason: zeroStock ? 'Zero stock' : `${recommendation.observedShortage} units below target`,
+      })),
+    purchaseOrderReferences: state.purchaseOrders.map((purchaseOrder) => ({
+      id: purchaseOrder.id,
+      number: purchaseOrder.poDraftNumber,
+      supplier: purchaseOrder.supplier,
+      lineItemCount: purchaseOrder.lines.length,
+      total: purchaseOrder.total,
+    })),
+  }
+
+  return {
+    id: documentId,
+    referenceNumber: existingDocument?.referenceNumber ?? `CSW-${inventoryDate}-${String(state.cswDocuments.length + 1).padStart(3, '0')}`,
+    title: 'Completed Staff Work: Inventory Purchase Recommendations',
+    to: existingDocument?.to ?? 'Director of Operations',
+    from: existingDocument?.from ?? requestedBy,
+    date: existingDocument?.date ?? nowIso(),
+    subject: 'Warehouse inventory purchase recommendations and purchase orders',
+    inventoryDate,
+    totalItemsCounted,
+    recommendedItemCount,
+    needsReviewCount,
+    suppliers: supplierSummaries,
+    totalRecommendedPurchaseValue,
+    accountAllocationTotals: accountTotals,
+    urgentOrZeroStockItems,
+    itemsWithInsufficientCountsOrMissingPricing,
+    situation: `Director approval is required to release ${recommendedItemCount} inventory purchase line(s) totaling ${formatMoney(totalRecommendedPurchaseValue)}; ${needsReviewCount} record(s) require attention before release.`,
+    data: buildCswData(sectionFacts),
+    solution: buildCswSolution(recommendedItemCount, totalRecommendedPurchaseValue, state.purchaseOrders.length),
+    highestPriorityPurchases: sectionFacts.highestPriorityPurchases,
+    purchaseOrderReferences: sectionFacts.purchaseOrderReferences,
     approvalStatus: existingDocument?.approvalStatus ?? 'PENDING',
     approvalSignatureName: existingDocument?.approvalSignatureName ?? null,
     approvalDate: existingDocument?.approvalDate ?? null,
@@ -964,9 +1128,10 @@ export class WarehouseInventoryImportService {
   approveCswDocument(
     state: InventoryFoundationState,
     documentId: string,
-    input: { approvedBy: string; reason?: string | null },
+    input: { approvedBy: string; reason?: string | null; withChanges?: boolean },
   ): InventoryFoundationState {
     const approvedAt = nowIso()
+    const approvalStatus: PurchaseApprovalStatus = input.withChanges ? 'APPROVED_WITH_MODIFICATIONS' : 'APPROVED'
     const document = state.cswDocuments.find((candidate) => candidate.id === documentId)
     const sourceRecommendationIds = new Set(document?.sourceRecommendationIds ?? [])
     const sourcePurchaseOrderIds = new Set(document?.sourcePurchaseOrderIds ?? [])
@@ -976,7 +1141,7 @@ export class WarehouseInventoryImportService {
         if (document.id !== documentId) return document
         return {
           ...document,
-          approvalStatus: 'APPROVED',
+          approvalStatus,
           approvalSignatureName: input.approvedBy,
           approvalDate: approvedAt,
         }
@@ -985,10 +1150,10 @@ export class WarehouseInventoryImportService {
         if (!sourceRecommendationIds.has(recommendation.id)) return recommendation
         return {
           ...recommendation,
-          approvalStatus: 'APPROVED',
+          approvalStatus,
           status: 'APPROVED_FOR_PURCHASE',
           approvalHistory: [{
-            status: 'APPROVED' as PurchaseApprovalStatus,
+            status: approvalStatus,
             approvedAt,
             approvedBy: input.approvedBy,
             reason: input.reason ?? null,

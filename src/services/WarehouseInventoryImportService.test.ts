@@ -222,7 +222,7 @@ describe('WarehouseInventoryImportService', () => {
     expect(recommendation?.suggestedPurchaseQuantity).toBeNull()
   })
 
-  it('creates PO drafts and a CSW from approved recommendations', () => {
+  it('creates purchase orders and a CSW from approved recommendations', () => {
     const service = new WarehouseInventoryImportService()
     const imported = service.importFromSeed(null)
     const recommendation = imported.recommendations.find((candidate) => (candidate.suggestedPurchaseQuantity ?? 0) > 0)
@@ -234,13 +234,74 @@ describe('WarehouseInventoryImportService', () => {
       quantity: recommendation?.suggestedPurchaseQuantity ?? null,
       reason: 'Approved for test coverage.',
     })
-    const withDrafts = service.createPurchaseOrderDrafts(approved, 'Test Director')
+    const withDrafts = service.createPurchaseOrderDrafts(approved, 'Dave Scott, Production Director')
     const withCsw = service.generateCswDocument(withDrafts, 'Test Director')
 
     expect(withDrafts.purchaseOrders.length).toBeGreaterThan(0)
     expect(withDrafts.purchaseOrders[0].lines.length).toBeGreaterThan(0)
+		expect(withDrafts.purchaseOrders[0].requestedBy).toBe('Dave Scott, Production Director')
     expect(withCsw.cswDocuments.length).toBeGreaterThan(0)
     expect(withCsw.cswDocuments[0].sourceRecommendationIds.length).toBeGreaterThan(0)
+
+    const document = withCsw.cswDocuments[0]
+		expect(document.referenceNumber).toMatch(/^CSW-/)
+    expect(document.situation).toContain('require attention')
+    expect(document.situation.split(/(?<=[.!?])\s+/)).toHaveLength(1)
+    expect(document.data).toContain('Executive Summary')
+    expect(document.data.indexOf('Totals')).toBeLessThan(document.data.indexOf('Supplier Totals'))
+    expect(document.data).toContain('Supplier Totals')
+    expect(document.data).toContain('Highest-Priority Purchases')
+    expect(document.data).toContain('Attached Purchase Orders')
+    expect(document.data).toContain(withDrafts.purchaseOrders[0].poDraftNumber)
+    expect(document.data).toContain('Detailed item lists are provided in the attached purchase orders')
+    expect(document.highestPriorityPurchases.length).toBeLessThanOrEqual(5)
+    expect(document.purchaseOrderReferences).toHaveLength(withDrafts.purchaseOrders.length)
+    expect(document.solution).toContain('Approved with Changes')
+    expect(document.solution).toContain('Signature:')
+    expect(document.solution).toContain('Printed name:')
+    expect(document.solution).toContain('Date:')
+    const retiredSections = [
+      'evaluation',
+      'risksAndExceptions',
+      'recommendation',
+      'purchaseSummary',
+      'accountSummary',
+      'expectedResult',
+    ]
+    retiredSections.forEach((section) => expect(document).not.toHaveProperty(section))
+
+    const approvedWithChanges = service.approveCswDocument(withCsw, document.id, {
+      approvedBy: 'Test Director',
+      withChanges: true,
+    })
+    expect(approvedWithChanges.cswDocuments[0].approvalStatus).toBe('APPROVED_WITH_MODIFICATIONS')
+    expect(approvedWithChanges.cswDocuments[0].approvalSignatureName).toBe('Test Director')
+    expect(approvedWithChanges.cswDocuments[0].approvalDate).not.toBeNull()
+
+    const migrated = service.importFromSeed({
+      ...withCsw,
+      cswDocuments: [{
+        ...document,
+        data: undefined,
+        solution: undefined,
+        evaluation: 'Legacy evaluation',
+        recommendation: 'Legacy recommendation',
+      } as unknown as typeof document],
+    })
+    expect(migrated.cswDocuments[0].data).toContain('Attached Purchase Orders')
+    expect(migrated.cswDocuments[0].purchaseOrderReferences.length).toBeGreaterThan(0)
+    expect(migrated.cswDocuments[0].solution).toContain('Approved with Changes')
+    expect(migrated.cswDocuments[0]).not.toHaveProperty('evaluation')
+    expect(migrated.cswDocuments[0]).not.toHaveProperty('recommendation')
+
+    const migratedRequester = service.importFromSeed({
+      ...withDrafts,
+      purchaseOrders: withDrafts.purchaseOrders.map((purchaseOrder) => ({
+        ...purchaseOrder,
+        requestedBy: 'Inventory Director',
+      })),
+    })
+    expect(migratedRequester.purchaseOrders[0].requestedBy).toBe('Dave Scott, Production Director')
   })
 
   it('records receipts and updates purchase order and inventory quantities', () => {

@@ -1,3 +1,5 @@
+import type { ThreeSectionCswContent } from './csw'
+
 export type InventoryRecordStatus = 'ACTIVE' | 'INACTIVE' | 'NEEDS_REVIEW'
 export type InventoryCountSessionStatus =
   | 'DRAFT'
@@ -292,8 +294,9 @@ export interface PurchaseOrderDraft {
   sourceInventoryCount: number
 }
 
-export interface InventoryCswDocument {
+export interface InventoryCswDocument extends ThreeSectionCswContent {
   id: string
+  referenceNumber: string
   title: string
   to: string
   from: string
@@ -314,13 +317,20 @@ export interface InventoryCswDocument {
   accountAllocationTotals: Record<string, number>
   urgentOrZeroStockItems: string[]
   itemsWithInsufficientCountsOrMissingPricing: string[]
-  situation: string
-  dataSummary: string
-  evaluation: string
-  purchaseSummary: string
-  accountSummary: string
-  risksAndExceptions: string
-  recommendation: string
+  highestPriorityPurchases: Array<{
+    item: string
+    supplier: string
+    quantity: number
+    subtotal: number
+    reason: string
+  }>
+  purchaseOrderReferences: Array<{
+    id: string
+    number: string
+    supplier: string
+    lineItemCount: number
+    total: number
+  }>
   approvalStatus: 'PENDING' | 'APPROVED' | 'APPROVED_WITH_MODIFICATIONS' | 'DISAPPROVED'
   approvalSignatureName: string | null
   approvalDate: string | null
