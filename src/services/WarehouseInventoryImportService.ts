@@ -3,9 +3,11 @@ import {
   WAREHOUSE_INVENTORY_WORKBOOK_NAME,
 } from '../data/warehouseInventoryWorkbookSeed'
 import type {
+  InventoryAdjustment,
   InventoryCategory,
   InventoryCountEntry,
   InventoryCountSession,
+  InventoryReceipt,
   InventoryFoundationState,
   InventoryItem,
   InventoryLocation,
@@ -48,6 +50,8 @@ const parseUnit = (value: string | null): { quantityPerPackage: number | null; u
 const nowIso = (): string => new Date().toISOString()
 
 const todayDate = (): string => new Date().toISOString().slice(0, 10)
+
+const asArray = <T>(value: unknown): T[] => (Array.isArray(value) ? value as T[] : [])
 
 const mergeRecommendationLists = (
   computed: InventoryPurchaseRecommendation[],
@@ -197,8 +201,17 @@ const buildStateFromSeed = (
   const importedAt = nowIso()
   const workbookName = WAREHOUSE_INVENTORY_WORKBOOK_NAME
 
-  const previousItemByWorkbookSourceId = new Map(previous?.items.map((item) => [item.workbookSourceId, item]))
-  const previousReservedByItemId = new Map(previous?.items.map((item) => [item.id, item.quantityReserved]))
+  const previousItems = asArray<InventoryItem>(previous?.items)
+  const previousRecommendations = asArray<InventoryPurchaseRecommendation>(previous?.recommendations)
+  const previousSessions = asArray<InventoryCountSession>(previous?.sessions)
+  const previousEntries = asArray<InventoryCountEntry>(previous?.entries)
+  const previousPurchaseOrders = asArray<PurchaseOrderDraft>(previous?.purchaseOrders)
+  const previousCswDocuments = asArray<InventoryCswDocument>(previous?.cswDocuments)
+  const previousAdjustments = asArray<InventoryAdjustment>(previous?.adjustments)
+  const previousReceipts = asArray<InventoryReceipt>(previous?.receipts)
+
+  const previousItemByWorkbookSourceId = new Map(previousItems.map((item) => [item.workbookSourceId, item]))
+  const previousReservedByItemId = new Map(previousItems.map((item) => [item.id, item.quantityReserved]))
 
   const categoryMap = new Map<string, InventoryCategory>()
   const locationMap = new Map<string, InventoryLocation>()
@@ -335,7 +348,7 @@ const buildStateFromSeed = (
     }))
 
   const items = [...importedItems, ...removedItems]
-  const recommendations = buildRecommendationList(items, previous?.recommendations)
+  const recommendations = buildRecommendationList(items, previousRecommendations)
 
   return {
     importedAt,
@@ -345,13 +358,13 @@ const buildStateFromSeed = (
     locations: [...locationMap.values()],
     units: [...unitMap.values()],
     suppliers: [...supplierMap.values()],
-    sessions: previous?.sessions ?? [],
-    entries: previous?.entries ?? [],
+    sessions: previousSessions,
+    entries: previousEntries,
     recommendations,
-    purchaseOrders: previous?.purchaseOrders ?? [],
-    cswDocuments: previous?.cswDocuments ?? [],
-    adjustments: previous?.adjustments ?? [],
-    receipts: previous?.receipts ?? [],
+    purchaseOrders: previousPurchaseOrders,
+    cswDocuments: previousCswDocuments,
+    adjustments: previousAdjustments,
+    receipts: previousReceipts,
     ruleTraces,
   }
 }

@@ -107,6 +107,36 @@ const getRecommendationPriority = (recommendation: InventoryPurchaseRecommendati
   return 'Routine'
 }
 
+const hasValidPersistedInventoryShape = (candidate: InventoryFoundationState | null): boolean => {
+	if (!candidate) return true
+	return Array.isArray((candidate as Partial<InventoryFoundationState>).items)
+		&& Array.isArray((candidate as Partial<InventoryFoundationState>).recommendations)
+		&& Array.isArray((candidate as Partial<InventoryFoundationState>).purchaseOrders)
+		&& Array.isArray((candidate as Partial<InventoryFoundationState>).cswDocuments)
+}
+
+const initializeInventoryState = (): { state: InventoryFoundationState; loadError: string | null } => {
+	try {
+		const loaded = inventoryService.load()
+		const hasInvalidShape = !hasValidPersistedInventoryShape(loaded)
+		const initialized = inventoryService.importFromSeed(loaded)
+		inventoryService.save(initialized)
+		return {
+			state: initialized,
+			loadError: hasInvalidShape
+				? 'Saved inventory data was in an outdated format. A fresh inventory snapshot was loaded instead.'
+				: null,
+		}
+	} catch {
+		const fallback = inventoryService.importFromSeed(null)
+		inventoryService.save(fallback)
+		return {
+			state: fallback,
+			loadError: 'Saved inventory data could not be loaded. A fresh inventory snapshot was loaded instead.',
+		}
+	}
+}
+
 const InventoryPage = () => {
 	const location = useLocation()
   const { productionJobs } = useAppState()
@@ -115,12 +145,9 @@ const InventoryPage = () => {
   const purchaseWorkspaceRef = useRef<HTMLElement | null>(null)
 	const drawerRef = useRef<HTMLElement | null>(null)
 
-	const [state, setState] = useState<InventoryFoundationState>(() => {
-		const loaded = inventoryService.load()
-		const initialized = inventoryService.importFromSeed(loaded)
-		inventoryService.save(initialized)
-		return initialized
-	})
+	const [initialization] = useState(initializeInventoryState)
+	const [state, setState] = useState<InventoryFoundationState>(initialization.state)
+	const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(initialization.loadError)
 
 	const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
 	const [searchQuery, setSearchQuery] = useState('')
@@ -449,6 +476,7 @@ const InventoryPage = () => {
 
 	const reimportWorkbook = (): void => {
 		saveState(inventoryService.importFromSeed(state))
+		setLoadErrorMessage(null)
 	}
 
 	const startWarehouseCount = (): void => {
@@ -561,6 +589,12 @@ const InventoryPage = () => {
 
 	return (
 		<section className="page inventory-foundation-page inventory-v2-page">
+			{loadErrorMessage ? (
+				<section className="panel">
+					<p className="warning">{loadErrorMessage}</p>
+				</section>
+			) : null}
+
 			<header className="inventory-v2-hero">
 				<div className="inventory-v2-hero-copy">
 					<span className="inventory-v2-eyebrow">Palette UI 2.0 · Warehouse Inventory</span>

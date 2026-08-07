@@ -240,4 +240,22 @@ describe('WarehouseInventoryImportService', () => {
     expect(reimported.sessions.length).toBe(withSession.sessions.length)
     expect(reimported.entries.length).toBe(withSession.entries.length)
   })
+
+  it('recovers from legacy persisted inventory state with missing list fields', () => {
+    const service = new WarehouseInventoryImportService()
+
+    const legacyState = {
+      importedAt: '2026-01-01T00:00:00.000Z',
+      workbookName: 'legacy-snapshot',
+    } as unknown as import('../types/inventory').InventoryFoundationState
+
+    expect(() => service.importFromSeed(legacyState)).not.toThrow()
+
+    const imported = service.importFromSeed(legacyState)
+    expect(imported.items.length).toBeGreaterThan(0)
+    expect(imported.purchaseOrders).toEqual([])
+    expect(imported.cswDocuments).toEqual([])
+    expect(imported.sessions).toEqual([])
+    expect(imported.entries).toEqual([])
+  })
 })
