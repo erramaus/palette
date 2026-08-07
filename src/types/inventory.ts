@@ -1,5 +1,13 @@
 export type InventoryRecordStatus = 'ACTIVE' | 'INACTIVE' | 'NEEDS_REVIEW'
-export type InventoryCountSessionStatus = 'DRAFT' | 'IN_PROGRESS' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
+export type InventoryCountSessionStatus =
+  | 'DRAFT'
+  | 'IN_PROGRESS'
+  | 'PAUSED'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'COMPLETED'
+  | 'CANCELLED'
 export type InventoryCountEntryStatus = 'DRAFT' | 'COUNTED' | 'NEEDS_REVIEW' | 'DISCREPANCY'
 export type InventoryRecommendationStatus =
   | 'NOT_REQUIRED'
@@ -132,6 +140,24 @@ export interface InventoryCountSession {
   entryIds: string[]
   submittedAt: string | null
   approvedAt: string | null
+  pausedAt?: string | null
+  resumedAt?: string | null
+  completedAt?: string | null
+  cancelledAt?: string | null
+}
+
+export interface InventoryActivityLogEntry {
+  id: string
+  occurredAt: string
+  action:
+    | 'COUNT_SESSION_STARTED'
+    | 'COUNT_SESSION_PAUSED'
+    | 'COUNT_SESSION_RESUMED'
+    | 'COUNT_SESSION_COMPLETED'
+    | 'COUNT_SESSION_CANCELLED'
+    | 'COUNT_SESSION_RESET'
+  sessionId: string
+  message: string
 }
 
 export interface InventoryAdjustment {
@@ -348,6 +374,7 @@ export interface InventoryFoundationState {
   cswDocuments: InventoryCswDocument[]
   adjustments: InventoryAdjustment[]
   receipts: InventoryReceipt[]
+  activityLog: InventoryActivityLogEntry[]
   ruleTraces: InventoryRuleTrace[]
 }
 

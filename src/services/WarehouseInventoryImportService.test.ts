@@ -77,7 +77,7 @@ describe('WarehouseInventoryImportService', () => {
     expect(sameItem?.quantityOnHand).toBe(beforeItem.quantityOnHand)
   })
 
-  it('updates stock only after approved count session', () => {
+  it('updates stock only after completed count session', () => {
     const service = new WarehouseInventoryImportService()
     const imported = service.importFromSeed(null)
     const beforeItem = imported.items[0]
@@ -90,11 +90,68 @@ describe('WarehouseInventoryImportService', () => {
       countedQuantity: beforeItem.quantityOnHand + 5,
       status: 'COUNTED',
     })
-    const submitted = service.submitCountSession(counted, withSession.sessions[0].id)
-    const approved = service.approveCountSession(submitted, withSession.sessions[0].id)
+    const completed = service.completeCountSession(counted, withSession.sessions[0].id)
 
-    const afterItem = approved.items.find((item) => item.id === beforeItem.id)
+    const afterItem = completed.items.find((item) => item.id === beforeItem.id)
     expect(afterItem?.quantityOnHand).toBe(beforeItem.quantityOnHand + 5)
+  })
+
+  it('pauses and resumes a count session without changing inventory quantities', () => {
+    const service = new WarehouseInventoryImportService()
+    const imported = service.importFromSeed(null)
+    const beforeItem = imported.items[0]
+
+    const started = service.startWarehouseCount(imported, '2026-08-03')
+    const paused = service.pauseCountSession(started, started.sessions[0].id)
+    const resumed = service.resumeCountSession(paused, paused.sessions[0].id)
+
+    expect(paused.sessions[0].status).toBe('PAUSED')
+    expect(resumed.sessions[0].status).toBe('IN_PROGRESS')
+    expect(resumed.items[0].quantityOnHand).toBe(beforeItem.quantityOnHand)
+  })
+
+  it('cancels a count session and keeps entered counts for audit without updating inventory', () => {
+    const service = new WarehouseInventoryImportService()
+    const imported = service.importFromSeed(null)
+    const beforeItem = imported.items[0]
+
+    const started = service.startWarehouseCount(imported, '2026-08-03')
+    const firstEntry = started.entries.find((entry) => entry.itemId === beforeItem.id)
+    expect(firstEntry).toBeDefined()
+
+    const updated = service.updateCountEntry(started, firstEntry!.id, {
+      countedQuantity: beforeItem.quantityOnHand + 8,
+      status: 'COUNTED',
+      countNotes: 'Audit retained on cancel',
+    })
+    const cancelled = service.cancelCountSession(updated, started.sessions[0].id)
+
+    const cancelledEntry = cancelled.entries.find((entry) => entry.id === firstEntry!.id)
+    const afterItem = cancelled.items.find((item) => item.id === beforeItem.id)
+
+    expect(cancelled.sessions[0].status).toBe('CANCELLED')
+    expect(cancelledEntry?.countedQuantity).toBe(beforeItem.quantityOnHand + 8)
+    expect(afterItem?.quantityOnHand).toBe(beforeItem.quantityOnHand)
+  })
+
+  it('resets a non-completed session by clearing draft counts only', () => {
+    const service = new WarehouseInventoryImportService()
+    const imported = service.importFromSeed(null)
+
+    const started = service.startWarehouseCount(imported, '2026-08-03')
+    const firstEntry = started.entries[0]
+    const updated = service.updateCountEntry(started, firstEntry.id, {
+      countedQuantity: firstEntry.previousOnHand + 3,
+      status: 'COUNTED',
+      countNotes: 'Temporary draft',
+    })
+
+    const reset = service.resetCountSession(updated, started.sessions[0].id)
+    const resetEntry = reset.entries.find((entry) => entry.id === firstEntry.id)
+
+    expect(resetEntry?.countedQuantity).toBeNull()
+    expect(resetEntry?.status).toBe('DRAFT')
+    expect(resetEntry?.countNotes).toBeNull()
   })
 
   it('reduces available quantity when reserving stock', () => {

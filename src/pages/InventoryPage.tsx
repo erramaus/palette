@@ -47,6 +47,22 @@ const formatDate = (value: string | null): string =>
 const formatDateTime = (value: string | null): string =>
   value ? new Date(value).toLocaleString() : '--'
 
+const formatSessionStatusLabel = (status: string): string => {
+	switch (status) {
+		case 'IN_PROGRESS':
+			return 'In Progress'
+		case 'PAUSED':
+			return 'Paused'
+		case 'COMPLETED':
+		case 'APPROVED':
+			return 'Completed'
+		case 'CANCELLED':
+			return 'Cancelled'
+		default:
+			return status.replace(/_/g, ' ')
+	}
+}
+
 const isLowStock = (item: InventoryItem): boolean =>
   item.reorderLevel !== null && item.quantityAvailable <= item.reorderLevel
 
@@ -325,8 +341,10 @@ const InventoryPage = () => {
 		[selectedItemId, state.items],
 	)
 
-	const latestSession = useMemo(
-		() => state.sessions.find((session) => session.status === 'IN_PROGRESS' || session.status === 'SUBMITTED') ?? null,
+	const latestSession = useMemo(() => state.sessions[0] ?? null, [state.sessions])
+
+	const activeSession = useMemo(
+		() => state.sessions.find((session) => session.status === 'IN_PROGRESS' || session.status === 'PAUSED') ?? null,
 		[state.sessions],
 	)
 
@@ -375,7 +393,7 @@ const InventoryPage = () => {
 	const countWorkspaceSummary = useMemo(() => {
 		const approvedEntryIds = new Set(
 			state.sessions
-				.filter((session) => session.status === 'APPROVED')
+				.filter((session) => session.status === 'COMPLETED' || session.status === 'APPROVED')
 				.flatMap((session) => session.entryIds),
 		)
 
@@ -506,14 +524,60 @@ const InventoryPage = () => {
 		saveState(inventoryService.startWarehouseCount(state))
 	}
 
-	const submitSession = (): void => {
-		if (!latestSession) return
-		saveState(inventoryService.submitCountSession(state, latestSession.id))
+	const saveSessionDrafts = (currentState: InventoryFoundationState): InventoryFoundationState => {
+		if (!activeSession) return currentState
+
+		return sessionEntries.reduce((nextState, entry) => {
+			const hasLocalChanges = entry.id in countValues || entry.id in countStatuses || entry.id in countNotes
+			if (!hasLocalChanges) return nextState
+
+			const quantityRaw = countValues[entry.id]
+			const quantity = quantityRaw === undefined
+				? entry.countedQuantity
+				: quantityRaw.trim() === ''
+					? null
+					: Number(quantityRaw)
+
+			return inventoryService.updateCountEntry(nextState, entry.id, {
+				countedQuantity: quantity,
+				status: countStatuses[entry.id] ?? (entry.status === 'DRAFT' ? 'COUNTED' : entry.status),
+				countNotes: countNotes[entry.id] ?? entry.countNotes ?? '',
+			})
+		}, currentState)
 	}
 
-	const approveSession = (): void => {
-		if (!latestSession) return
-		saveState(inventoryService.approveCountSession(state, latestSession.id))
+	const pauseSession = (): void => {
+		if (!activeSession || activeSession.status !== 'IN_PROGRESS') return
+		const stateWithDrafts = saveSessionDrafts(state)
+		saveState(inventoryService.pauseCountSession(stateWithDrafts, activeSession.id))
+	}
+
+	const resumeSession = (): void => {
+		if (!activeSession || activeSession.status !== 'PAUSED') return
+		saveState(inventoryService.resumeCountSession(state, activeSession.id))
+	}
+
+	const completeSession = (): void => {
+		if (!activeSession) return
+		const stateWithDrafts = saveSessionDrafts(state)
+		saveState(inventoryService.completeCountSession(stateWithDrafts, activeSession.id))
+	}
+
+	const cancelSession = (): void => {
+		if (!activeSession) return
+		const stateWithDrafts = saveSessionDrafts(state)
+		saveState(inventoryService.cancelCountSession(stateWithDrafts, activeSession.id))
+	}
+
+	const resetSession = (): void => {
+		if (!activeSession) return
+		const confirmed = window.confirm('Reset this count session? This clears draft counts only and cannot be undone.')
+		if (!confirmed) return
+		saveState(inventoryService.resetCountSession(state, activeSession.id))
+		const entryIds = new Set(activeSession.entryIds)
+		setCountValues((current) => Object.fromEntries(Object.entries(current).filter(([entryId]) => !entryIds.has(entryId))))
+		setCountStatuses((current) => Object.fromEntries(Object.entries(current).filter(([entryId]) => !entryIds.has(entryId))))
+		setCountNotes((current) => Object.fromEntries(Object.entries(current).filter(([entryId]) => !entryIds.has(entryId))))
 	}
 
 	const updateEntry = (entryId: string): void => {
@@ -628,9 +692,11 @@ const InventoryPage = () => {
 					</p>
 				</div>
 				<div className="inventory-v2-hero-actions">
-					<button type="button" className="btn btn-primary inventory-v2-count-cta" onClick={startWarehouseCount}>
-						Start Count Session
-					</button>
+						{!activeSession ? (
+							<button type="button" className="btn btn-primary inventory-v2-count-cta" onClick={startWarehouseCount}>
+								Start Count Session
+							</button>
+						) : null}
 					<button type="button" className="btn" onClick={reimportWorkbook}>
 						Reimport Workbook Seed
 					</button>
@@ -659,7 +725,7 @@ const InventoryPage = () => {
 				/>
 				<InventorySummaryCard
 					label="Active Count Session"
-					value={latestSession ? latestSession.status.replace('_', ' ') : 'None'}
+					value={latestSession ? formatSessionStatusLabel(latestSession.status) : 'None'}
 					detail={latestSession ? `Session date ${latestSession.inventoryDate}` : 'No active warehouse count in progress'}
 					tone={latestSession ? 'accent' : 'default'}
 				/>
@@ -812,14 +878,25 @@ const InventoryPage = () => {
 									<p>Dedicated warehouse count workspace with session progress, approval routing, and discrepancy handling.</p>
 								</div>
 								<div className="inventory-section-actions">
-									<button type="button" className="btn btn-primary inventory-v2-count-cta" onClick={startWarehouseCount}>
-										Start Count Session
-									</button>
-									{latestSession?.status === 'IN_PROGRESS' ? (
-										<button type="button" className="btn" onClick={submitSession}>Submit Count Session</button>
+									{!activeSession ? (
+										<button type="button" className="btn btn-primary inventory-v2-count-cta" onClick={startWarehouseCount}>
+											Start Count Session
+										</button>
 									) : null}
-									{latestSession?.status === 'SUBMITTED' ? (
-										<button type="button" className="btn" onClick={approveSession}>Approve Count Session</button>
+									{activeSession?.status === 'IN_PROGRESS' ? (
+										<>
+											<button type="button" className="btn" onClick={pauseSession}>Pause Count Session</button>
+											<button type="button" className="btn" onClick={completeSession}>Complete Count Session</button>
+											<button type="button" className="btn" onClick={cancelSession}>Cancel Count Session</button>
+											<button type="button" className="btn" onClick={resetSession}>Reset Count Session</button>
+										</>
+									) : null}
+									{activeSession?.status === 'PAUSED' ? (
+										<>
+											<button type="button" className="btn" onClick={resumeSession}>Resume Count Session</button>
+											<button type="button" className="btn" onClick={cancelSession}>Cancel Count Session</button>
+											<button type="button" className="btn" onClick={resetSession}>Reset Count Session</button>
+										</>
 									) : null}
 								</div>
 							</div>
@@ -833,7 +910,7 @@ const InventoryPage = () => {
 								<div className="inventory-mini-stat"><span>Approval Queue</span><strong>{countWorkspaceSummary.approvalQueue}</strong></div>
 							</div>
 
-							{!latestSession ? (
+							{!activeSession ? (
 								<p className="inventory-empty-state">No active count session. Start a warehouse count to populate draft counts and the approval queue.</p>
 							) : (
 								<div className="inventory-grid-scroll inventory-grid-scroll-short">
@@ -853,6 +930,7 @@ const InventoryPage = () => {
 										<tbody>
 											{sessionEntries.slice(0, 60).map((entry: InventoryCountEntry) => {
 												const item = state.items.find((candidate) => candidate.id === entry.itemId)
+												const countsEditable = activeSession.status === 'IN_PROGRESS'
 												return (
 													<tr key={entry.id}>
 														<td>{entry.locationName}</td>
@@ -862,13 +940,15 @@ const InventoryPage = () => {
 														<td>
 															<input
 																type="number"
-																value={countValues[entry.id] ?? ''}
+																value={countValues[entry.id] ?? (entry.countedQuantity === null ? '' : String(entry.countedQuantity))}
+																disabled={!countsEditable}
 																onChange={(event) => setCountValues((current) => ({ ...current, [entry.id]: event.target.value }))}
 															/>
 														</td>
 														<td>
 															<select
-																value={countStatuses[entry.id] ?? 'COUNTED'}
+																value={countStatuses[entry.id] ?? (entry.status === 'DRAFT' ? 'COUNTED' : entry.status)}
+																disabled={!countsEditable}
 																onChange={(event) => setCountStatuses((current) => ({ ...current, [entry.id]: event.target.value as InventoryCountEntryStatus }))}
 															>
 																<option value="COUNTED">COUNTED</option>
@@ -879,11 +959,12 @@ const InventoryPage = () => {
 														<td>
 															<input
 																type="text"
-																value={countNotes[entry.id] ?? ''}
+																value={countNotes[entry.id] ?? entry.countNotes ?? ''}
+																disabled={!countsEditable}
 																onChange={(event) => setCountNotes((current) => ({ ...current, [entry.id]: event.target.value }))}
 															/>
 														</td>
-														<td><button type="button" className="btn" onClick={() => updateEntry(entry.id)}>Save</button></td>
+														<td><button type="button" className="btn" disabled={!countsEditable} onClick={() => updateEntry(entry.id)}>Save</button></td>
 													</tr>
 												)
 											})}

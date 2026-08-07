@@ -7,6 +7,7 @@ import type {
   InventoryCategory,
   InventoryCountEntry,
   InventoryCountSession,
+  InventoryActivityLogEntry,
   InventoryReceipt,
   InventoryFoundationState,
   InventoryItem,
@@ -209,6 +210,7 @@ const buildStateFromSeed = (
   const previousCswDocuments = asArray<InventoryCswDocument>(previous?.cswDocuments)
   const previousAdjustments = asArray<InventoryAdjustment>(previous?.adjustments)
   const previousReceipts = asArray<InventoryReceipt>(previous?.receipts)
+  const previousActivityLog = asArray<InventoryActivityLogEntry>(previous?.activityLog)
 
   const previousItemByWorkbookSourceId = new Map(previousItems.map((item) => [item.workbookSourceId, item]))
   const previousReservedByItemId = new Map(previousItems.map((item) => [item.id, item.quantityReserved]))
@@ -365,6 +367,7 @@ const buildStateFromSeed = (
     cswDocuments: previousCswDocuments,
     adjustments: previousAdjustments,
     receipts: previousReceipts,
+    activityLog: previousActivityLog,
     ruleTraces,
   }
 }
@@ -403,7 +406,7 @@ const applyApprovedSession = (state: InventoryFoundationState, session: Inventor
 
   for (const entryId of session.entryIds) {
     const entry = entryById.get(entryId)
-    if (!entry || entry.countedQuantity === null) continue
+    if (!entry || entry.countedQuantity === null || entry.status !== 'COUNTED') continue
     const item = itemById.get(entry.itemId)
     if (!item) continue
 
@@ -434,6 +437,24 @@ const applyApprovedSession = (state: InventoryFoundationState, session: Inventor
     recommendations,
   }
 }
+
+const appendActivityLogEntry = (
+  state: InventoryFoundationState,
+  input: {
+    action: InventoryActivityLogEntry['action']
+    sessionId: string
+    message: string
+  },
+): InventoryActivityLogEntry[] => [
+  {
+    id: makeId('inv-activity', `${input.action}-${input.sessionId}-${nowIso()}`),
+    occurredAt: nowIso(),
+    action: input.action,
+    sessionId: input.sessionId,
+    message: input.message,
+  },
+  ...state.activityLog,
+]
 
 const buildPurchaseOrderDrafts = (state: InventoryFoundationState, requestedBy: string): PurchaseOrderDraft[] => {
   const eligibleRecommendations = state.recommendations.filter((recommendation) => {
@@ -646,6 +667,11 @@ export class WarehouseInventoryImportService {
   }
 
   startWarehouseCount(state: InventoryFoundationState, inventoryDate = todayDate()): InventoryFoundationState {
+    const existingOpenSession = state.sessions.find((session) => session.status === 'IN_PROGRESS' || session.status === 'PAUSED')
+    if (existingOpenSession) {
+      throw new Error('A count session is already active. Pause, complete, cancel, or reset it before starting a new session.')
+    }
+
     const sessionId = makeId('inv-session', `${inventoryDate}-${state.sessions.length + 1}`)
     const sessionEntries = buildCountEntries(state, sessionId)
 
@@ -660,12 +686,137 @@ export class WarehouseInventoryImportService {
       entryIds: sessionEntries.map((entry) => entry.id),
       submittedAt: null,
       approvedAt: null,
+      pausedAt: null,
+      resumedAt: null,
+      completedAt: null,
+      cancelledAt: null,
     }
 
     return {
       ...state,
       sessions: [session, ...state.sessions],
       entries: [...sessionEntries, ...state.entries],
+      activityLog: appendActivityLogEntry(state, {
+        action: 'COUNT_SESSION_STARTED',
+        sessionId,
+        message: `Count session started for ${inventoryDate}.`,
+      }),
+    }
+  }
+
+  pauseCountSession(state: InventoryFoundationState, sessionId: string): InventoryFoundationState {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId)
+    if (!session) throw new Error('Count session not found.')
+    if (session.status !== 'IN_PROGRESS') throw new Error('Only in-progress sessions can be paused.')
+
+    const pausedAt = nowIso()
+    return {
+      ...state,
+      sessions: state.sessions.map((candidate) => candidate.id === sessionId
+        ? { ...candidate, status: 'PAUSED', pausedAt }
+        : candidate),
+      activityLog: appendActivityLogEntry(state, {
+        action: 'COUNT_SESSION_PAUSED',
+        sessionId,
+        message: `Count session paused on ${pausedAt}.`,
+      }),
+    }
+  }
+
+  resumeCountSession(state: InventoryFoundationState, sessionId: string): InventoryFoundationState {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId)
+    if (!session) throw new Error('Count session not found.')
+    if (session.status !== 'PAUSED') throw new Error('Only paused sessions can be resumed.')
+
+    const resumedAt = nowIso()
+    return {
+      ...state,
+      sessions: state.sessions.map((candidate) => candidate.id === sessionId
+        ? { ...candidate, status: 'IN_PROGRESS', resumedAt }
+        : candidate),
+      activityLog: appendActivityLogEntry(state, {
+        action: 'COUNT_SESSION_RESUMED',
+        sessionId,
+        message: `Count session resumed on ${resumedAt}.`,
+      }),
+    }
+  }
+
+  completeCountSession(state: InventoryFoundationState, sessionId: string): InventoryFoundationState {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId)
+    if (!session) throw new Error('Count session not found.')
+    if (session.status !== 'IN_PROGRESS' && session.status !== 'PAUSED') {
+      throw new Error('Only in-progress or paused sessions can be completed.')
+    }
+
+    const completedSession: InventoryCountSession = {
+      ...session,
+      status: 'COMPLETED',
+      completedAt: nowIso(),
+    }
+
+    const withCompletedSession: InventoryFoundationState = {
+      ...state,
+      sessions: state.sessions.map((candidate) => candidate.id === sessionId ? completedSession : candidate),
+    }
+    const withAppliedCounts = applyApprovedSession(withCompletedSession, completedSession)
+
+    return {
+      ...withAppliedCounts,
+      activityLog: appendActivityLogEntry(withAppliedCounts, {
+        action: 'COUNT_SESSION_COMPLETED',
+        sessionId,
+        message: `Count session completed and approved counts were applied for ${completedSession.inventoryDate}.`,
+      }),
+    }
+  }
+
+  cancelCountSession(state: InventoryFoundationState, sessionId: string): InventoryFoundationState {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId)
+    if (!session) throw new Error('Count session not found.')
+    if (session.status !== 'IN_PROGRESS' && session.status !== 'PAUSED') {
+      throw new Error('Only in-progress or paused sessions can be cancelled.')
+    }
+
+    const cancelledAt = nowIso()
+    return {
+      ...state,
+      sessions: state.sessions.map((candidate) => candidate.id === sessionId
+        ? { ...candidate, status: 'CANCELLED', cancelledAt }
+        : candidate),
+      activityLog: appendActivityLogEntry(state, {
+        action: 'COUNT_SESSION_CANCELLED',
+        sessionId,
+        message: `Count session cancelled on ${cancelledAt}. Entered counts were retained for audit.`,
+      }),
+    }
+  }
+
+  resetCountSession(state: InventoryFoundationState, sessionId: string): InventoryFoundationState {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId)
+    if (!session) throw new Error('Count session not found.')
+    if (session.status === 'COMPLETED' || session.status === 'APPROVED') {
+      throw new Error('Completed sessions cannot be reset.')
+    }
+
+    const entryIds = new Set(session.entryIds)
+    return {
+      ...state,
+      entries: state.entries.map((entry) => {
+        if (!entryIds.has(entry.id)) return entry
+        return {
+          ...entry,
+          countedQuantity: null,
+          status: 'DRAFT',
+          countNotes: null,
+          discrepancyNotes: null,
+        }
+      }),
+      activityLog: appendActivityLogEntry(state, {
+        action: 'COUNT_SESSION_RESET',
+        sessionId,
+        message: `Count session reset. Draft counts were cleared for ${session.inventoryDate}.`,
+      }),
     }
   }
 
