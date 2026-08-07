@@ -4,6 +4,7 @@ import SummaryCard from '../components/dashboard/SummaryCard'
 import { ProductionAnalyticsService } from '../services/ProductionAnalyticsService'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { IntelligenceService } from '../services/intelligence/IntelligenceService'
+import CommandCenterRecordList, { type CommandCenterRecord } from '../components/common/CommandCenterRecordList'
 import { useAppState } from '../state/AppStateContext'
 import type { IntelligenceRecommendation, RiskLevel } from '../types/productionIntelligence'
 import type { ProductionMetricDefinition } from '../types/productionAnalytics'
@@ -210,6 +211,65 @@ const DashboardPage = () => {
   const activeProductionCount = productionJobs.filter(
     (job) => !job.onHold && job.steps.SHIPPED !== 'COMPLETE',
   ).length
+
+  const jobById = useMemo(
+    () => new Map(productionJobs.map((job) => [job.id, job])),
+    [productionJobs],
+  )
+
+  const todayScheduledOperations = useMemo(
+    () => scheduleResult.entries.filter((entry) => entry.plannedStart.slice(0, 10) === today),
+    [scheduleResult.entries, today],
+  )
+
+  const productionHealthRecords = useMemo<CommandCenterRecord[]>(() => {
+    const records: CommandCenterRecord[] = productionJobs
+      .filter((job) => job.dueStatus === 'OVERDUE' || job.dueStatus === 'AT_RISK' || job.onHold || job.dueStatus === 'DUE_TODAY')
+      .map((job) => ({
+        id: job.id,
+        workItemId: job.id,
+        orderLabel: job.orderNumber,
+        status: job.onHold ? 'ON_HOLD' : job.dueStatus,
+        statusTone: job.onHold ? 'blocked' : job.dueStatus === 'OVERDUE' ? 'late' : job.dueStatus === 'AT_RISK' ? 'review' : job.dueStatus === 'DUE_TODAY' ? 'progress' : 'ready',
+        dueDate: job.dueDate,
+        customer: job.customerName,
+        artwork: job.artworkTitle,
+        currentOperation: job.steps.SHIPPED === 'COMPLETE'
+          ? 'COMPLETE'
+          : PRODUCTION_STEP_LABELS[
+              PRODUCTION_STEP_SEQUENCE.find((step) => job.steps[step] === 'WAITING') ?? 'FILES'
+            ],
+        assignedEmployee: employees.find((employee) => employee.id === job.assignedWorkerId)?.name ?? job.assignedWorkerId ?? '--',
+        priority: job.priority === 'ORIGINALS' ? 100 : job.priority === 'CUSTOMER_PURCHASED' ? 80 : 60,
+        estimatedRemainingMinutes: PRODUCTION_STEP_SEQUENCE
+          .filter((step) => job.steps[step] !== 'COMPLETE')
+          .reduce((sum, step) => sum + job.estimatedMinutes[step], 0),
+        searchText: [job.orderNumber, job.customerName, job.artworkTitle, job.assignedWorkerId, job.notes].join(' '),
+      }))
+
+    return records.sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0))
+  }, [employees, productionJobs])
+
+  const todayProductionRecords = useMemo<CommandCenterRecord[]>(() => {
+    return todayScheduledOperations.map((entry) => {
+      const job = jobById.get(entry.workItemId)
+      return {
+        id: entry.id,
+        workItemId: entry.workItemId,
+        orderLabel: entry.orderNumber,
+        status: entry.status,
+        statusTone: entry.status === 'BLOCKED' ? 'blocked' : entry.status === 'IN_PROGRESS' ? 'progress' : entry.status === 'COMPLETE' ? 'complete' : 'ready',
+        dueDate: entry.dueDate,
+        customer: job?.customerName ?? '--',
+        artwork: job?.artworkTitle ?? entry.pieceLabel,
+        currentOperation: entry.operation,
+        assignedEmployee: entry.assignedEmployee,
+        priority: entry.priority,
+        estimatedRemainingMinutes: entry.estimatedMinutes,
+        searchText: [entry.orderNumber, entry.pieceLabel, entry.operation, entry.assignedEmployee, job?.customerName ?? '', job?.artworkTitle ?? ''].join(' '),
+      }
+    })
+  }, [jobById, todayScheduledOperations])
 
   useEffect(() => {
     if (!location.hash) return
@@ -636,6 +696,12 @@ const DashboardPage = () => {
         <p className="dashboard-intelligence-explanation">
           {intelligenceFoundation.health.explanation}
         </p>
+        <CommandCenterRecordList
+          title="Production Health Drilldown"
+          description="Open work items grouped by live status, sorted by urgency, and searchable by order, customer, artwork, employee, or operation."
+          records={productionHealthRecords}
+          onOpenRecord={(record) => navigate(`/work-items/${record.workItemId}`)}
+        />
       </section>
 
       <section className="panel dashboard-predictive-panel">
@@ -910,6 +976,12 @@ const DashboardPage = () => {
       <section className="dashboard-two-col">
         <article id="timeline" className="panel">
           <h3>Today's Production</h3>
+          <CommandCenterRecordList
+            title="Today's Assigned Operations"
+            description="Scheduled work items for the current day, grouped by execution status and filtered by urgency."
+            records={todayProductionRecords}
+            onOpenRecord={(record) => navigate(`/work-items/${record.workItemId}`)}
+          />
           <div className="dashboard-employee-grid">
             {employeeRows.map((row) => (
               <article key={row.worker.id} className="dashboard-employee-card">

@@ -695,6 +695,113 @@ ul {
   font-size: 0.9rem;
 }
 
+.command-center-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.command-center-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.command-center-toolbar label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.command-center-toolbar input,
+.command-center-toolbar select {
+  width: 100%;
+}
+
+.command-center-status-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.command-center-status-group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+.command-center-record-list {
+  gap: 10px;
+}
+
+.command-center-record-item {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+
+.command-center-record-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid #e4e8ef;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.command-center-record-button:hover,
+.command-center-record-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: #c9d3e1;
+  box-shadow: 0 8px 24px rgba(30, 42, 74, 0.08);
+}
+
+.command-center-record-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.command-center-record-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.command-center-record-head strong {
+  display: block;
+  color: var(--text);
+}
+
+.command-center-record-head p,
+.command-center-record-main p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.command-center-record-action {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--brand);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.command-center-list-panel .badge {
+  white-space: nowrap;
+}
+
 .subtle {
   color: var(--muted);
   font-size: 0.9rem;

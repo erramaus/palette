@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import CommandCenterRecordList, { type CommandCenterRecord } from '../components/common/CommandCenterRecordList'
 import { BattlePlanOptimizationService } from '../services/BattlePlanOptimizationService'
 import { WarehouseInventoryImportService } from '../services/WarehouseInventoryImportService'
 import { buildMaterialInventoryBalancesFromWorkbookItems } from '../services/MaterialForecastService'
@@ -167,6 +168,35 @@ const BattlePlansPage = () => {
   const capacityByEmployeeId = useMemo(
     () => new Map(scheduleResult.employeeCapacity.map((capacity) => [capacity.employeeId, capacity])),
     [scheduleResult.employeeCapacity],
+  )
+  const operationQueueRecords = useMemo<CommandCenterRecord[]>(
+    () =>
+      operationBattlePlanItems.map((entry) => {
+        const job = productionJobs.find((candidate) => candidate.id === entry.workItemId)
+        return {
+          id: entry.id,
+          workItemId: entry.workItemId,
+          orderLabel: entry.orderNumber,
+          status: entry.status,
+          statusTone:
+            entry.status === 'BLOCKED'
+              ? 'blocked'
+              : entry.status === 'IN_PROGRESS'
+                ? 'progress'
+                : entry.status === 'COMPLETE'
+                  ? 'complete'
+                  : 'ready',
+          dueDate: entry.dueDate,
+          customer: job?.customerName ?? '--',
+          artwork: job?.artworkTitle ?? entry.pieceLabel,
+          currentOperation: entry.operation,
+          assignedEmployee: entry.assignedEmployee !== 'UNASSIGNED' ? getEmployeeName(employees, entry.assignedEmployee) : 'Unassigned',
+          priority: entry.priority,
+          estimatedRemainingMinutes: entry.estimatedMinutes,
+          searchText: [entry.orderNumber, entry.pieceLabel, entry.operation, job?.customerName ?? '', job?.artworkTitle ?? '', entry.assignedEmployee].join(' '),
+        }
+      }),
+    [employees, operationBattlePlanItems, productionJobs],
   )
   const formatLatestScheduledFinish = (taskIds: string[]): string => {
     const latestFinish = taskIds
@@ -1466,27 +1496,13 @@ const BattlePlansPage = () => {
       </div>
 
       <section className="panel">
-        <div className="work-item-section-header">
-          <div>
-            <h3>Production Operation Queue</h3>
-            <p className="subtle">Automatic Battle Plan intake generated from WorkItem operations.</p>
-          </div>
-          <span className="badge">Newest 20 of {operationBattlePlanItems.length}</span>
-        </div>
-        <div className="table-wrap">
-          <table className="workshop-table">
-            <thead><tr><th>Assigned</th><th>Operation</th><th>Order</th><th>Piece</th><th>Estimate</th><th>Due</th><th>Status</th></tr></thead>
-            <tbody>
-              {operationBattlePlanItems.slice(-20).reverse().map((item) => (
-                <tr key={item.operationId}>
-                  <td>{item.assignedEmployee !== 'UNASSIGNED' ? getEmployeeName(employees, item.assignedEmployee) : 'Unassigned'}</td>
-                  <td><strong>{item.operation}</strong></td><td>{item.orderNumber}</td><td>{item.pieceLabel}</td>
-                  <td>{item.estimatedMinutes} min</td><td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '--'}</td><td>{item.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CommandCenterRecordList
+          title="Production Operation Queue"
+          description="Automatic Battle Plan intake generated from work item operations."
+          records={operationQueueRecords}
+          onOpenRecord={(record) => navigate(`/work-items/${record.workItemId}`)}
+          openLabel="Open Work Item"
+        />
       </section>
 
       <div className="panel battle-plan-tabs-panel">

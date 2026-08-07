@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
 import type { ForecastConfig } from '../types/productionForecasting'
@@ -36,6 +36,31 @@ const SettingsPage = () => {
 	const [pendingBackup, setPendingBackup] = useState<PendingBackup | null>(null)
 	const [restoreConfirmed, setRestoreConfirmed] = useState(false)
 	const [backupMessage, setBackupMessage] = useState<string | null>(null)
+	const [employeeSearch, setEmployeeSearch] = useState('')
+	const [employeeSort, setEmployeeSort] = useState<'name' | 'role' | 'status'>('name')
+
+	const employeeRows = useMemo(() => {
+		const normalizedSearch = employeeSearch.trim().toLowerCase()
+		return [...employees]
+			.filter((employee) => {
+				if (!normalizedSearch) return true
+				return [employee.id, employee.name, employee.role, employee.skills.join(' '), employee.active ? 'active' : 'inactive']
+					.join(' ')
+					.toLowerCase()
+					.includes(normalizedSearch)
+			})
+			.sort((left, right) => {
+				switch (employeeSort) {
+					case 'role':
+						return left.role.localeCompare(right.role)
+					case 'status':
+						return Number(right.active) - Number(left.active)
+					case 'name':
+					default:
+						return left.name.localeCompare(right.name)
+				}
+			})
+	}, [employeeSearch, employeeSort, employees])
 
 	useEffect(() => {
 		const params = new URLSearchParams(location.search)
@@ -111,8 +136,27 @@ const SettingsPage = () => {
 			<section id="employees" className="panel">
 				<h3>Employees</h3>
 				<p className="subtle">{employees.filter((employee) => employee.active).length} active employees are available in the current app state.</p>
+				<div className="command-center-summary-grid">
+					<span className="badge">Total {employees.length}</span>
+					<span className="badge">Active {employees.filter((employee) => employee.active).length}</span>
+					<span className="badge">Inactive {employees.filter((employee) => !employee.active).length}</span>
+				</div>
+				<div className="command-center-toolbar">
+					<label>
+						Search
+						<input type="search" value={employeeSearch} onChange={(event) => setEmployeeSearch(event.target.value)} placeholder="Name, role, skill" />
+					</label>
+					<label>
+						Sort
+						<select value={employeeSort} onChange={(event) => setEmployeeSort(event.target.value as 'name' | 'role' | 'status')}>
+							<option value="name">Name</option>
+							<option value="role">Role</option>
+							<option value="status">Status</option>
+						</select>
+					</label>
+				</div>
 				<div className="dashboard-employee-grid">
-					{employees.filter((employee) => employee.active).slice(0, 6).map((employee) => (
+					{employeeRows.filter((employee) => employee.active).slice(0, 6).map((employee) => (
 						<article key={employee.id} className="dashboard-employee-card">
 							<div>
 								<h4>{employee.name}</h4>
@@ -120,6 +164,30 @@ const SettingsPage = () => {
 							</div>
 						</article>
 					))}
+				</div>
+				<div className="table-wrap settings-employee-table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Role</th>
+								<th>Skills</th>
+								<th>Default Minutes</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							{employeeRows.map((employee) => (
+								<tr key={employee.id}>
+									<td>{employee.name}</td>
+									<td>{employee.role.replaceAll('_', ' ')}</td>
+									<td>{employee.skills.join(', ')}</td>
+									<td>{employee.defaultAvailableMinutes}</td>
+									<td>{employee.active ? 'Active' : 'Inactive'}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
 				</div>
 			</section>
 
