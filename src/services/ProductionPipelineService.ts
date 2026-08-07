@@ -308,13 +308,37 @@ export class ProductionPipelineService {
   rebuildOrder(workItem: WorkItem, input: PipelineOrderInput): PipelineImportResult {
     const cutCalculations = this.calculateCuts(input)
     const operationNames = this.buildOperationRoute(input.productType, cutCalculations)
-    const operations = this.createOperations(workItem, operationNames, cutCalculations)
-
     workItem.type = input.productType
     workItem.priority = input.priority
     workItem.dueDate = input.dueDate
     workItem.assignedEmployeeId = input.assignedEmployeeId
     workItem.notes = [...input.notes]
+    const existingOperationsByName = new Map(
+      this.getOperations(workItem).map((operation) => [operation.name, operation]),
+    )
+    const operations = this.createOperations(workItem, operationNames, cutCalculations).map((operation) => {
+      const existing = existingOperationsByName.get(operation.name)
+      if (!existing) return operation
+
+      return {
+        ...operation,
+        id: existing.id,
+        status: existing.status,
+        notes: existing.notes,
+        startedAt: existing.startedAt,
+        startedBy: existing.startedBy,
+        completedAt: existing.completedAt,
+        completedBy: existing.completedBy,
+        block: existing.block,
+        blockHistory: existing.blockHistory,
+        completionHistory: existing.completionHistory,
+        carryForwardHistory: existing.carryForwardHistory,
+        history: existing.history,
+        tagIds: existing.tagIds,
+        tagStatus: existing.tagStatus,
+      }
+    })
+
     workItem.customFields = {
       ...workItem.customFields,
       pipeline: {

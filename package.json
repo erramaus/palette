@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:workshop-seed": "tsx scripts/generateWorkshopProductionSheetSeed.ts",
     "test": "vitest run",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -23,6 +24,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
     "sharp": "^0.35.3",
+    "tsx": "^4.23.9",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^4.1.10",

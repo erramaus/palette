@@ -1,10 +1,12 @@
 import { mockEmployees } from '../data/mockEmployees'
-import { mockProductionJobs } from '../data/mockProductionJobs'
+import { workshopProductionSheetJobs } from '../data/workshopProductionSheetJobs'
 import type { ProductType, ProductionJob } from '../types/production'
 import type { CanonicalOrderImport, NormalizationResult } from '../types/orderImport'
 import { OrderImportService } from './OrderImportService'
 import {
   ProductionPipelineService,
+  type ProductionOperation,
+  type ProductionOperationName,
   type ProductionPipelineResult,
 } from './ProductionPipelineService'
 import { WorkItemService, type WorkflowContext } from './WorkItemService'
@@ -92,6 +94,50 @@ const inferDepartment = (job: ProductionJob): string => {
   }
 
   return 'Production'
+}
+
+const SOURCE_STEP_BY_OPERATION: Partial<Record<ProductionOperationName, keyof ProductionJob['steps']>> = {
+  FILES: 'FILES',
+  PRINT: 'PRINTED',
+  PRINTED: 'PRINTED',
+  DIBOND: 'DIBOND',
+  BASE_CUT: 'STRETCHER_BASE',
+  BASE_ASSEMBLY: 'STRETCHER_BASE',
+  STRETCHER_CUT: 'STRETCHER_BASE',
+  STRETCHER_ASSEMBLY: 'STRETCHER_BASE',
+  STRETCHER: 'STRETCHER_BASE',
+  MOUNT: 'MOUNTED',
+  FRAME_CUT: 'FRAME_MADE',
+  FRAME_ASSEMBLY: 'FRAME_MADE',
+  FRAME: 'FRAMED',
+  SHIPPING: 'SHIPPED',
+}
+
+const hasPaletteLifecycle = (operation: ProductionOperation): boolean =>
+  Boolean(
+    operation.startedAt
+    || operation.completedAt
+    || operation.block
+    || operation.blockHistory.length
+    || operation.completionHistory.length
+    || operation.carryForwardHistory.length
+    || operation.history.length,
+  )
+
+const applySourceCompletion = (
+  job: ProductionJob,
+  operations: ProductionOperation[],
+): void => {
+  for (const operation of operations) {
+    const sourceStep = SOURCE_STEP_BY_OPERATION[operation.name]
+    if (
+      sourceStep
+      && job.steps[sourceStep] === 'COMPLETE'
+      && !hasPaletteLifecycle(operation)
+    ) {
+      operation.status = 'COMPLETE'
+    }
+  }
 }
 
 const createWorkflowContexts = (workflowService: WorkflowService): Record<string, WorkflowContext> => {
@@ -324,7 +370,6 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     const priority = requireNormalized('priority', canonicalImport.priority)
     const departmentName = inferDepartment(job)
     const packagingMethod = canonicalImport.shippingOrPickupMethod.normalized
-      ?? (productType === 'GALLERY_INVENTORY' ? 'GALLERY' : 'STANDARD_BOX')
     const pieceKey = productionPiece.key
     const sourceRecordId = typeof job.originalImport?.sourceRecordId === 'string' ? job.originalImport.sourceRecordId : job.id
     const existingSourceRecordWorkItemId = workItemIdBySourceRecordId.get(sourceRecordId)
@@ -355,12 +400,13 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
           canonicalOrderImport: canonicalImport,
           frameStyle: frameSelection,
           departmentTag: normalize(departmentName).replaceAll(' ', '_').toUpperCase(),
-          packagingMethod,
+          ...(packagingMethod ? { packagingMethod } : {}),
         },
       })
 
       workItemIdByPieceKey.set(pieceKey, rebuilt.workItem.id)
       workItemIdByOrderNumber.set(orderNumber, rebuilt.workItem.id)
+      applySourceCompletion(job, rebuilt.operations)
       return {
         workItem: rebuilt.workItem,
         operations: rebuilt.operations,
@@ -404,7 +450,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
         canonicalOrderImport: canonicalImport,
         frameStyle: frameSelection,
         departmentTag: normalize(departmentName).replaceAll(' ', '_').toUpperCase(),
-        packagingMethod,
+        ...(packagingMethod ? { packagingMethod } : {}),
       },
     })
 
@@ -418,6 +464,8 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
       workItemService.updateWorkItem(result.workItem.id, { status: 'BLOCKED' })
     }
 
+    applySourceCompletion(job, result.operations)
+
     if (job.steps.SHIPPED === 'COMPLETE') {
       workItemService.updateWorkItem(result.workItem.id, { status: 'COMPLETE' })
     }
@@ -428,7 +476,7 @@ export const createWorkshopListUiEnvironment = (): WorkshopListUiEnvironment => 
     }
   }
 
-  for (const job of mockProductionJobs) {
+  for (const job of workshopProductionSheetJobs) {
     ingestProductionJob(job)
   }
 

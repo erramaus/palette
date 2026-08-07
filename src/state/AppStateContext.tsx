@@ -11,8 +11,7 @@ import {
 import { createEntityId } from '../utils/id'
 import { nowIso } from '../utils/time'
 import { mockEmployees } from '../data/mockEmployees'
-import { mockProductionJobs } from '../data/mockProductionJobs'
-import { mockBattlePlans } from '../data/mockBattlePlans'
+import { workshopProductionSheetJobs } from '../data/workshopProductionSheetJobs'
 import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
 import type {
   OperationIntelligenceSignal,
@@ -269,7 +268,7 @@ const syncJobFilesStep = (
 
 const buildInitialThreeDPreparations = (): ThreeDFilePreparation[] => {
   const environment = getWorkshopListUiEnvironment()
-  return mockProductionJobs
+  return workshopProductionSheetJobs
     .filter((job) => isThreeDProductType(job.productType))
     .map((job) => {
       const workItemId = environment.getWorkItemIdForOrderNumber(job.orderNumber) ?? `WI-${job.orderNumber}`
@@ -315,12 +314,12 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   }, [environment, persistenceService])
-  const [productionJobs, setProductionJobs] = useState<ProductionJob[]>(initialPersistence.snapshot?.data.orders ?? mockProductionJobs)
+  const [productionJobs, setProductionJobs] = useState<ProductionJob[]>(initialPersistence.snapshot?.data.orders ?? workshopProductionSheetJobs)
   const [threeDFilePreparations, setThreeDFilePreparations] = useState<ThreeDFilePreparation[]>(
     initialPersistence.snapshot?.data.productionPieces ?? buildInitialThreeDPreparations(),
   )
   const [battlePlans, setBattlePlans] = useState<BattlePlan[]>(
-    ensureRecurringInventoryBattlePlanTasks(initialPersistence.snapshot?.data.battlePlans ?? mockBattlePlans),
+    ensureRecurringInventoryBattlePlanTasks(initialPersistence.snapshot?.data.battlePlans ?? []),
   )
   const [activityLogs, setActivityLogs] = useState<AppActivityLog[]>(initialPersistence.snapshot?.data.activityLogs ?? [])
   const [forecastSettings, setForecastSettings] = useState<ForecastConfig>(() => ({
@@ -1108,9 +1107,9 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const resetLocalPersistence = useCallback((): void => {
     persistenceService.reset()
     environment.workItemService.replaceAllWorkItems(baselineWorkItems)
-    setProductionJobs(mockProductionJobs)
+    setProductionJobs(workshopProductionSheetJobs)
     setThreeDFilePreparations(buildInitialThreeDPreparations())
-    setBattlePlans(ensureRecurringInventoryBattlePlanTasks(mockBattlePlans))
+    setBattlePlans(ensureRecurringInventoryBattlePlanTasks([]))
     setForecastSettings(DEFAULT_FORECAST_CONFIG)
     setAnalyticsTargets(DEFAULT_PRODUCTION_ANALYTICS_TARGETS)
     setOptimizationWeights(DEFAULT_OPTIMIZATION_WEIGHTS)

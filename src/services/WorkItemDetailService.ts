@@ -3,7 +3,7 @@ import type { ProductType, ProductionJob } from '../types/production'
 import type { ProductionCutCalculationResult } from '../types/productionCut'
 import type { WorkItem, WorkflowStage } from '../models'
 import type { ProductionTag } from '../types/entities'
-import { mockProductionJobs } from '../data/mockProductionJobs'
+import { workshopProductionSheetJobs } from '../data/workshopProductionSheetJobs'
 import { nowIso } from '../utils/time'
 import {
   ProductionTagService,
@@ -114,7 +114,7 @@ export class WorkItemDetailService {
     this.productsById = new Map()
     this.departmentsById = new Map()
     this.employeesById = new Map(environment.employees.map((employee) => [employee.id, employee]))
-    this.refreshLookupMaps(mockProductionJobs)
+    this.refreshLookupMaps(workshopProductionSheetJobs)
 
     const lookupProvider: ProductionTagLookupProvider = {
       getCustomerName: (customerId) => this.customersById.get(customerId)?.name,

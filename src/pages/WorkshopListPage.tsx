@@ -20,6 +20,7 @@ import {
   type WorkshopListUiEnvironment,
 } from '../services/workshopListUiBootstrap'
 import { getPriorityPresentation } from '../utils/priorityPresentation'
+import { formatDateOnly } from '../utils/time'
 
 type SortableColumn =
   | 'priority'
@@ -97,11 +98,7 @@ const statusBadgeTone = (status: string): string => {
 }
 
 const formatDate = (value?: string): string => {
-  if (!value) {
-    return '--'
-  }
-
-  return new Date(value).toLocaleDateString()
+  return formatDateOnly(value)
 }
 
 const defaultFormState = (env: WorkshopListUiEnvironment): AddWorkItemFormState => {
