@@ -37,6 +37,8 @@ import {
   type GenerationSummary,
   type UnassignedTask,
 } from '../services/battlePlanGenerator'
+import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
+import { createWorkItemNavigationResolver } from '../services/workItemNavigationResolver'
 import {
   applyGroupOrderToTasks,
   BP_PRIORITY_ORDER,
@@ -153,6 +155,16 @@ const BattlePlansPage = () => {
     () => employees.filter((employee) => employee.role === 'WORKER' && employee.active),
     [employees],
   )
+  const environment = useMemo(() => getWorkshopListUiEnvironment(), [])
+  const workItemNavigationResolver = useMemo(
+    () => createWorkItemNavigationResolver({
+      workItems: environment.workItemService.listWorkItems(),
+      productionJobs,
+      productionOperations,
+      getWorkItemIdForOrderNumber: environment.getWorkItemIdForOrderNumber,
+    }),
+    [environment, productionJobs, productionOperations],
+  )
 
   const scheduleEntryByOperationId = useMemo(
     () => new Map(scheduleResult.entries.map((entry) => [entry.operationId, entry])),
@@ -173,9 +185,18 @@ const BattlePlansPage = () => {
     () =>
       operationBattlePlanItems.map((entry) => {
         const job = productionJobs.find((candidate) => candidate.id === entry.workItemId)
+        const resolvedWorkItemId = workItemNavigationResolver.resolveWorkItemId({
+          candidateWorkItemId: entry.workItemId,
+          operationId: entry.operationId,
+          orderNumber: entry.orderNumber,
+        })
         return {
           id: entry.id,
           workItemId: entry.workItemId,
+          resolvedWorkItemId,
+          openDisabledReason: resolvedWorkItemId ? undefined : 'Work Item unavailable',
+          operationId: entry.operationId,
+          orderNumber: entry.orderNumber,
           orderLabel: entry.orderNumber,
           status: entry.status,
           statusTone:
@@ -196,7 +217,7 @@ const BattlePlansPage = () => {
           searchText: [entry.orderNumber, entry.pieceLabel, entry.operation, job?.customerName ?? '', job?.artworkTitle ?? '', entry.assignedEmployee].join(' '),
         }
       }),
-    [employees, operationBattlePlanItems, productionJobs],
+    [employees, operationBattlePlanItems, productionJobs, workItemNavigationResolver],
   )
   const formatLatestScheduledFinish = (taskIds: string[]): string => {
     const latestFinish = taskIds
@@ -1500,7 +1521,11 @@ const BattlePlansPage = () => {
           title="Production Operation Queue"
           description="Automatic Battle Plan intake generated from work item operations."
           records={operationQueueRecords}
-          onOpenRecord={(record) => navigate(`/work-items/${record.workItemId}`)}
+          onOpenRecord={(record) => {
+            if (record.resolvedWorkItemId) {
+              navigate(`/work-items/${record.resolvedWorkItemId}`)
+            }
+          }}
           openLabel="Open Work Item"
         />
       </section>

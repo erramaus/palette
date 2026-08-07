@@ -758,11 +758,18 @@ ul {
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.command-center-record-button:hover,
-.command-center-record-button:focus-visible {
+.command-center-record-button:not(:disabled):hover,
+.command-center-record-button:not(:disabled):focus-visible {
   transform: translateY(-1px);
   border-color: #c9d3e1;
   box-shadow: 0 8px 24px rgba(30, 42, 74, 0.08);
+}
+
+.command-center-record-button:disabled {
+  cursor: not-allowed;
+  border-color: #d6dce8;
+  background: #f5f7fb;
+  opacity: 0.84;
 }
 
 .command-center-record-main {
@@ -796,6 +803,10 @@ ul {
   color: var(--brand);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.command-center-record-action-disabled {
+  color: var(--muted);
 }
 
 .command-center-list-panel .badge {

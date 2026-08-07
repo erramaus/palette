@@ -14,9 +14,14 @@ export interface CommandCenterRecord {
   priority?: number
   estimatedRemainingMinutes?: number
   workItemId?: string
+  resolvedWorkItemId?: string
   statusTone?: CommandCenterStatusTone
   searchText?: string
   orderLabel?: string
+  orderNumber?: string
+  jobId?: string
+  operationId?: string
+  openDisabledReason?: string
 }
 
 interface CommandCenterRecordListProps {
@@ -25,6 +30,7 @@ interface CommandCenterRecordListProps {
   records: CommandCenterRecord[]
   emptyMessage?: string
   openLabel?: string
+  unavailableLabel?: string
   dueDateLabel?: string
   onOpenRecord?: (record: CommandCenterRecord) => void
 }
@@ -75,6 +81,7 @@ const CommandCenterRecordList = ({
   records,
   emptyMessage = 'No matching records',
   openLabel = 'Open Work Item',
+  unavailableLabel = 'Work Item unavailable',
   dueDateLabel = 'Due',
   onOpenRecord,
 }: CommandCenterRecordListProps) => {
@@ -218,12 +225,19 @@ const CommandCenterRecordList = ({
               <ul className="plain-list command-center-record-list">
                 {groupRecords.map((record) => {
                   const tone = record.statusTone ?? 'default'
+                  const resolvedWorkItemId = record.resolvedWorkItemId ?? record.workItemId
+                  const canOpen = Boolean(onOpenRecord && resolvedWorkItemId) && !record.openDisabledReason
                   return (
                     <li key={record.id} className="command-center-record-item">
                       <button
                         type="button"
                         className="command-center-record-button"
-                        onClick={() => onOpenRecord?.(record)}
+                        disabled={!canOpen}
+                        onClick={() => {
+                          if (canOpen) {
+                            onOpenRecord?.(record)
+                          }
+                        }}
                       >
                         <div className="command-center-record-main">
                           <div className="command-center-record-head">
@@ -237,7 +251,9 @@ const CommandCenterRecordList = ({
                           <p className="subtle">{record.assignedEmployee ?? '--'} · Priority {record.priority ?? '--'} · {record.estimatedRemainingMinutes ?? '--'} min remaining</p>
                           <p className="subtle">{dueDateLabel} {formatDate(record.dueDate)}</p>
                         </div>
-                        <span className="command-center-record-action">{openLabel}</span>
+                        <span className={canOpen ? 'command-center-record-action' : 'command-center-record-action command-center-record-action-disabled'}>
+                          {canOpen ? openLabel : (record.openDisabledReason ?? unavailableLabel)}
+                        </span>
                       </button>
                     </li>
                   )

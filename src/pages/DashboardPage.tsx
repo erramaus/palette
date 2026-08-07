@@ -4,6 +4,8 @@ import SummaryCard from '../components/dashboard/SummaryCard'
 import { ProductionAnalyticsService } from '../services/ProductionAnalyticsService'
 import { ProductionIntelligenceService } from '../services/ProductionIntelligenceService'
 import { IntelligenceService } from '../services/intelligence/IntelligenceService'
+import { getWorkshopListUiEnvironment } from '../services/workshopListUiBootstrap'
+import { createWorkItemNavigationResolver } from '../services/workItemNavigationResolver'
 import CommandCenterRecordList, { type CommandCenterRecord } from '../components/common/CommandCenterRecordList'
 import { useAppState } from '../state/AppStateContext'
 import type { IntelligenceRecommendation, RiskLevel } from '../types/productionIntelligence'
@@ -61,6 +63,7 @@ const DashboardPage = () => {
     employees,
     activityLogs,
     operationIntelligence,
+    productionOperations,
     addActivityLog,
     analyticsTargets,
     intelligenceReviewState,
@@ -212,6 +215,17 @@ const DashboardPage = () => {
     (job) => !job.onHold && job.steps.SHIPPED !== 'COMPLETE',
   ).length
 
+  const environment = useMemo(() => getWorkshopListUiEnvironment(), [])
+  const workItemNavigationResolver = useMemo(
+    () => createWorkItemNavigationResolver({
+      workItems: environment.workItemService.listWorkItems(),
+      productionJobs,
+      productionOperations,
+      getWorkItemIdForOrderNumber: environment.getWorkItemIdForOrderNumber,
+    }),
+    [environment, productionJobs, productionOperations],
+  )
+
   const jobById = useMemo(
     () => new Map(productionJobs.map((job) => [job.id, job])),
     [productionJobs],
@@ -225,9 +239,21 @@ const DashboardPage = () => {
   const productionHealthRecords = useMemo<CommandCenterRecord[]>(() => {
     const records: CommandCenterRecord[] = productionJobs
       .filter((job) => job.dueStatus === 'OVERDUE' || job.dueStatus === 'AT_RISK' || job.onHold || job.dueStatus === 'DUE_TODAY')
-      .map((job) => ({
-        id: job.id,
-        workItemId: job.id,
+      .map((job) => {
+        const resolvedWorkItemId = workItemNavigationResolver.resolveWorkItemId({
+          candidateWorkItemId: job.id,
+          jobId: job.id,
+          orderNumber: job.orderNumber,
+          sourceRecordId: job.id,
+        })
+
+        return {
+          id: job.id,
+          workItemId: job.id,
+          resolvedWorkItemId,
+          openDisabledReason: resolvedWorkItemId ? undefined : 'Work Item unavailable',
+          orderNumber: job.orderNumber,
+          jobId: job.id,
         orderLabel: job.orderNumber,
         status: job.onHold ? 'ON_HOLD' : job.dueStatus,
         statusTone: job.onHold ? 'blocked' : job.dueStatus === 'OVERDUE' ? 'late' : job.dueStatus === 'AT_RISK' ? 'review' : job.dueStatus === 'DUE_TODAY' ? 'progress' : 'ready',
@@ -245,17 +271,27 @@ const DashboardPage = () => {
           .filter((step) => job.steps[step] !== 'COMPLETE')
           .reduce((sum, step) => sum + job.estimatedMinutes[step], 0),
         searchText: [job.orderNumber, job.customerName, job.artworkTitle, job.assignedWorkerId, job.notes].join(' '),
-      }))
+        }
+      })
 
     return records.sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0))
-  }, [employees, productionJobs])
+  }, [employees, productionJobs, workItemNavigationResolver])
 
   const todayProductionRecords = useMemo<CommandCenterRecord[]>(() => {
     return todayScheduledOperations.map((entry) => {
       const job = jobById.get(entry.workItemId)
+      const resolvedWorkItemId = workItemNavigationResolver.resolveWorkItemId({
+        candidateWorkItemId: entry.workItemId,
+        operationId: entry.operationId,
+        orderNumber: entry.orderNumber,
+      })
       return {
         id: entry.id,
         workItemId: entry.workItemId,
+        resolvedWorkItemId,
+        openDisabledReason: resolvedWorkItemId ? undefined : 'Work Item unavailable',
+        operationId: entry.operationId,
+        orderNumber: entry.orderNumber,
         orderLabel: entry.orderNumber,
         status: entry.status,
         statusTone: entry.status === 'BLOCKED' ? 'blocked' : entry.status === 'IN_PROGRESS' ? 'progress' : entry.status === 'COMPLETE' ? 'complete' : 'ready',
@@ -269,7 +305,7 @@ const DashboardPage = () => {
         searchText: [entry.orderNumber, entry.pieceLabel, entry.operation, entry.assignedEmployee, job?.customerName ?? '', job?.artworkTitle ?? ''].join(' '),
       }
     })
-  }, [jobById, todayScheduledOperations])
+  }, [jobById, todayScheduledOperations, workItemNavigationResolver])
 
   useEffect(() => {
     if (!location.hash) return
@@ -700,7 +736,11 @@ const DashboardPage = () => {
           title="Production Health Drilldown"
           description="Open work items grouped by live status, sorted by urgency, and searchable by order, customer, artwork, employee, or operation."
           records={productionHealthRecords}
-          onOpenRecord={(record) => navigate(`/work-items/${record.workItemId}`)}
+          onOpenRecord={(record) => {
+            if (record.resolvedWorkItemId) {
+              navigate(`/work-items/${record.resolvedWorkItemId}`)
+            }
+          }}
         />
       </section>
 
@@ -980,7 +1020,11 @@ const DashboardPage = () => {
             title="Today's Assigned Operations"
             description="Scheduled work items for the current day, grouped by execution status and filtered by urgency."
             records={todayProductionRecords}
-            onOpenRecord={(record) => navigate(`/work-items/${record.workItemId}`)}
+            onOpenRecord={(record) => {
+              if (record.resolvedWorkItemId) {
+                navigate(`/work-items/${record.resolvedWorkItemId}`)
+              }
+            }}
           />
           <div className="dashboard-employee-grid">
             {employeeRows.map((row) => (
