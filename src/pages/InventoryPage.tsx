@@ -143,6 +143,8 @@ const InventoryPage = () => {
 
   const countWorkspaceRef = useRef<HTMLElement | null>(null)
   const purchaseWorkspaceRef = useRef<HTMLElement | null>(null)
+	const poDraftWorkspaceRef = useRef<HTMLElement | null>(null)
+	const cswWorkspaceRef = useRef<HTMLElement | null>(null)
 	const drawerRef = useRef<HTMLElement | null>(null)
 
 	const [initialization] = useState(initializeInventoryState)
@@ -176,6 +178,27 @@ const InventoryPage = () => {
 			window.requestAnimationFrame(() => {
 				purchaseWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 			})
+		}
+
+		if (params.get('section') === 'needs-review') {
+			setFilterNeedsReview(true)
+		}
+
+		if (params.get('section') === 'po-drafts') {
+			window.requestAnimationFrame(() => {
+				poDraftWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			})
+		}
+
+		if (params.get('section') === 'csw') {
+			window.requestAnimationFrame(() => {
+				cswWorkspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			})
+		}
+
+		const selectedItemFromQuery = params.get('item')
+		if (selectedItemFromQuery) {
+			setSelectedItemId(selectedItemFromQuery)
 		}
 	}, [location.search])
 
@@ -956,7 +979,7 @@ const InventoryPage = () => {
 								</table>
 							</div>
 
-							<section className="inventory-workspace-card" style={{ marginTop: '1rem' }}>
+							<section className="inventory-workspace-card" ref={poDraftWorkspaceRef} style={{ marginTop: '1rem' }}>
 								<div className="inventory-section-header">
 									<div>
 										<h3>Purchase Order Drafts</h3>
@@ -1039,7 +1062,7 @@ const InventoryPage = () => {
 								) : null}
 							</section>
 
-							<section className="inventory-workspace-card" style={{ marginTop: '1rem' }}>
+							<section className="inventory-workspace-card" ref={cswWorkspaceRef} style={{ marginTop: '1rem' }}>
 								<div className="inventory-section-header">
 									<div>
 										<h3>Completed Staff Work</h3>
