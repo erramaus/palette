@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
 import PriorityBadge from '../components/common/PriorityBadge'
@@ -21,6 +21,11 @@ import {
 } from '../services/workshopListUiBootstrap'
 import { getPriorityPresentation } from '../utils/priorityPresentation'
 import { formatDateOnly } from '../utils/time'
+import {
+  countWorkshopRowsBySummary,
+  filterWorkshopRowsBySummary,
+  type WorkshopSummaryFilter,
+} from '../utils/workshopSummaryFilters'
 
 type SortableColumn =
   | 'priority'
@@ -141,6 +146,8 @@ const WorkshopListPage = () => {
 
   const [selectedSort, setSelectedSort] = useState<SortableColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [summaryFilter, setSummaryFilter] = useState<WorkshopSummaryFilter | null>(null)
+  const filteredResultsRef = useRef<HTMLElement>(null)
 
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -159,15 +166,18 @@ const WorkshopListPage = () => {
     const filter = params.get('filter')
 
     if (filter === 'late') {
-      setFilterLateOnly(true)
-      setFilterBlockedOnly(false)
+      setSummaryFilter('LATE')
     }
 
     if (filter === 'active') {
-      setFilterLateOnly(false)
-      setFilterBlockedOnly(false)
+      setSummaryFilter('ACTIVE')
     }
   }, [location.search])
+
+  useEffect(() => {
+    if (!summaryFilter) return
+    filteredResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [summaryFilter])
 
   const [addForm, setAddForm] = useState<AddWorkItemFormState>(() =>
     defaultFormState(environment),
@@ -226,12 +236,38 @@ const WorkshopListPage = () => {
     return [...rows]
   }, [environment, refreshKey])
 
-  const filteredRows = useMemo(() => {
-    let rows = environment.workshopListService.filter(workshopFilter, allRows)
-
-    if (searchText.trim()) {
-      rows = environment.workshopListService.search(searchText, rows)
+  const blockedReasonByWorkItemId = useMemo(() => {
+    const reasons = new Map<string, string[]>()
+    for (const order of workshopHierarchy) {
+      for (const artwork of order.artworks) {
+        for (const piece of artwork.pieces) {
+          const blockedReasons = piece.operations
+            .filter((operation) => operation.status === 'BLOCKED')
+            .map((operation) => operation.operation.block?.reason
+              ?? operation.operation.cutCalculation?.trace.explanation
+              ?? `${operation.label} is blocked pending production review.`)
+          if (blockedReasons.length > 0) reasons.set(piece.workItemId, [...new Set(blockedReasons)])
+        }
+      }
     }
+    return reasons
+  }, [workshopHierarchy])
+
+  const baseFilteredRows = useMemo(() => {
+    let rows = environment.workshopListService.filter(workshopFilter, allRows)
+    if (searchText.trim()) rows = environment.workshopListService.search(searchText, rows)
+    return rows
+  }, [allRows, environment, searchText, workshopFilter])
+
+  const summaryCounts = useMemo(
+    () => countWorkshopRowsBySummary(baseFilteredRows, new Set(blockedReasonByWorkItemId.keys())),
+    [baseFilteredRows, blockedReasonByWorkItemId],
+  )
+
+  const filteredRows = useMemo(() => {
+    let rows = summaryFilter
+      ? filterWorkshopRowsBySummary(baseFilteredRows, summaryFilter, new Set(blockedReasonByWorkItemId.keys()))
+      : [...baseFilteredRows]
 
     if (selectedSort) {
       const mappedSort = sortMappings[selectedSort]
@@ -278,20 +314,17 @@ const WorkshopListPage = () => {
       }
     }
 
-    return rows
+    return summaryFilter === 'LATE' || summaryFilter === 'DUE_THIS_WEEK'
+      ? filterWorkshopRowsBySummary(rows, summaryFilter, new Set(blockedReasonByWorkItemId.keys()))
+      : rows
   }, [
-    allRows,
+    baseFilteredRows,
+    blockedReasonByWorkItemId,
     environment,
-    searchText,
     selectedSort,
     sortDirection,
-    workshopFilter,
+    summaryFilter,
   ])
-
-  const summary = useMemo(
-    () => environment.workshopListService.getSummary(filteredRows),
-    [environment, filteredRows],
-  )
 
   const rowByWorkItemId = useMemo(
     () => new Map(filteredRows.map((row) => [row.workItemId, row])),
@@ -367,6 +400,19 @@ const WorkshopListPage = () => {
     })),
   ].filter((chip): chip is { label: string; clear: () => void } => chip !== null)
 
+  const summaryFilterLabels: Record<WorkshopSummaryFilter, string> = {
+    ACTIVE: 'Active',
+    LATE: 'Late',
+    BLOCKED: 'Blocked',
+    DUE_TODAY: 'Due Today',
+    DUE_THIS_WEEK: 'Due This Week',
+  }
+
+  const onSummaryCardClick = (filter: WorkshopSummaryFilter): void => {
+    const nextFilter = summaryFilter === filter ? null : filter
+    setSummaryFilter(nextFilter)
+  }
+
   const onSort = (column: SortableColumn): void => {
     if (selectedSort === column) {
       setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
@@ -396,6 +442,7 @@ const WorkshopListPage = () => {
     setFilterDueTo('')
     setFilterLateOnly(false)
     setFilterBlockedOnly(false)
+    setSummaryFilter(null)
     setFilterTags('')
     setSearchText('')
   }
@@ -688,26 +735,26 @@ const WorkshopListPage = () => {
       </header>
 
       <section className="summary-grid workshop-v2-summary" aria-label="Workshop summary">
-        <article className="summary-card">
+        <button type="button" className={`summary-card summary-card-action${summaryFilter === 'ACTIVE' ? ' summary-card-selected' : ''}`} onClick={() => onSummaryCardClick('ACTIVE')} aria-pressed={summaryFilter === 'ACTIVE'}>
           <p>Active</p>
-          <h3>{summary.totalActiveItems}</h3>
-        </article>
-        <article className="summary-card">
+          <h3>{summaryCounts.ACTIVE}</h3>
+        </button>
+        <button type="button" className={`summary-card summary-card-action${summaryFilter === 'LATE' ? ' summary-card-selected' : ''}`} onClick={() => onSummaryCardClick('LATE')} aria-pressed={summaryFilter === 'LATE'}>
           <p>Late</p>
-          <h3>{summary.lateItems}</h3>
-        </article>
-        <article className="summary-card">
+          <h3>{summaryCounts.LATE}</h3>
+        </button>
+        <button type="button" className={`summary-card summary-card-action${summaryFilter === 'BLOCKED' ? ' summary-card-selected' : ''}`} onClick={() => onSummaryCardClick('BLOCKED')} aria-pressed={summaryFilter === 'BLOCKED'}>
           <p>Blocked</p>
-          <h3>{summary.blockedItems}</h3>
-        </article>
-        <article className="summary-card">
+          <h3>{summaryCounts.BLOCKED}</h3>
+        </button>
+        <button type="button" className={`summary-card summary-card-action${summaryFilter === 'DUE_TODAY' ? ' summary-card-selected' : ''}`} onClick={() => onSummaryCardClick('DUE_TODAY')} aria-pressed={summaryFilter === 'DUE_TODAY'}>
           <p>Due Today</p>
-          <h3>{summary.dueToday}</h3>
-        </article>
-        <article className="summary-card">
+          <h3>{summaryCounts.DUE_TODAY}</h3>
+        </button>
+        <button type="button" className={`summary-card summary-card-action${summaryFilter === 'DUE_THIS_WEEK' ? ' summary-card-selected' : ''}`} onClick={() => onSummaryCardClick('DUE_THIS_WEEK')} aria-pressed={summaryFilter === 'DUE_THIS_WEEK'}>
           <p>Due This Week</p>
-          <h3>{summary.dueThisWeek}</h3>
-        </article>
+          <h3>{summaryCounts.DUE_THIS_WEEK}</h3>
+        </button>
       </section>
 
       <section className="workshop-v2-toolbar workshop-v2-toolbar-compact" aria-label="Workshop filter toolbar">
@@ -770,9 +817,9 @@ const WorkshopListPage = () => {
           <button type="button" className="btn" onClick={() => setShowMoreFilters((value) => !value)}>
             {showMoreFilters ? 'Hide More Filters' : 'More Filters'}
           </button>
-          {filterChips.length > 0 && (
+          {(filterChips.length > 0 || searchText.trim() || summaryFilter) && (
             <button type="button" className="btn" onClick={clearAllFilters}>
-              Clear All
+              Clear Filters
             </button>
           )}
         </div>
@@ -867,6 +914,42 @@ const WorkshopListPage = () => {
           </label>
         </section>
       )}
+
+      {summaryFilter ? (
+        <section ref={filteredResultsRef} className="panel workshop-record-panel" tabIndex={-1}>
+          <div className="work-item-section-header">
+            <div>
+              <h3>Showing: {summaryFilterLabels[summaryFilter]} — {filteredRows.length} Work {filteredRows.length === 1 ? 'Item' : 'Items'}</h3>
+              <p className="subtle">Combined with the current search and toolbar filters.</p>
+            </div>
+            <button type="button" className="btn" onClick={clearAllFilters}>Clear Filters</button>
+          </div>
+          <ul className="plain-list">
+            {filteredRows.length > 0 ? filteredRows.map((row) => (
+              <li key={row.workItemId}>
+                <button type="button" className="dashboard-record-item workshop-filtered-result" onClick={() => navigate(`/work-items/${encodeURIComponent(row.workItemNumber)}`)}>
+                  <div>
+                  <strong>{row.workItemNumber}</strong>
+                  <p>{row.artworkName}</p>
+                  <p className="subtle">
+                    {row.customerName} · {row.currentStage} · {row.assignedEmployee}
+                  </p>
+                  <p className="subtle">
+                    Due {row.dueDate ? formatDate(row.dueDate) : '--'} · {row.status} · {row.isLate ? 'Late' : 'On track'}
+                  </p>
+                  {summaryFilter === 'BLOCKED' && (
+                    <p className="workshop-blocked-reason">
+                      <strong>Blocked:</strong> {blockedReasonByWorkItemId.get(row.workItemId)?.join(' ') || row.notesSummary || 'No blocking reason recorded.'}
+                    </p>
+                  )}
+                  </div>
+                  <span className="btn">Open Work Item</span>
+                </button>
+              </li>
+            )) : <li className="subtle">None</li>}
+          </ul>
+        </section>
+      ) : null}
 
       {loading && <div className="panel">Loading workshop items...</div>}
       {!loading && errorMessage && <div className="panel warning">{errorMessage}</div>}

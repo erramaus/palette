@@ -3852,6 +3852,37 @@ body {
   outline-offset: 2px;
 }
 
+.summary-card-action.summary-card-selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16), 0 10px 24px rgba(17, 24, 39, 0.08);
+}
+
+.workshop-filtered-result {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workshop-filtered-result:hover,
+.workshop-filtered-result:focus-visible {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.workshop-filtered-result:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.workshop-blocked-reason {
+  margin-top: 8px;
+  color: #991b1b;
+}
+
 .summary-card-hint {
   justify-self: end;
   font-size: 0.76rem;
