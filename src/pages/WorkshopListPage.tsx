@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppState } from '../state/AppStateContext'
 import PriorityBadge from '../components/common/PriorityBadge'
@@ -26,6 +26,14 @@ import {
   filterWorkshopRowsBySummary,
   type WorkshopSummaryFilter,
 } from '../utils/workshopSummaryFilters'
+import {
+  canonicalWorkshopProductType,
+  countWorkshopRowsByProductType,
+  filterWorkshopRowsByProductType,
+  WORKSHOP_PRODUCT_TYPE_LABELS,
+  WORKSHOP_PRODUCT_TYPES,
+  type WorkshopProductType,
+} from '../utils/workshopProductTypes'
 
 type SortableColumn =
   | 'priority'
@@ -147,6 +155,7 @@ const WorkshopListPage = () => {
   const [selectedSort, setSelectedSort] = useState<SortableColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [summaryFilter, setSummaryFilter] = useState<WorkshopSummaryFilter | null>(null)
+  const [productTypeFilter, setProductTypeFilter] = useState<WorkshopProductType | null>(null)
   const filteredResultsRef = useRef<HTMLElement>(null)
 
   const [filterType, setFilterType] = useState('')
@@ -259,15 +268,25 @@ const WorkshopListPage = () => {
     return rows
   }, [allRows, environment, searchText, workshopFilter])
 
+  const productTypeCounts = useMemo(
+    () => countWorkshopRowsByProductType(baseFilteredRows),
+    [baseFilteredRows],
+  )
+
+  const productFilteredRows = useMemo(
+    () => filterWorkshopRowsByProductType(baseFilteredRows, productTypeFilter),
+    [baseFilteredRows, productTypeFilter],
+  )
+
   const summaryCounts = useMemo(
-    () => countWorkshopRowsBySummary(baseFilteredRows, new Set(blockedReasonByWorkItemId.keys())),
-    [baseFilteredRows, blockedReasonByWorkItemId],
+    () => countWorkshopRowsBySummary(productFilteredRows, new Set(blockedReasonByWorkItemId.keys())),
+    [blockedReasonByWorkItemId, productFilteredRows],
   )
 
   const filteredRows = useMemo(() => {
     let rows = summaryFilter
-      ? filterWorkshopRowsBySummary(baseFilteredRows, summaryFilter, new Set(blockedReasonByWorkItemId.keys()))
-      : [...baseFilteredRows]
+      ? filterWorkshopRowsBySummary(productFilteredRows, summaryFilter, new Set(blockedReasonByWorkItemId.keys()))
+      : [...productFilteredRows]
 
     if (selectedSort) {
       const mappedSort = sortMappings[selectedSort]
@@ -318,9 +337,9 @@ const WorkshopListPage = () => {
       ? filterWorkshopRowsBySummary(rows, summaryFilter, new Set(blockedReasonByWorkItemId.keys()))
       : rows
   }, [
-    baseFilteredRows,
     blockedReasonByWorkItemId,
     environment,
+    productFilteredRows,
     selectedSort,
     sortDirection,
     summaryFilter,
@@ -345,6 +364,51 @@ const WorkshopListPage = () => {
       }))
       .filter((order) => order.artworks.length > 0)
   }, [filteredRows, workshopHierarchy])
+
+  const workshopSections = useMemo(() => WORKSHOP_PRODUCT_TYPES.flatMap((productType) => {
+    const sectionRows = filteredRows.filter(
+      (row) => canonicalWorkshopProductType(row.workItemType) === productType,
+    )
+    if (sectionRows.length === 0) return []
+    const workItemIds = new Set(sectionRows.map((row) => row.workItemId))
+    const hierarchy = filteredHierarchy
+      .map((order) => ({
+        ...order,
+        artworks: order.artworks
+          .map((artwork) => ({
+            ...artwork,
+            pieces: artwork.pieces.filter((piece) => workItemIds.has(piece.workItemId)),
+          }))
+          .filter((artwork) => artwork.pieces.length > 0),
+      }))
+      .filter((order) => order.artworks.length > 0)
+    const operations = hierarchy.flatMap((order) =>
+      order.artworks.flatMap((artwork) =>
+        artwork.pieces.flatMap((piece) => piece.operations),
+      ),
+    )
+    const blockedIds = new Set(blockedReasonByWorkItemId.keys())
+    return [{
+      productType,
+      label: WORKSHOP_PRODUCT_TYPE_LABELS[productType],
+      rows: sectionRows,
+      hierarchy,
+      firstOrderId: hierarchy[0]?.id,
+      activeOperations: operations.filter((operation) => operation.status !== 'COMPLETE').length,
+      lateCount: sectionRows.filter((row) => row.isLate).length,
+      blockedCount: sectionRows.filter((row) => row.isBlocked || blockedIds.has(row.workItemId)).length,
+    }]
+  }), [blockedReasonByWorkItemId, filteredHierarchy, filteredRows])
+
+  const groupedHierarchy = useMemo(
+    () => workshopSections.flatMap((section) => section.hierarchy),
+    [workshopSections],
+  )
+
+  const sectionByFirstOrderId = useMemo(
+    () => new Map(workshopSections.map((section) => [section.firstOrderId, section])),
+    [workshopSections],
+  )
 
   const toggleNode = (nodeId: string): void => {
     setExpandedNodeIds((current) => {
@@ -432,6 +496,7 @@ const WorkshopListPage = () => {
   }
 
   const clearAllFilters = (): void => {
+    setProductTypeFilter(null)
     setFilterType('')
     setFilterStatus('')
     setFilterPriority('')
@@ -734,6 +799,30 @@ const WorkshopListPage = () => {
         </div>
       </header>
 
+      <section className="workshop-product-selector" aria-label="Product Type">
+        <button
+          type="button"
+          className={`workshop-product-type-card${productTypeFilter === null ? ' workshop-product-type-card-selected' : ''}`}
+          onClick={() => setProductTypeFilter(null)}
+          aria-pressed={productTypeFilter === null}
+        >
+          <span>All</span>
+          <strong>{productTypeCounts.ALL}</strong>
+        </button>
+        {(['PRINTS', 'CANVAS_PRINTS', 'THREE_D_PRINTS', 'ORIGINALS'] as const).map((productType) => (
+          <button
+            key={productType}
+            type="button"
+            className={`workshop-product-type-card${productTypeFilter === productType ? ' workshop-product-type-card-selected' : ''}`}
+            onClick={() => setProductTypeFilter((current) => current === productType ? null : productType)}
+            aria-pressed={productTypeFilter === productType}
+          >
+            <span>{WORKSHOP_PRODUCT_TYPE_LABELS[productType]}</span>
+            <strong>{productTypeCounts[productType]}</strong>
+          </button>
+        ))}
+      </section>
+
       <section className="summary-grid workshop-v2-summary" aria-label="Workshop summary">
         <button type="button" className={`summary-card summary-card-action${summaryFilter === 'ACTIVE' ? ' summary-card-selected' : ''}`} onClick={() => onSummaryCardClick('ACTIVE')} aria-pressed={summaryFilter === 'ACTIVE'}>
           <p>Active</p>
@@ -817,7 +906,7 @@ const WorkshopListPage = () => {
           <button type="button" className="btn" onClick={() => setShowMoreFilters((value) => !value)}>
             {showMoreFilters ? 'Hide More Filters' : 'More Filters'}
           </button>
-          {(filterChips.length > 0 || searchText.trim() || summaryFilter) && (
+          {(filterChips.length > 0 || searchText.trim() || summaryFilter || productTypeFilter) && (
             <button type="button" className="btn" onClick={clearAllFilters}>
               Clear Filters
             </button>
@@ -977,13 +1066,27 @@ const WorkshopListPage = () => {
               <span>Actions</span>
             </div>
 
-            {filteredHierarchy.map((order) => {
+            {groupedHierarchy.map((order) => {
               const orderExpanded = expandedNodeIds.has(order.id)
               const orderLeadRow = order.artworks.flatMap((artwork) => artwork.pieces).map((piece) => rowByWorkItemId.get(piece.workItemId)).find((row): row is WorkshopListRow => Boolean(row))
               const orderSelected = selectedDrawer?.key === order.id
 
+              const section = sectionByFirstOrderId.get(order.id)
+
               return (
-                <div key={order.id} className="workshop-tree-order-group">
+                <Fragment key={`${section?.productType ?? 'group'}:${order.id}`}>
+                  {section && (
+                    <header className="workshop-product-section-header">
+                      <h3>{section.label}</h3>
+                      <dl>
+                        <div><dt>Pieces</dt><dd>{section.rows.length}</dd></div>
+                        <div><dt>Active operations</dt><dd>{section.activeOperations}</dd></div>
+                        <div><dt>Late</dt><dd>{section.lateCount}</dd></div>
+                        <div><dt>Blocked</dt><dd>{section.blockedCount}</dd></div>
+                      </dl>
+                    </header>
+                  )}
+                  <div className="workshop-tree-order-group">
                   <div
                     className={[
                       'workshop-tree-row',
@@ -1289,7 +1392,8 @@ const WorkshopListPage = () => {
                       </div>
                     )
                   })}
-                </div>
+                  </div>
+                </Fragment>
               )
             })}
           </section>

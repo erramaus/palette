@@ -20,6 +20,8 @@ export type ProductionOperationName =
   | 'STRETCHER_ASSEMBLY'
   | 'STRETCHER'
   | 'STRETCH'
+  | 'SAND_STRETCHER_CORNERS'
+  | 'CLOTH_BACKING'
   | 'TRIM'
   | 'SLICE'
   | 'RESIZE'
@@ -28,6 +30,10 @@ export type ProductionOperationName =
   | 'FRAME_CUT'
   | 'FRAME_ASSEMBLY'
   | 'FRAME'
+  | 'INSTALL_IN_FRAME'
+  | 'HARDWARE_WIRE'
+  | 'FRAME_FINISHING'
+  | 'BAG'
   | 'QC'
   | 'SHIPPING'
 
@@ -228,6 +234,8 @@ const OPERATION_MINUTES: Record<ProductionOperationName, number> = {
   STRETCHER_ASSEMBLY: 25,
   STRETCHER: 45,
   STRETCH: 40,
+  SAND_STRETCHER_CORNERS: 15,
+  CLOTH_BACKING: 20,
   TRIM: 25,
   SLICE: 60,
   RESIZE: 30,
@@ -236,14 +244,19 @@ const OPERATION_MINUTES: Record<ProductionOperationName, number> = {
   FRAME_CUT: 45,
   FRAME_ASSEMBLY: 45,
   FRAME: 90,
+  INSTALL_IN_FRAME: 45,
+  HARDWARE_WIRE: 20,
+  FRAME_FINISHING: 25,
+  BAG: 15,
   QC: 20,
   SHIPPING: 35,
 }
 
-const OPERATION_TEMPLATES: Record<'CANVAS' | 'PAPER' | 'THREE_D' | 'OTHER', ProductionOperationName[]> = {
-  CANVAS: ['FILES', 'PRINTED', 'STRETCHER', 'STRETCH', 'FRAME', 'QC', 'SHIPPING'],
-  PAPER: ['FILES', 'PRINTED', 'TRIM', 'QC', 'SHIPPING'],
-  THREE_D: ['FILES', 'SLICE', 'RESIZE', 'DIBOND', 'MOUNT', 'FRAME', 'QC', 'SHIPPING'],
+const OPERATION_TEMPLATES: Record<'CANVAS' | 'PAPER' | 'THREE_D' | 'ORIGINAL' | 'OTHER', ProductionOperationName[]> = {
+  CANVAS: ['FILES', 'PRINT', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'SAND_STRETCHER_CORNERS', 'STRETCH', 'CLOTH_BACKING', 'QC', 'SHIPPING'],
+  PAPER: ['FILES', 'PRINT', 'TRIM', 'QC', 'SHIPPING'],
+  THREE_D: ['FILES', 'PRINT', 'DIBOND', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT', 'HARDWARE_WIRE', 'BAG', 'SHIPPING'],
+  ORIGINAL: ['STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'SAND_STRETCHER_CORNERS', 'STRETCH', 'QC', 'SHIPPING'],
   OTHER: ['FILES', 'FRAME', 'QC', 'SHIPPING'],
 }
 
@@ -263,6 +276,18 @@ const percentComplete = (operations: ProductionOperation[]): number =>
     ? 100
     : Math.round((operations.filter((operation) => operation.status === 'COMPLETE').length / operations.length) * 100)
 
+const hasOperationLifecycle = (operation: ProductionOperation): boolean =>
+  operation.status === 'COMPLETE'
+  || Boolean(
+    operation.startedAt
+    || operation.completedAt
+    || operation.block
+    || operation.blockHistory.length
+    || operation.completionHistory.length
+    || operation.carryForwardHistory.length
+    || operation.history.length,
+  )
+
 export class ProductionPipelineService {
   private readonly createWorkItem: ProductionPipelineDependencies['createWorkItem']
   private readonly frameCalculationService = new FrameCalculationService()
@@ -277,6 +302,7 @@ export class ProductionPipelineService {
   importOrder(input: PipelineOrderInput): ProductionPipelineResult {
     const cutCalculations = this.calculateCuts(input)
     const operationNames = this.buildOperationRoute(input.productType, cutCalculations)
+    const routeValidation = this.validateOperationRoute(input.productType, operationNames)
     const workItem = this.createWorkItem({ ...input, id: input.workItemId, operationNames })
     const operations = this.createOperations(workItem, operationNames, cutCalculations)
 
@@ -291,6 +317,7 @@ export class ProductionPipelineService {
         orientation: input.orientation,
         cutCalculations,
         operations,
+        routeValidation,
       },
     }
     workItem.tags = operationNames
@@ -313,12 +340,19 @@ export class ProductionPipelineService {
     workItem.dueDate = input.dueDate
     workItem.assignedEmployeeId = input.assignedEmployeeId
     workItem.notes = [...input.notes]
+    const existingOperations = this.getOperations(workItem)
     const existingOperationsByName = new Map(
-      this.getOperations(workItem).map((operation) => [operation.name, operation]),
+      existingOperations.map((operation) => [operation.name, operation]),
     )
-    const operations = this.createOperations(workItem, operationNames, cutCalculations).map((operation) => {
+    const operations: ProductionOperation[] = this.createOperations(workItem, operationNames, cutCalculations).map((operation) => {
       const existing = existingOperationsByName.get(operation.name)
-      if (!existing) return operation
+      if (!existing) {
+        return {
+          ...operation,
+          id: `${workItem.id}:operation:${operation.name.toLowerCase()}`,
+          dependsOnOperationIds: [],
+        }
+      }
 
       return {
         ...operation,
@@ -338,6 +372,21 @@ export class ProductionPipelineService {
         tagStatus: existing.tagStatus,
       }
     })
+    operations.forEach((operation, index) => {
+      operation.sequence = index + 1
+      operation.dependsOnOperationIds = index === 0 ? [] : [operations[index - 1].id]
+    })
+    const conflictingOperations = existingOperations.filter((operation) =>
+      !operationNames.includes(operation.name),
+    )
+    const historicalRouteMismatches = conflictingOperations.filter(hasOperationLifecycle)
+    for (const historical of historicalRouteMismatches) {
+      operations.push({
+        ...historical,
+        sequence: operations.length + 1,
+        notes: [...historical.notes, `NEEDS_REVIEW: ${historical.name} is not valid for ${input.productType}. Preserved as lifecycle history.`],
+      })
+    }
 
     workItem.customFields = {
       ...workItem.customFields,
@@ -350,6 +399,12 @@ export class ProductionPipelineService {
         orientation: input.orientation,
         cutCalculations,
         operations,
+        routeValidation: {
+          status: conflictingOperations.length > 0 ? 'NEEDS_REVIEW' : 'CONFIRMED',
+          mismatches: conflictingOperations.map((operation) =>
+            `${operation.name} is not valid for ${input.productType}; ${hasOperationLifecycle(operation) ? 'historical lifecycle was preserved' : 'new incorrect work was not created'}.`,
+          ),
+        },
       },
     }
     workItem.tags = [...operationNames]
@@ -371,6 +426,7 @@ export class ProductionPipelineService {
     if (productType === 'THREE_D_PRINT' || productType === 'TEXTURED_REPLICA_3D') {
       return [...OPERATION_TEMPLATES.THREE_D]
     }
+    if (productType === 'ORIGINAL') return [...OPERATION_TEMPLATES.ORIGINAL]
     return [...OPERATION_TEMPLATES.OTHER]
   }
 
@@ -536,12 +592,12 @@ export class ProductionPipelineService {
         mouldingIdentifier,
       }))
     }
-    if ((input.productType === 'THREE_D_PRINT' || input.productType === 'TEXTURED_REPLICA_3D') && baseStyle) {
+    if (input.productType === 'THREE_D_PRINT' || input.productType === 'TEXTURED_REPLICA_3D') {
       calculations.push(this.baseCalculationService.calculate({
         productType: input.productType,
         width: input.width,
         height: input.height,
-        importedFrameName: baseStyle,
+        importedFrameName: baseStyle ?? frameStyle ?? '',
         mouldingIdentifier,
       }))
     }
@@ -591,16 +647,63 @@ export class ProductionPipelineService {
     const frame = calculations.find((calculation) => calculation.kind === 'FRAME')
     const base = calculations.find((calculation) => calculation.kind === 'BASE')
     const stretcher = calculations.find((calculation) => calculation.kind === 'STRETCHER')
-    const route: ProductionOperationName[] = ['FILES']
+    const route: ProductionOperationName[] = productType === 'ORIGINAL' ? [] : ['FILES']
 
     if (productType !== 'ORIGINAL') route.push('PRINT')
     if (calculations.some((calculation) => calculation.kind === 'DIBOND')) route.push('DIBOND')
     if (base) route.push('BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT')
-    if (stretcher) route.push('STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'STRETCH')
-    if (frame) route.push('FRAME_CUT', 'FRAME_ASSEMBLY', 'FRAME')
+    if (stretcher) route.push('STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'SAND_STRETCHER_CORNERS', 'STRETCH')
+    if (productType === 'CANVAS') route.push('CLOTH_BACKING')
+    if (frame) route.push('FRAME_CUT', 'FRAME_ASSEMBLY', 'INSTALL_IN_FRAME')
+    if (productType === 'THREE_D_PRINT' || productType === 'TEXTURED_REPLICA_3D') {
+      route.push('HARDWARE_WIRE')
+      if (frame) route.push('FRAME_FINISHING')
+      route.push('BAG')
+    }
     if (productType === 'PAPER') route.push('TRIM')
     route.push('QC', 'SHIPPING')
     return route
+  }
+
+  private validateOperationRoute(
+    productType: ProductType,
+    operationNames: ProductionOperationName[],
+  ): { status: 'CONFIRMED' | 'NEEDS_REVIEW'; mismatches: string[] } {
+    const mismatches: string[] = []
+    const hasAny = (...names: ProductionOperationName[]): boolean =>
+      names.some((name) => operationNames.includes(name))
+    const require = (...names: ProductionOperationName[]): void => {
+      for (const name of names) {
+        if (!operationNames.includes(name)) mismatches.push(`${productType} requires ${name}.`)
+      }
+    }
+    const prohibit = (label: string, ...names: ProductionOperationName[]): void => {
+      if (hasAny(...names)) mismatches.push(`${productType} cannot include ${label}.`)
+    }
+
+    if (productType === 'PAPER') {
+      require('PRINT')
+      prohibit('base operations', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT')
+      prohibit('stretcher operations', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'STRETCH')
+      prohibit('Dibond operations', 'DIBOND')
+    } else if (productType === 'CANVAS') {
+      require('PRINT', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'SAND_STRETCHER_CORNERS', 'STRETCH', 'CLOTH_BACKING')
+      prohibit('base operations', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT')
+      prohibit('Dibond operations', 'DIBOND')
+    } else if (productType === 'THREE_D_PRINT' || productType === 'TEXTURED_REPLICA_3D') {
+      require('PRINT', 'DIBOND', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT', 'HARDWARE_WIRE', 'BAG')
+      prohibit('stretcher operations', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'STRETCH')
+    } else if (productType === 'ORIGINAL') {
+      require('STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'SAND_STRETCHER_CORNERS', 'STRETCH')
+      prohibit('printing operations', 'PRINT', 'PRINTED')
+      prohibit('base operations', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT')
+      prohibit('Dibond operations', 'DIBOND')
+    }
+
+    return {
+      status: mismatches.length > 0 ? 'NEEDS_REVIEW' : 'CONFIRMED',
+      mismatches,
+    }
   }
 
   private isCutOperation(operation: ProductionOperationName): boolean {
@@ -608,12 +711,14 @@ export class ProductionPipelineService {
   }
 
   private workstationForOperation(operation: ProductionOperationName): string {
-    if (operation === 'FRAME_CUT' || operation === 'FRAME_ASSEMBLY' || operation === 'FRAME') return 'frames'
+    if (operation === 'FRAME_CUT' || operation === 'FRAME_ASSEMBLY' || operation === 'FRAME' || operation === 'INSTALL_IN_FRAME' || operation === 'FRAME_FINISHING') return 'frames'
     if (operation === 'BASE_CUT' || operation === 'BASE_ASSEMBLY') return 'base-shop'
     if (operation === 'STRETCHER_CUT' || operation === 'STRETCHER_ASSEMBLY' || operation === 'STRETCH') return 'stretching'
     if (operation === 'PRINT' || operation === 'PRINTED' || operation === 'TRIM') return 'printing'
     if (operation === 'DIBOND') return 'cnc'
     if (operation === 'MOUNT') return 'mounting'
+    if (operation === 'HARDWARE_WIRE') return 'hardware'
+    if (operation === 'BAG') return 'packing'
     if (operation === 'QC') return 'qc'
     if (operation === 'SHIPPING') return 'shipping'
     return 'files'
@@ -680,6 +785,8 @@ const LEGACY_STEP_BY_OPERATION: Record<ProductionOperationName, ProductionStepNa
   STRETCHER_ASSEMBLY: 'STRETCHER_BASE',
   STRETCHER: 'STRETCHER_BASE',
   STRETCH: 'STRETCHER_BASE',
+  SAND_STRETCHER_CORNERS: 'STRETCHER_BASE',
+  CLOTH_BACKING: 'STRETCHER_BASE',
   TRIM: 'PRINTED',
   SLICE: 'FILES',
   RESIZE: 'FILES',
@@ -688,6 +795,10 @@ const LEGACY_STEP_BY_OPERATION: Record<ProductionOperationName, ProductionStepNa
   FRAME_CUT: 'FRAME_MADE',
   FRAME_ASSEMBLY: 'FRAME_MADE',
   FRAME: 'FRAMED',
+  INSTALL_IN_FRAME: 'FRAMED',
+  HARDWARE_WIRE: 'FRAMED',
+  FRAME_FINISHING: 'FRAMED',
+  BAG: 'SHIPPED',
   QC: 'SHIPPED',
   SHIPPING: 'SHIPPED',
 }

@@ -80,10 +80,12 @@ describe('ProductionPipelineService', () => {
       'PRINT',
       'STRETCHER_CUT',
       'STRETCHER_ASSEMBLY',
+      'SAND_STRETCHER_CORNERS',
       'STRETCH',
+      'CLOTH_BACKING',
       'FRAME_CUT',
       'FRAME_ASSEMBLY',
-      'FRAME',
+      'INSTALL_IN_FRAME',
       'QC',
       'SHIPPING',
     ])
@@ -155,7 +157,8 @@ describe('ProductionPipelineService', () => {
 
     expect(result.operations.map((operation) => operation.name)).toEqual([
       'FILES', 'PRINT', 'DIBOND', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT',
-      'FRAME_CUT', 'FRAME_ASSEMBLY', 'FRAME', 'QC', 'SHIPPING',
+      'FRAME_CUT', 'FRAME_ASSEMBLY', 'INSTALL_IN_FRAME', 'HARDWARE_WIRE',
+      'FRAME_FINISHING', 'BAG', 'QC', 'SHIPPING',
     ])
     expect(result.operations.find((operation) => operation.name === 'DIBOND')).toMatchObject({
       workstation: 'cnc',
@@ -175,12 +178,112 @@ describe('ProductionPipelineService', () => {
     })
 
     expect(result.operations.map((operation) => operation.name)).toEqual([
-      'FILES', 'PRINT', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'STRETCH', 'QC', 'SHIPPING',
+      'FILES', 'PRINT', 'STRETCHER_CUT', 'STRETCHER_ASSEMBLY',
+      'SAND_STRETCHER_CORNERS', 'STRETCH', 'CLOTH_BACKING', 'QC', 'SHIPPING',
     ])
     expect(result.operations.some((operation) => operation.name.startsWith('FRAME'))).toBe(false)
     expect(service.getOperations(result.workItem).map((operation) => operation.id)).toEqual(
       result.operations.map((operation) => operation.id),
     )
+  })
+
+  it('creates a paper Print route without base, stretcher, or Dibond work', () => {
+    const result = createService().importOrder({
+      orderNumber: 'PAPER-1', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'PAPER', width: 16, height: 20, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'Rolled' },
+    })
+
+    expect(result.operations.map((operation) => operation.name)).toEqual([
+      'FILES', 'PRINT', 'TRIM', 'QC', 'SHIPPING',
+    ])
+    expect(result.cutCalculations).toEqual([])
+  })
+
+  it.each([
+    { longest: 30, center: false, corner: false, additional: false },
+    { longest: 31, center: true, corner: false, additional: false },
+    { longest: 46, center: true, corner: true, additional: false },
+    { longest: 61, center: true, corner: true, additional: true },
+  ])('applies Canvas support thresholds at $longest inches', ({ longest, center, corner, additional }) => {
+    const result = createService().importOrder({
+      orderNumber: `CANVAS-${longest}`, customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'CANVAS', width: 20, height: longest, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'None' },
+    })
+    const stretcher = result.cutCalculations.find((calculation) => calculation.kind === 'STRETCHER')
+
+    expect(stretcher).toMatchObject({
+      centerStrainerRequired: center,
+      cornerStrainerRequired: corner,
+      oppositeAdditionalStrainerRequired: additional,
+    })
+  })
+
+  it('creates the complete unframed 3D route without frame operations', () => {
+    const result = createService().importOrder({
+      orderNumber: '3D-NONE', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'TEXTURED_REPLICA_3D', width: 20, height: 30, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'None' },
+    })
+
+    expect(result.operations.map((operation) => operation.name)).toEqual([
+      'FILES', 'PRINT', 'DIBOND', 'BASE_CUT', 'BASE_ASSEMBLY', 'MOUNT',
+      'HARDWARE_WIRE', 'BAG', 'QC', 'SHIPPING',
+    ])
+    expect(result.operations.some((operation) => operation.name.startsWith('STRETCHER'))).toBe(false)
+    expect(result.operations.find((operation) => operation.name === 'BASE_CUT')).toMatchObject({
+      status: 'BLOCKED',
+      tagStatus: 'NEEDS_REVIEW',
+    })
+  })
+
+  it.each([
+    { longest: 60, additional: false },
+    { longest: 61, additional: true },
+  ])('creates the Original route with mandatory supports at $longest inches', ({ longest, additional }) => {
+    const result = createService().importOrder({
+      orderNumber: `ORIGINAL-${longest}`, customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'ORIGINAL', width: 30, height: longest, orientation: 'VERT',
+      priority: 100, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'None' },
+    })
+    const stretcher = result.cutCalculations.find((calculation) => calculation.kind === 'STRETCHER')
+
+    expect(result.operations.map((operation) => operation.name)).toEqual([
+      'STRETCHER_CUT', 'STRETCHER_ASSEMBLY', 'SAND_STRETCHER_CORNERS',
+      'STRETCH', 'QC', 'SHIPPING',
+    ])
+    expect(stretcher).toMatchObject({
+      centerStrainerRequired: true,
+      cornerStrainerRequired: true,
+      oppositeAdditionalStrainerRequired: additional,
+    })
+  })
+
+  it('preserves a completed impossible historical operation and flags the rebuilt route', () => {
+    const service = createService()
+    const first = service.importOrder({
+      orderNumber: 'ROUTE-HISTORY', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'CANVAS', width: 20, height: 30, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'None' },
+    })
+    const historical = first.operations.find((operation) => operation.name === 'STRETCHER_CUT')!
+    historical.status = 'COMPLETE'
+    historical.completedAt = '2026-08-06T12:00:00.000Z'
+    historical.completedBy = 'employee-1'
+
+    const rebuilt = service.rebuildOrder(first.workItem, {
+      orderNumber: 'ROUTE-HISTORY', customerName: 'Customer', artworkName: 'Artwork',
+      productType: 'PAPER', width: 20, height: 30, orientation: 'VERT',
+      priority: 80, dueDate: '2026-08-05', notes: [], customFields: { frameStyle: 'Rolled' },
+    })
+    const validation = (rebuilt.workItem.customFields.pipeline as { routeValidation: { status: string } }).routeValidation
+
+    expect(rebuilt.operations.find((operation) => operation.id === historical.id)).toMatchObject({
+      name: 'STRETCHER_CUT', status: 'COMPLETE', completedAt: historical.completedAt,
+    })
+    expect(validation.status).toBe('NEEDS_REVIEW')
+    expect(rebuilt.operations.some((operation) => operation.name.startsWith('BASE'))).toBe(false)
   })
 
   it('blocks unresolved cut work and every downstream dependency', () => {

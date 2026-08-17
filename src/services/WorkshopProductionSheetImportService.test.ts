@@ -59,6 +59,28 @@ describe('WorkshopProductionSheetImportService', () => {
     expect(preview.jobs.some((job) => job.steps.FILES === 'COMPLETE')).toBe(false)
   })
 
+  it('classifies the current Workshop sheet into the four canonical product groups', () => {
+    const preview = service.parseBuffer(loadWorkbookBuffer(), 'Warehouse Production Sheets.xlsx')
+    const counts = preview.jobs.reduce<Record<string, number>>((result, job) => {
+      const group = job.productType === 'PAPER'
+        ? 'Prints'
+        : job.productType === 'CANVAS'
+          ? 'Canvas Prints'
+          : job.productType === 'ORIGINAL'
+            ? 'Originals'
+            : '3D Prints'
+      result[group] = (result[group] ?? 0) + 1
+      return result
+    }, {})
+
+    expect(counts).toEqual({
+      '3D Prints': 12,
+      Originals: 25,
+      'Canvas Prints': 8,
+      Prints: 1,
+    })
+  })
+
   it('classifies an identical workbook against imported jobs as unchanged', () => {
     const first = service.parseBuffer(loadWorkbookBuffer(), 'Warehouse Production Sheets.xlsx')
     const second = service.parseBuffer(loadWorkbookBuffer(), 'Warehouse Production Sheets.xlsx', first.jobs)

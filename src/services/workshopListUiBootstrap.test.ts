@@ -67,6 +67,49 @@ describe('workshop list order ingestion', () => {
     expect(workItems.flatMap((workItem) => environment.productionPipelineService.buildTags(workItem))).toHaveLength(operations.length)
   })
 
+  it('imports the current sheet with confirmed product-specific routes and no crossovers', () => {
+    const environment = createWorkshopListUiEnvironment()
+    const workItems = environment.workItemService.listWorkItems()
+    const counts = workItems.reduce<Record<string, number>>((result, workItem) => {
+      result[workItem.type] = (result[workItem.type] ?? 0) + 1
+      return result
+    }, {})
+
+    expect(counts).toEqual({
+      TEXTURED_REPLICA_3D: 12,
+      ORIGINAL: 25,
+      CANVAS: 8,
+      PAPER: 1,
+    })
+    for (const workItem of workItems) {
+      const operations = environment.productionPipelineService.getOperations(workItem)
+      const names = operations.map((operation) => operation.name)
+      const pipeline = workItem.customFields.pipeline as {
+        routeValidation: { status: string; mismatches: string[] }
+        cutCalculations: Array<{
+          kind: string
+          centerStrainerRequired: boolean | null
+          cornerStrainerRequired: boolean | null
+        }>
+      }
+      expect(pipeline.routeValidation).toEqual({ status: 'CONFIRMED', mismatches: [] })
+
+      if (workItem.type === 'PAPER') {
+        expect(names).not.toEqual(expect.arrayContaining(['BASE_CUT', 'STRETCHER_CUT', 'DIBOND']))
+      } else if (workItem.type === 'CANVAS') {
+        expect(names).not.toEqual(expect.arrayContaining(['BASE_CUT', 'DIBOND']))
+      } else if (workItem.type === 'TEXTURED_REPLICA_3D') {
+        expect(names).not.toContain('STRETCHER_CUT')
+      } else if (workItem.type === 'ORIGINAL') {
+        const stretcher = pipeline.cutCalculations.find((calculation) => calculation.kind === 'STRETCHER')
+        expect(stretcher).toMatchObject({
+          centerStrainerRequired: true,
+          cornerStrainerRequired: true,
+        })
+      }
+    }
+  })
+
   it('canonicalizes once without duplicating WorkItems or operation IDs', () => {
     const environment = createWorkshopListUiEnvironment()
     const workItemCountBefore = environment.workItemService.listWorkItems().length

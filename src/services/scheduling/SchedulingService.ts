@@ -43,15 +43,19 @@ export interface SchedulingInput {
 const LEGACY_STEP_BY_OPERATION: Record<ProductionOperationName, ProductionStepName> = {
   FILES: 'FILES', PRINT: 'PRINTED', PRINTED: 'PRINTED', BASE_CUT: 'STRETCHER_BASE', BASE_ASSEMBLY: 'STRETCHER_BASE',
   STRETCHER_CUT: 'STRETCHER_BASE', STRETCHER_ASSEMBLY: 'STRETCHER_BASE', STRETCHER: 'STRETCHER_BASE', STRETCH: 'STRETCHER_BASE',
+  SAND_STRETCHER_CORNERS: 'STRETCHER_BASE', CLOTH_BACKING: 'STRETCHER_BASE',
   TRIM: 'PRINTED', SLICE: 'FILES', RESIZE: 'FILES', DIBOND: 'DIBOND', MOUNT: 'MOUNTED',
-  FRAME_CUT: 'FRAME_MADE', FRAME_ASSEMBLY: 'FRAME_MADE', FRAME: 'FRAMED', QC: 'SHIPPED', SHIPPING: 'SHIPPED',
+  FRAME_CUT: 'FRAME_MADE', FRAME_ASSEMBLY: 'FRAME_MADE', FRAME: 'FRAMED', INSTALL_IN_FRAME: 'FRAMED',
+  FRAME_FINISHING: 'FRAMED', HARDWARE_WIRE: 'FRAMED', BAG: 'SHIPPED', QC: 'SHIPPED', SHIPPING: 'SHIPPED',
 }
 
 export const DEFAULT_WORK_CENTER_BY_OPERATION: Record<ProductionOperationName, string> = {
   FILES: 'files', PRINT: 'printing', PRINTED: 'printing', BASE_CUT: 'base-shop', BASE_ASSEMBLY: 'base-shop',
   STRETCHER_CUT: 'stretching', STRETCHER_ASSEMBLY: 'stretching', STRETCHER: 'stretching', STRETCH: 'stretching',
+  SAND_STRETCHER_CORNERS: 'stretching', CLOTH_BACKING: 'stretching',
   TRIM: 'printing', SLICE: 'files', RESIZE: 'files', DIBOND: 'cnc', MOUNT: 'mounting',
-  FRAME_CUT: 'frames', FRAME_ASSEMBLY: 'frames', FRAME: 'frames', QC: 'qc', SHIPPING: 'shipping',
+  FRAME_CUT: 'frames', FRAME_ASSEMBLY: 'frames', FRAME: 'frames', INSTALL_IN_FRAME: 'frames', FRAME_FINISHING: 'frames',
+  HARDWARE_WIRE: 'hardware', BAG: 'packing', QC: 'qc', SHIPPING: 'shipping',
 }
 
 export const DEFAULT_PRODUCTION_CALENDAR: ProductionCalendar = {
@@ -62,7 +66,7 @@ export const DEFAULT_PRODUCTION_CALENDAR: ProductionCalendar = {
   holidays: [],
   workCenters: [
     ['files', 'Files'], ['printing', 'Printing'], ['cnc', 'CNC'], ['stretching', 'Stretching'],
-    ['base-shop', 'Base Shop'], ['mounting', 'Mounting'], ['frames', 'Frames'], ['qc', 'QC'], ['shipping', 'Shipping'],
+    ['base-shop', 'Base Shop'], ['mounting', 'Mounting'], ['frames', 'Frames'], ['hardware', 'Hardware'], ['packing', 'Packing'], ['qc', 'QC'], ['shipping', 'Shipping'],
   ].map(([id, name]) => ({ id, name, capacity: 1 })),
 }
 

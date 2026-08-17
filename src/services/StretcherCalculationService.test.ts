@@ -64,13 +64,34 @@ describe('StretcherCalculationService', () => {
     expect(overSixty.trace.calculatedOutputs.additionalStrainerLengthInches).toBe(33.1875)
   })
 
-  it('uses strict confirmed thresholds', () => {
-    const atThirty = service.calculate({ productType: 'ORIGINAL', width: 20, height: 30 })
-    const atFortyFive = service.calculate({ productType: 'ORIGINAL', width: 20, height: 45 })
+  it('uses strict confirmed canvas thresholds', () => {
+    const atThirty = service.calculate({ productType: 'CANVAS', width: 20, height: 30 })
+    const atFortyFive = service.calculate({ productType: 'CANVAS', width: 20, height: 45 })
 
     expect(atThirty.centerStrainerRequired).toBe(false)
     expect(atFortyFive.centerStrainerRequired).toBe(true)
     expect(atFortyFive.cornerStrainerRequired).toBe(false)
+  })
+
+  it('always adds center and corner supports for an original under 60 inches', () => {
+    const result = service.calculate({ productType: 'ORIGINAL', width: 24, height: 30 })
+
+    expect(result.centerStrainerRequired).toBe(true)
+    expect(result.cornerStrainerRequired).toBe(true)
+    expect(result.oppositeAdditionalStrainerRequired).toBe(false)
+    expect(result.strainerMembers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'CENTER', quantity: 1 }),
+      expect.objectContaining({ type: 'CORNER', quantity: 4 }),
+    ]))
+  })
+
+  it('adds two lengthwise strainers for an original over 60 inches', () => {
+    const result = service.calculate({ productType: 'ORIGINAL', width: 48, height: 72 })
+
+    expect(result.oppositeAdditionalStrainerRequired).toBe(true)
+    expect(result.strainerMembers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'ADDITIONAL_LENGTHWISE', quantity: 2 }),
+    ]))
   })
 
   it('returns NEEDS_REVIEW for unsupported products and missing dimensions', () => {

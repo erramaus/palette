@@ -75,8 +75,9 @@ export class StretcherCalculationService {
     const long = Math.max(outerWidth, outerHeight)
     const short = Math.min(outerWidth, outerHeight)
     const maximumDimension = Math.max(input.width, input.height)
-    const centerStrainerRequired = maximumDimension > 30
-    const cornerStrainerRequired = maximumDimension > 45
+    const isOriginal = input.productType === 'ORIGINAL'
+    const centerStrainerRequired = isOriginal || maximumDimension > 30
+    const cornerStrainerRequired = isOriginal || maximumDimension > 45
     const additionalStrainersRequired = maximumDimension > 60
     const members = fourMembers(long, short)
     const strainerMembers = this.buildStrainerMembers({
